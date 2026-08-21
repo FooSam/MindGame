@@ -1,0 +1,104 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="240dp"
+    android:height="72dp"
+    android:viewportWidth="240"
+    android:viewportHeight="72">
+
+    <!-- Rounded Banner Background Container -->
+    <path
+        android:fillColor="#2B263D"
+        android:pathData="M16,0 H224 A16,16 0 0,1 240,16 V56 A16,16 0 0,1 224,72 H16 A16,16 0 0,1 0,56 V16 A16,16 0 0,1 16,0 Z" />
+
+    <!-- Left Brain Background Tint (Cyan/Indigo Logic Side) -->
+    <path
+        android:fillColor="#1E293B"
+        android:pathData="M16,2 H118 V70 H16 A14,14 0 0,1 2,56 V16 A14,14 0 0,1 16,2 Z" />
+
+    <!-- Right Brain Background Tint (Violet/Amber Creative Side) -->
+    <path
+        android:fillColor="#3B1C32"
+        android:pathData="M122,2 H224 A14,14 0 0,1 238,16 V56 A14,14 0 0,1 224,70 H122 V2 Z" />
+
+    <!-- Center Dividing Energy Wave / Spark Line -->
+    <path
+        android:fillColor="#6750A4"
+        android:pathData="M117,2 H123 V70 H117 Z" />
+
+    <!-- ================= LEFT BRAIN: LOGIC / TECH / MATH ================= -->
+    <!-- Left Brain Contour -->
+    <path
+        android:fillColor="#0EA5E9"
+        android:pathData="M105,20 C100,12 75,12 65,22 C58,18 45,24 45,34 C42,42 48,50 55,54 C65,60 90,60 105,52 Z"
+        android:fillAlpha="0.25" />
+
+    <!-- Circuit Lines & Nodes -->
+    <path
+        android:strokeColor="#38BDF8"
+        android:strokeWidth="1.8"
+        android:fillColor="#00000000"
+        android:pathData="M25,24 H40 L48,32 H60 M20,44 H35 L45,36 M30,56 H50 L58,48" />
+    <path android:fillColor="#38BDF8" android:pathData="M25,24 m-2,0 a2,2 0 1,1 4,0 a2,2 0 1,1 -4,0" />
+    <path android:fillColor="#38BDF8" android:pathData="M60,32 m-2,0 a2,2 0 1,1 4,0 a2,2 0 1,1 -4,0" />
+    <path android:fillColor="#38BDF8" android:pathData="M20,44 m-2,0 a2,2 0 1,1 4,0 a2,2 0 1,1 -4,0" />
+    <path android:fillColor="#38BDF8" android:pathData="M58,48 m-2,0 a2,2 0 1,1 4,0 a2,2 0 1,1 -4,0" />
+
+    <!-- Gear Symbol (Logic) -->
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M78,28 L80,24 L84,24 L86,28 L90,29 L93,26 L96,29 L94,33 L97,36 L101,36 L101,40 L97,42 L96,46 L99,49 L96,52 L92,50 L89,53 L89,57 L85,57 L83,53 L79,52 L76,55 L73,52 L75,48 L72,45 L68,45 L68,41 L72,39 L73,35 L70,32 L73,29 L77,31 Z" />
+    <path android:fillColor="#1E293B" android:pathData="M85,40 m-5,0 a5,5 0 1,1 10,0 a5,5 0 1,1 -10,0" />
+
+    <!-- Binary / Math Overlay Text Elements -->
+    <path
+        android:fillColor="#0EA5E9"
+        android:pathData="M38,15 H42 V21 H38 Z M34,17 H46 V19 H34 Z" /> <!-- Plus symbol -->
+    <path
+        android:fillColor="#0284C7"
+        android:pathData="M15,32 H23 V34 H15 Z M15,37 H23 V39 H15 Z" /> <!-- Equals symbol -->
+
+    <!-- ================= RIGHT BRAIN: CREATIVE / NATURE / PLAY ================= -->
+    <!-- Right Brain Contour -->
+    <path
+        android:fillColor="#F43F5E"
+        android:pathData="M135,20 C140,12 165,12 175,22 C182,18 195,24 195,34 C198,42 192,50 185,54 C175,60 150,60 135,52 Z"
+        android:fillAlpha="0.25" />
+
+    <!-- Game Controller (Play) -->
+    <path
+        android:fillColor="#FB7185"
+        android:pathData="M145,26 C140,26 136,30 137,36 L139,46 C140,50 144,52 148,50 L153,46 H163 L168,50 C172,52 176,50 177,46 L179,36 C180,30 176,26 171,26 Z" />
+    <!-- D-Pad on Controller -->
+    <path android:fillColor="#3B1C32" android:pathData="M144,34 H148 V38 H144 Z M142,35 H150 V37 H142 Z" />
+    <!-- Buttons on Controller -->
+    <path android:fillColor="#F59E0B" android:pathData="M170,33 m-1.5,0 a1.5,1.5 0 1,1 3,0 a1.5,1.5 0 1,1 -3,0" />
+    <path android:fillColor="#10B981" android:pathData="M174,36 m-1.5,0 a1.5,1.5 0 1,1 3,0 a1.5,1.5 0 1,1 -3,0" />
+
+    <!-- Nature Leaf (Nature/Growth) -->
+    <path
+        android:fillColor="#34D399"
+        android:pathData="M195,20 C185,20 182,30 188,38 C194,44 206,42 206,30 C206,24 201,20 195,20 Z" />
+    <path
+        android:strokeColor="#065F46"
+        android:strokeWidth="1.2"
+        android:fillColor="#00000000"
+        android:pathData="M187,39 C192,34 198,28 204,22" />
+
+    <!-- Sparkles / Creativity Stars -->
+    <path
+        android:fillColor="#FBBF24"
+        android:pathData="M218,18 L220,23 L225,25 L220,27 L218,32 L216,27 L211,25 L216,23 Z" />
+    <path
+        android:fillColor="#F43F5E"
+        android:pathData="M222,46 L223.5,49 L226.5,50.5 L223.5,52 L222,55 L220.5,52 L217.5,50.5 L220.5,49 Z" />
+
+    <!-- Music Note (Art/Audio) -->
+    <path
+        android:fillColor="#A78BFA"
+        android:pathData="M198,48 V58 A4,4 0 1,1 194,54 A4,4 0 0,1 198,58 V46 H206 V50 H198 Z" />
+
+    <!-- ================= CENTER GLOWING SPARK ================= -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M120,28 L122.5,33.5 L128,36 L122.5,38.5 L120,44 L117.5,38.5 L112,36 L117.5,33.5 Z" />
+
+</vector>

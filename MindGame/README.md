@@ -73,7 +73,7 @@ gradle :app:bundleRelease
 
 ## 🔒 隱私與資料安全 (Privacy & Data Safety)
 - **零個人資料收集**：本程式為單機離線遊戲，**不收集、不上傳、不共享**任何使用者的個人身分識別資訊 (PII)。
-- **隱私權政策完整網址**：請參閱 [PRIVACY_POLICY.md](PRIVACY_POLICY.md) 或線上網頁 `https://FooSam.github.io/MindGame/privacy/`。
+- **隱私權政策完整網址**：請參閱 [PRIVACY_POLICY.md](../PRIVACY_POLICY.md) 或線上網頁 `https://<your-username>.github.io/<repo-name>/`。
 
 ---
 

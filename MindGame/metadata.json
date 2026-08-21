@@ -1,0 +1,6 @@
+{
+  "name": "左右腦鍛鍊",
+  "description": "全方位左右腦力與專注力鍛鍊益智遊戲，支援多種風格樣式、音效與排行榜",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

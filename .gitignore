@@ -1,0 +1,42 @@
+# ==========================================
+# MindGameAPP 專案頂層 Git 排除規則
+# ==========================================
+
+# 1. 本地 AI 任務規劃文檔、工作日誌與專案規範 (僅供本地 Agent 參考，不開源)
+Docs/
+Log/
+.agents/
+Gemini.md
+ProjectState.md
+MindGame指令.txt
+
+# 2. 正式 Release 產出目錄與安裝包
+Release/
+*.apk
+*.aab
+
+# 3. 壓縮封裝備份檔
+*.zip
+*.rar
+*.7z
+山姆休閒園地.zip
+
+# 4. 私密發布簽署金鑰與憑證
+*.jks
+*.keystore
+*.p12
+*.pem
+*.key
+
+# 5. 本地環境變數與 SDK 設定
+.env
+.env.local
+local.properties
+
+# 6. 作業系統與 IDE 暫存檔
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+.idea/
+.vscode/
