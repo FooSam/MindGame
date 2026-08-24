@@ -356,7 +356,7 @@ fun SettingsDialog(
                                                     color = MaterialTheme.colorScheme.primaryContainer
                                                 ) {
                                                     Text(
-                                                        text = Localization.getString("about_version_value", currentLanguage),
+                                                        text = "v${com.example.BuildConfig.VERSION_NAME}",
                                                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                                                         style = MaterialTheme.typography.labelSmall.copy(
                                                             fontWeight = FontWeight.Bold,

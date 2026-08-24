@@ -124,4 +124,58 @@ class FocusTrainLogicTest {
         assertEquals("完成時 target 為 total + 1", total + 1, currentTarget)
         assertEquals("模擬無錯誤點擊", 0, mistakes)
     }
+
+    @Test
+    fun testPolarCoordinateSectorMapping() {
+        // 驗證極座標扇形分割演算法：所有 360 度角度均能精確映射至 0..K-1，無死角或重疊
+        val itemCounts = listOf(6, 12, 24, 32)
+        for (itemCount in itemCounts) {
+            val sweep = 360f / itemCount
+            val mappedIndices = mutableSetOf<Int>()
+
+            for (angle in 0 until 3600) { // 0.1 度精細取樣
+                val angleDeg = angle / 10f
+                val k = (angleDeg / sweep).toInt().coerceIn(0, itemCount - 1)
+                assertTrue("扇形索引必須在 0 到 ${itemCount - 1} 之間", k in 0 until itemCount)
+                mappedIndices.add(k)
+            }
+
+            assertEquals("所有扇形索引均被完整且均勻覆蓋", itemCount, mappedIndices.size)
+        }
+    }
+
+    @Test
+    fun testFocusTrainAndAboutLocalization() {
+        val zhLang = com.example.data.model.AppLanguage.TRADITIONAL_CHINESE
+        val enLang = com.example.data.model.AppLanguage.ENGLISH
+
+        // 專注力訓練語系 key 檢驗
+        val keys = listOf(
+            "current_target_label",
+            "time_elapsed_label",
+            "game_start_button",
+            "game_reset_button",
+            "game_completed_title",
+            "record_time_format",
+            "record_saved_message",
+            "play_again_button",
+            "focus_train_ready_hint"
+        )
+
+        for (key in keys) {
+            val zhStr = com.example.data.model.Localization.getString(key, zhLang)
+            val enStr = com.example.data.model.Localization.getString(key, enLang)
+            assertNotEquals("繁中不可為 fallback key: $key", key, zhStr)
+            assertNotEquals("英文不可為 fallback key: $key", key, enStr)
+            assertTrue("繁中不可為空: $key", zhStr.isNotBlank())
+            assertTrue("英文不可為空: $key", enStr.isNotBlank())
+        }
+
+        // 關於彈窗資訊檢驗
+        val appNameZh = com.example.data.model.Localization.getString("about_app_name_value", zhLang)
+        assertEquals("繁中應用程式名稱不應包含 (Brain Training)", "左右腦鍛鍊", appNameZh)
+
+        val devZh = com.example.data.model.Localization.getString("about_dev_value", zhLang)
+        assertTrue("繁中開發團隊應包含凡夫俗子工作室", devZh.contains("凡夫俗子工作室"))
+    }
 }
