@@ -1,6 +1,8 @@
 package com.example.ui.viewmodel
 
 import android.app.Application
+import android.content.Context
+import android.content.SharedPreferences
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.audio.SoundManager
@@ -48,19 +50,32 @@ enum class GameStatus {
 
 class GameViewModel(application: Application) : AndroidViewModel(application) {
 
+    private val prefs: SharedPreferences = application.getSharedPreferences("mindgame_prefs", Context.MODE_PRIVATE)
+
     private val repository: ScoreRepository = ScoreRepository(
         AppDatabase.getDatabase(application).scoreDao()
     )
 
     // Global Settings
-    private val _language = MutableStateFlow(AppLanguage.TRADITIONAL_CHINESE)
+    private val _language = MutableStateFlow(
+        prefs.getString("pref_language", null)?.let { code ->
+            AppLanguage.values().firstOrNull { it.code == code }
+        } ?: AppLanguage.TRADITIONAL_CHINESE
+    )
     val language: StateFlow<AppLanguage> = _language.asStateFlow()
 
-    private val _appTheme = MutableStateFlow(com.example.ui.theme.AppThemeStyle.SNOW_WHITE)
+    private val _appTheme = MutableStateFlow(
+        prefs.getString("pref_theme", null)?.let { key ->
+            com.example.ui.theme.AppThemeStyle.values().firstOrNull { it.key == key }
+        } ?: com.example.ui.theme.AppThemeStyle.SNOW_WHITE
+    )
     val appTheme: StateFlow<com.example.ui.theme.AppThemeStyle> = _appTheme.asStateFlow()
 
-    private val _playerName = MutableStateFlow("玩家 1")
+    private val _playerName = MutableStateFlow(prefs.getString("pref_player_name", "玩家 1") ?: "玩家 1")
     val playerName: StateFlow<String> = _playerName.asStateFlow()
+
+    private val _isFullScreenEnabled = MutableStateFlow(prefs.getBoolean("pref_fullscreen", true))
+    val isFullScreenEnabled: StateFlow<Boolean> = _isFullScreenEnabled.asStateFlow()
 
     // Navigation
     private val _currentScreen = MutableStateFlow(ScreenState.HOME)
@@ -211,10 +226,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val _showSettingsDialog = MutableStateFlow(false)
     val showSettingsDialog: StateFlow<Boolean> = _showSettingsDialog.asStateFlow()
 
-    private val _isSfxEnabled = MutableStateFlow(true)
+    private val _isSfxEnabled = MutableStateFlow(prefs.getBoolean("pref_sfx", true))
     val isSfxEnabled: StateFlow<Boolean> = _isSfxEnabled.asStateFlow()
 
-    private val _isBgmEnabled = MutableStateFlow(false)
+    private val _isBgmEnabled = MutableStateFlow(prefs.getBoolean("pref_bgm", false))
     val isBgmEnabled: StateFlow<Boolean> = _isBgmEnabled.asStateFlow()
 
     private var timerJob: Job? = null
@@ -225,6 +240,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private var leaderboardJob: Job? = null
 
     init {
+        SoundManager.isSfxEnabled = _isSfxEnabled.value
+        SoundManager.setBgmState(_isBgmEnabled.value)
         setupInitialGrid(GameDifficulty.BEGINNER)
         setupFocusTrainGame(GameDifficulty.BEGINNER)
         setupSpeedMatchInitialGrid(GameDifficulty.BEGINNER)
@@ -233,20 +250,29 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setLanguage(lang: AppLanguage) {
         _language.value = lang
+        prefs.edit().putString("pref_language", lang.code).apply()
     }
 
     fun setThemeStyle(style: com.example.ui.theme.AppThemeStyle) {
         _appTheme.value = style
+        prefs.edit().putString("pref_theme", style.key).apply()
+    }
+
+    fun toggleFullScreen(enabled: Boolean) {
+        _isFullScreenEnabled.value = enabled
+        prefs.edit().putBoolean("pref_fullscreen", enabled).apply()
     }
 
     fun toggleSfx(enabled: Boolean) {
         _isSfxEnabled.value = enabled
         SoundManager.isSfxEnabled = enabled
+        prefs.edit().putBoolean("pref_sfx", enabled).apply()
     }
 
     fun toggleBgm(enabled: Boolean) {
         _isBgmEnabled.value = enabled
         SoundManager.setBgmState(enabled)
+        prefs.edit().putBoolean("pref_bgm", enabled).apply()
     }
 
     fun openSettingsDialog() {
@@ -261,6 +287,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val trimmed = name.trim()
         if (trimmed.isNotEmpty()) {
             _playerName.value = trimmed
+            prefs.edit().putString("pref_player_name", trimmed).apply()
         }
     }
 

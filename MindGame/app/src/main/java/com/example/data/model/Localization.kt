@@ -37,7 +37,9 @@ object Localization {
         "language_selector" to "語系切換",
         "theme_selector" to "風格樣式",
         "theme_title" to "風格樣式",
-        "audio_settings_title" to "音效與音樂",
+        "audio_settings_title" to "功能與音效",
+        "fullscreen_switch_label" to "全螢幕獨佔模式",
+        "fullscreen_switch_desc" to "隱藏狀態列與導航列，享受沉浸式遊戲視野",
         "sfx_switch_label" to "操作音效",
         "bgm_switch_label" to "背景音樂",
         "state_enabled" to "已開啟",
@@ -46,7 +48,7 @@ object Localization {
         "about_app_name_label" to "應用程式名稱",
         "about_app_name_value" to "左右腦鍛鍊",
         "about_version_label" to "當前版本",
-        "about_version_value" to "v1.00.00.03",
+        "about_version_value" to "v1.00.00.05",
         "about_dev_label" to "開發團隊",
         "about_dev_value" to "凡夫俗子工作室 (Ordinary People Studio)",
         "about_desc_label" to "產品理念",
@@ -93,7 +95,7 @@ object Localization {
         "game_completed_title" to "訓練完成！",
         "record_time_format" to "完成時間：%s",
         "record_saved_message" to "成績已自動記錄至排行榜！",
-        "play_again_button" to "再試一次",
+        "play_again_button" to "再來一局",
         "focus_train_ready_hint" to "按下「開始訓練」後，數字將隨機分佈於圓盤並開始旋轉計時",
 
         // Cat Sudoku Specifics
@@ -114,7 +116,8 @@ object Localization {
         "erase" to "擦除",
         "undo" to "復原",
         "mistakes_label" to "錯誤次數",
-        "sudoku_completed" to "數獨挑戰完成！",
+        "sudoku_completed" to "闖關完成",
+        "stage_completed" to "闖關完成",
 
         // Speed Match Specifics
         "speed_match_start" to "開始",
@@ -163,7 +166,7 @@ object Localization {
         "focus_rating_great" to "🌟 表現優異！專注力極佳！",
         "focus_rating_good" to "👍 順利完成，繼續挑戰更高難度！",
         "score_saved" to "已自動更新至排行榜！",
-        "play_again" to "再試一次",
+        "play_again" to "再來一局",
         "back_to_menu" to "返回選單"
     )
 
@@ -181,7 +184,9 @@ object Localization {
         "language_selector" to "Language",
         "theme_selector" to "Theme Style",
         "theme_title" to "Theme Style",
-        "audio_settings_title" to "Audio & Music",
+        "audio_settings_title" to "Settings & Audio",
+        "fullscreen_switch_label" to "Full Screen Mode",
+        "fullscreen_switch_desc" to "Hide system bars for immersive gameplay",
         "sfx_switch_label" to "Sound Effects",
         "bgm_switch_label" to "Background Music",
         "state_enabled" to "Enabled",
@@ -190,7 +195,7 @@ object Localization {
         "about_app_name_label" to "Application Name",
         "about_app_name_value" to "MindGame",
         "about_version_label" to "Current Version",
-        "about_version_value" to "v1.00.00.03",
+        "about_version_value" to "v1.00.00.05",
         "about_dev_label" to "Development Team",
         "about_dev_value" to "Ordinary People Studio",
         "about_desc_label" to "Design Concept",
@@ -258,7 +263,8 @@ object Localization {
         "erase" to "Erase",
         "undo" to "Undo",
         "mistakes_label" to "Mistakes",
-        "sudoku_completed" to "Sudoku Completed!",
+        "sudoku_completed" to "Level Completed!",
+        "stage_completed" to "Level Completed!",
 
         // Speed Match Specifics
         "speed_match_start" to "Start",

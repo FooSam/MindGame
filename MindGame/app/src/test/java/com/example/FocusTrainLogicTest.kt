@@ -178,4 +178,33 @@ class FocusTrainLogicTest {
         val devZh = com.example.data.model.Localization.getString("about_dev_value", zhLang)
         assertTrue("繁中開發團隊應包含凡夫俗子工作室", devZh.contains("凡夫俗子工作室"))
     }
+
+    @Test
+    fun testSudokuAndDialogLocalizationKeys() {
+        val zhLang = com.example.data.model.AppLanguage.TRADITIONAL_CHINESE
+        val enLang = com.example.data.model.AppLanguage.ENGLISH
+
+        val checkKeys = listOf(
+            "stage_completed",
+            "sudoku_completed",
+            "play_again",
+            "play_again_button",
+            "back_to_menu",
+            "leaderboard_title"
+        )
+
+        for (k in checkKeys) {
+            val zh = com.example.data.model.Localization.getString(k, zhLang)
+            val en = com.example.data.model.Localization.getString(k, enLang)
+            assertNotEquals("繁中不可為 fallback: $k", k, zh)
+            assertNotEquals("英文不可為 fallback: $k", k, en)
+        }
+
+        // 驗證數獨結算文案
+        assertEquals("闖關完成", com.example.data.model.Localization.getString("stage_completed", zhLang))
+        assertEquals("再來一局", com.example.data.model.Localization.getString("play_again", zhLang))
+        assertEquals("Level Completed!", com.example.data.model.Localization.getString("stage_completed", enLang))
+        assertEquals("Play Again", com.example.data.model.Localization.getString("play_again", enLang))
+    }
 }
+

@@ -154,19 +154,20 @@
       <h2>1. 前言與適用範圍</h2>
       <p>感謝您下載並使用由 Ordinary People Studio（以下簡稱「我們」）所開發的「左右腦鍛鍊」（以下簡稱「本應用程式」）。我們極度重視每位使用者的隱私權，本政策旨在向您說明本應用程式的資料處理原則。</p>
 
-      <h2>2. 個人資料之收集、處理與利用</h2>
+      <h2>2. 個人資料之收集、處理與第三方服務</h2>
       <ul>
-        <li><strong>無個人資料收集</strong>：本應用程式無需註冊、登入帳號即可完整使用所有功能。我們不會主動或被動收集您的姓名、電話、電子郵件、精準地理位置、通訊錄、相片或其他個人識別資訊。</li>
-        <li><strong>無第三方資料追蹤</strong>：本應用程式未整合任何會追蹤使用者行為或收集個人資料的第三方廣告或分析 SDK。</li>
+        <li><strong>本機資料儲存</strong>：本應用程式為單機離線遊戲，排行榜成績、自訂暱稱與風格設定全數儲存在裝置本機 (SQLite / Room)，我們不維護任何雲端帳號伺服器。</li>
+        <li><strong>第三方廣告服務 (Google AdMob)</strong>：本應用程式整合 Google AdMob 服務提供插頁式廣告支援營運。Google AdMob 可能會存取廣告識別碼 (Advertising ID, AD_ID) 以提供相關廣告服務與防止詐欺行為。詳細說明請參閱 <a href="https://policies.google.com/privacy" target="_blank">Google 隱私權政策</a>。</li>
       </ul>
 
       <h2>3. 本機資料儲存說明</h2>
-      <p>您在遊戲中產生的排行榜成績、通關時間、點錯紀錄、自訂玩家暱稱與風格設定，<strong>全數儲存在您裝置的本地資料庫 (SQLite / Room) 中</strong>，絕不上傳至任何外部伺服器。</p>
+      <p>您在遊戲中產生的排行榜成績、通關時間、點錯紀錄、自訂玩家暱稱與風格設定，<strong>全數儲存在您裝置的本地資料庫 (SQLite / Room) 中</strong>，絕不上傳至任何外部個人伺服器。</p>
 
       <h2>4. 系統權限使用說明</h2>
       <ul>
         <li><strong>震動權限 (android.permission.VIBRATE)</strong>：僅在遊戲點擊錯誤時提供微弱震動提示，以增進操作反饋。</li>
-        <li>本應用程式<strong>絕不索取</strong>相機、麥克風、聯絡人、儲存空間或定位權限。</li>
+        <li><strong>網路權限 (android.permission.INTERNET / ACCESS_NETWORK_STATE)</strong>：用於載入 Google AdMob 廣告內容。</li>
+        <li><strong>廣告識別碼權限 (com.google.android.gms.permission.AD_ID)</strong>：用於 Google Play 廣告服務合規運作。</li>
       </ul>
 
       <h2>5. 兒童隱私保護</h2>
@@ -181,25 +182,26 @@
     <!-- English Content -->
     <div id="content-en" style="display: none;">
       <div class="highlight-card">
-        <strong>🛡️ Zero Data Collection Commitment:</strong> MindGame is a standalone offline game. We do not collect, upload, store, or share any Personally Identifiable Information (PII).
+        <strong>🛡️ Privacy Commitment:</strong> MindGame stores gameplay locally and uses Google AdMob for ad-supported free gameplay.
       </div>
 
       <h2>1. Introduction</h2>
       <p>Thank you for using <strong>MindGame (Brain Training)</strong> developed by Ordinary People Studio ("we", "us"). We are strongly committed to protecting your privacy.</p>
 
-      <h2>2. Information Collection and Use</h2>
+      <h2>2. Data Collection and Third-Party Services</h2>
       <ul>
-        <li><strong>No Personal Data Collected</strong>: No account or registration is required. We do not collect your name, email, phone number, location, contacts, device identifiers, or media files.</li>
-        <li><strong>No Third-Party Tracking</strong>: The App contains no user-tracking analytics or invasive third-party SDKs.</li>
+        <li><strong>Local Storage</strong>: Game scores, custom names, and settings are stored locally on your device. We do not operate user account databases.</li>
+        <li><strong>Third-Party Advertising (Google AdMob)</strong>: The App integrates Google AdMob to serve interstitial ads. Google AdMob may process Advertising ID (AD_ID) in accordance with <a href="https://policies.google.com/privacy" target="_blank">Google Privacy Policy</a>.</li>
       </ul>
 
       <h2>3. Local Storage</h2>
-      <p>All gameplay records, leaderboard scores, custom player names, and visual preferences are <strong>stored strictly on your local device (Room SQLite)</strong> and are never transmitted to external cloud servers.</p>
+      <p>All gameplay records, leaderboard scores, custom player names, and visual preferences are <strong>stored strictly on your local device (Room SQLite)</strong>.</p>
 
       <h2>4. System Permissions</h2>
       <ul>
         <li><strong>Vibration (android.permission.VIBRATE)</strong>: Used solely for haptic feedback when an incorrect button is tapped.</li>
-        <li>The App <strong>does not request</strong> camera, microphone, contacts, location, or storage permissions.</li>
+        <li><strong>Internet (android.permission.INTERNET / ACCESS_NETWORK_STATE)</strong>: Used for loading Google AdMob ads.</li>
+        <li><strong>Advertising ID (com.google.android.gms.permission.AD_ID)</strong>: Required for Google Play advertising services.</li>
       </ul>
 
       <h2>5. Children's Privacy</h2>

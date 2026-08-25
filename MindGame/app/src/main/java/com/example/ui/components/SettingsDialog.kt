@@ -18,12 +18,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -63,10 +65,12 @@ private enum class SettingsTab {
 fun SettingsDialog(
     currentTheme: AppThemeStyle,
     currentLanguage: AppLanguage,
+    isFullScreenEnabled: Boolean,
     isSfxEnabled: Boolean,
     isBgmEnabled: Boolean,
     onSelectTheme: (AppThemeStyle) -> Unit,
     onSelectLanguage: (AppLanguage) -> Unit,
+    onToggleFullScreen: (Boolean) -> Unit,
     onToggleSfx: (Boolean) -> Unit,
     onToggleBgm: (Boolean) -> Unit,
     onDismiss: () -> Unit
@@ -118,7 +122,7 @@ fun SettingsDialog(
                         modifier = Modifier.weight(1f)
                     )
                     TabChip(
-                        icon = Icons.Default.VolumeUp,
+                        icon = Icons.AutoMirrored.Filled.VolumeUp,
                         title = Localization.getString("audio_settings_title", currentLanguage).take(2),
                         isSelected = activeTab == SettingsTab.AUDIO,
                         onClick = { activeTab = SettingsTab.AUDIO },
@@ -248,83 +252,131 @@ fun SettingsDialog(
                         }
 
                         SettingsTab.AUDIO -> {
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                            LazyColumn(
+                                verticalArrangement = Arrangement.spacedBy(10.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                // SFX Switch Card
-                                Card(
-                                    shape = RoundedCornerShape(14.dp),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
+                                // Full Screen Mode Switch Card
+                                item {
+                                    Card(
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                                     ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                imageVector = Icons.Default.VolumeUp,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.primary,
-                                                modifier = Modifier.size(22.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(12.dp))
-                                            Column {
-                                                Text(
-                                                    text = Localization.getString("sfx_switch_label", currentLanguage),
-                                                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Fullscreen,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(24.dp)
                                                 )
-                                                Text(
-                                                    text = if (isSfxEnabled) Localization.getString("state_enabled", currentLanguage) else Localization.getString("state_disabled", currentLanguage),
-                                                    style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                )
+                                                Spacer(modifier = Modifier.width(12.dp))
+                                                Column(modifier = Modifier.padding(end = 8.dp)) {
+                                                    Text(
+                                                        text = Localization.getString("fullscreen_switch_label", currentLanguage),
+                                                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
+                                                    )
+                                                    Text(
+                                                        text = Localization.getString("fullscreen_switch_desc", currentLanguage),
+                                                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                                                        lineHeight = 16.sp
+                                                    )
+                                                }
                                             }
+                                            Switch(
+                                                checked = isFullScreenEnabled,
+                                                onCheckedChange = onToggleFullScreen
+                                            )
                                         }
-                                        Switch(
-                                            checked = isSfxEnabled,
-                                            onCheckedChange = onToggleSfx
-                                        )
+                                    }
+                                }
+
+                                // SFX Switch Card
+                                item {
+                                    Card(
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(
+                                                    imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(22.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(12.dp))
+                                                Column {
+                                                    Text(
+                                                        text = Localization.getString("sfx_switch_label", currentLanguage),
+                                                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
+                                                    )
+                                                    Text(
+                                                        text = if (isSfxEnabled) Localization.getString("state_enabled", currentLanguage) else Localization.getString("state_disabled", currentLanguage),
+                                                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                    )
+                                                }
+                                            }
+                                            Switch(
+                                                checked = isSfxEnabled,
+                                                onCheckedChange = onToggleSfx
+                                            )
+                                        }
                                     }
                                 }
 
                                 // BGM Switch Card
-                                Card(
-                                    shape = RoundedCornerShape(14.dp),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
+                                item {
+                                    Card(
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                                     ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                imageVector = Icons.Default.MusicNote,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.primary,
-                                                modifier = Modifier.size(22.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(12.dp))
-                                            Column {
-                                                Text(
-                                                    text = Localization.getString("bgm_switch_label", currentLanguage),
-                                                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(
+                                                    imageVector = Icons.Default.MusicNote,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(22.dp)
                                                 )
-                                                Text(
-                                                    text = if (isBgmEnabled) Localization.getString("state_enabled", currentLanguage) else Localization.getString("state_disabled", currentLanguage),
-                                                    style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                )
+                                                Spacer(modifier = Modifier.width(12.dp))
+                                                Column {
+                                                    Text(
+                                                        text = Localization.getString("bgm_switch_label", currentLanguage),
+                                                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
+                                                    )
+                                                    Text(
+                                                        text = if (isBgmEnabled) Localization.getString("state_enabled", currentLanguage) else Localization.getString("state_disabled", currentLanguage),
+                                                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                    )
+                                                }
                                             }
+                                            Switch(
+                                                checked = isBgmEnabled,
+                                                onCheckedChange = onToggleBgm
+                                            )
                                         }
-                                        Switch(
-                                            checked = isBgmEnabled,
-                                            onCheckedChange = onToggleBgm
-                                        )
                                     }
                                 }
                             }

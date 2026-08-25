@@ -5,12 +5,21 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.components.ChangeNameDialog
 import com.example.ui.components.LeaderboardDialog
@@ -28,6 +37,10 @@ import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.viewmodel.GameViewModel
 import com.example.ui.viewmodel.ScreenState
 
+import android.app.Activity
+import com.example.ad.AdManager
+import com.example.ui.viewmodel.GameStatus
+
 class MainActivity : ComponentActivity() {
 
     private val viewModel: GameViewModel by viewModels()
@@ -35,6 +48,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        AdManager.initialize(this)
 
         setContent {
             val appTheme by viewModel.appTheme.collectAsStateWithLifecycle()
@@ -107,13 +121,64 @@ fun MainApp(viewModel: GameViewModel) {
     val showLeaderboardDialog by viewModel.showLeaderboardDialog.collectAsStateWithLifecycle()
     val showNameDialog by viewModel.showNameDialog.collectAsStateWithLifecycle()
     val showSettingsDialog by viewModel.showSettingsDialog.collectAsStateWithLifecycle()
+    val isFullScreenEnabled by viewModel.isFullScreenEnabled.collectAsStateWithLifecycle()
     val isSfxEnabled by viewModel.isSfxEnabled.collectAsStateWithLifecycle()
     val isBgmEnabled by viewModel.isBgmEnabled.collectAsStateWithLifecycle()
 
-    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-        Modifier.padding(innerPadding)
+    val context = LocalContext.current
+    LaunchedEffect(isFullScreenEnabled) {
+        val activity = context as? ComponentActivity
+        activity?.let { act ->
+            val window = act.window
+            val insetsController = WindowCompat.getInsetsController(window, window.decorView)
+            insetsController.systemBarsBehavior =
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            if (isFullScreenEnabled) {
+                insetsController.hide(WindowInsetsCompat.Type.systemBars())
+            } else {
+                insetsController.show(WindowInsetsCompat.Type.systemBars())
+            }
+        }
+    }
 
-        when (currentScreen) {
+    // 監聽各遊戲通關結算事件，每滿 3 局觸發一次插頁式廣告
+    LaunchedEffect(gameStatus) {
+        if (gameStatus == GameStatus.COMPLETED) {
+            AdManager.recordGameFinished(context as? Activity)
+        }
+    }
+    LaunchedEffect(focusTrainStatus) {
+        if (focusTrainStatus == GameStatus.COMPLETED) {
+            AdManager.recordGameFinished(context as? Activity)
+        }
+    }
+    LaunchedEffect(speedMatchStatus) {
+        if (speedMatchStatus == GameStatus.COMPLETED) {
+            AdManager.recordGameFinished(context as? Activity)
+        }
+    }
+    LaunchedEffect(sudokuStatus) {
+        if (sudokuStatus == GameStatus.COMPLETED) {
+            AdManager.recordGameFinished(context as? Activity)
+        }
+    }
+    LaunchedEffect(catSudokuStatus) {
+        if (catSudokuStatus == GameStatus.COMPLETED) {
+            AdManager.recordGameFinished(context as? Activity)
+        }
+    }
+
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets.safeDrawing
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            when (currentScreen) {
             ScreenState.HOME -> {
                 HomeScreen(
                     playerName = playerName,
@@ -241,6 +306,7 @@ fun MainApp(viewModel: GameViewModel) {
                 )
             }
         }
+        }
 
         // Global Dialogs
         if (showNameDialog) {
@@ -259,6 +325,7 @@ fun MainApp(viewModel: GameViewModel) {
             SettingsDialog(
                 currentTheme = appTheme,
                 currentLanguage = language,
+                isFullScreenEnabled = isFullScreenEnabled,
                 isSfxEnabled = isSfxEnabled,
                 isBgmEnabled = isBgmEnabled,
                 onSelectTheme = { selectedStyle ->
@@ -266,6 +333,9 @@ fun MainApp(viewModel: GameViewModel) {
                 },
                 onSelectLanguage = { selectedLang ->
                     viewModel.setLanguage(selectedLang)
+                },
+                onToggleFullScreen = { enabled ->
+                    viewModel.toggleFullScreen(enabled)
                 },
                 onToggleSfx = { enabled ->
                     viewModel.toggleSfx(enabled)

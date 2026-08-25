@@ -1,4 +1,7 @@
 import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy
+import java.util.Properties
+import java.io.FileInputStream
+import groovy.json.JsonSlurper
 
 plugins {
   alias(libs.plugins.android.application)
@@ -8,8 +11,6 @@ plugins {
   alias(libs.plugins.secrets)
   alias(libs.plugins.google.services)
 }
-
-import groovy.json.JsonSlurper
 
 val versionFile = rootProject.file("version.json")
 val (appVersionName, appVersionCode) = if (versionFile.exists()) {
@@ -42,18 +43,36 @@ android {
 
   signingConfigs {
     create("release") {
+      val keystorePropsFile = rootProject.file("keystore.properties")
+      val keystoreProps = Properties()
+      if (keystorePropsFile.exists()) {
+        FileInputStream(keystorePropsFile).use { stream ->
+          keystoreProps.load(stream)
+        }
+      }
+
       val keystoreCandidates = listOf(
         "D:/Sam/HomeWork/AppKeys/upload-key.jks",
         "D:/Work/Sam/Project/AppKeys/upload-key.jks"
       )
       val defaultKeystore = keystoreCandidates.firstOrNull { file(it).exists() }
-      val keystorePath = System.getenv("KEYSTORE_PATH") ?: defaultKeystore
-      val envPass = System.getenv("STORE_PASSWORD")
-      if (keystorePath != null && envPass != null) {
+      val keystorePath = System.getenv("KEYSTORE_PATH")
+        ?: keystoreProps.getProperty("storeFile")
+        ?: defaultKeystore
+      val storePass = System.getenv("STORE_PASSWORD")
+        ?: keystoreProps.getProperty("storePassword")
+      val keyAliasVal = System.getenv("KEY_ALIAS")
+        ?: keystoreProps.getProperty("keyAlias")
+        ?: "upload"
+      val keyPass = System.getenv("KEY_PASSWORD")
+        ?: keystoreProps.getProperty("keyPassword")
+        ?: storePass
+
+      if (keystorePath != null && storePass != null) {
         storeFile = file(keystorePath)
-        storePassword = envPass
-        keyAlias = System.getenv("KEY_ALIAS") ?: "upload"
-        keyPassword = System.getenv("KEY_PASSWORD") ?: envPass
+        storePassword = storePass
+        keyAlias = keyAliasVal
+        keyPassword = keyPass
       } else {
         val debugStore = file("${System.getProperty("user.home")}/.android/debug.keystore")
         if (debugStore.exists()) {
@@ -106,6 +125,7 @@ googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.W
 // Some unused dependencies are commented out below instead of being removed.
 // This makes it easy to add them back in the future if needed.
 dependencies {
+  implementation(libs.play.services.ads)
   implementation(platform(libs.androidx.compose.bom))
   implementation(platform(libs.firebase.bom))
   // implementation(libs.accompanist.permissions)

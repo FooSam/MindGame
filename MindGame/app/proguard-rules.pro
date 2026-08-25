@@ -30,3 +30,9 @@
 # Kotlin Coroutines & Serialization
 -keepclassmembers class kotlinx.coroutines.** { *; }
 -dontwarn kotlinx.coroutines.**
+
+# Google Play Services Ads Keep Rules
+-keep class com.google.android.gms.ads.** { *; }
+-keep class com.google.ads.** { *; }
+-dontwarn com.google.android.gms.ads.**
+

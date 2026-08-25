@@ -325,35 +325,119 @@ fun SudokuScreen(
     if (status == GameStatus.COMPLETED) {
         AlertDialog(
             onDismissRequest = { },
+            shape = RoundedCornerShape(24.dp),
             title = {
                 Text(
-                    text = "🎉 ${Localization.getString("game_completed", language)}",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                    text = "🎉 ${Localization.getString("stage_completed", language)}",
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 )
             },
             text = {
-                Column {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = Localization.getString("your_time", language),
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium)
+                                )
+                                Text(
+                                    text = formatTimeMillis(elapsedTimeMillis),
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                )
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = Localization.getString("mistakes_label", language),
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium)
+                                )
+                                Text(
+                                    text = "$wrongCount 次",
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (wrongCount > 0) MaterialTheme.colorScheme.error else Color(0xFF10B981)
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
                     Text(
-                        text = "${Localization.getString("time", language)}: ${formatTimeMillis(elapsedTimeMillis)}",
-                        style = MaterialTheme.typography.bodyLarge
+                        text = Localization.getString("score_saved", language),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "${Localization.getString("mistakes_label", language)}: $wrongCount",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Action Buttons
+                    Button(
+                        onClick = onResetClick,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = Localization.getString("play_again", language),
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedButton(
+                        onClick = onLeaderboardClick,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = Localization.getString("leaderboard_title", language),
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    TextButton(
+                        onClick = onBackClick,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = Localization.getString("back_to_menu", language),
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
+                    }
                 }
             },
-            confirmButton = {
-                Button(onClick = onResetClick) {
-                    Text(Localization.getString("play_again", language))
-                }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = onLeaderboardClick) {
-                    Text(Localization.getString("leaderboard_title", language))
-                }
-            }
+            confirmButton = { },
+            dismissButton = { }
         )
     }
 }

@@ -12,6 +12,7 @@ MindGame指令.txt
 
 # 2. 正式 Release 產出目錄與安裝包
 Release/
+上版圖/
 *.apk
 *.aab
 
@@ -32,6 +33,7 @@ Release/
 .env
 .env.local
 local.properties
+keystore.properties
 
 # 6. 作業系統與 IDE 暫存檔
 .DS_Store
