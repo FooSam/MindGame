@@ -1,24 +1,135 @@
 package com.example.audio
 
+import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
+import android.media.MediaPlayer
+import com.example.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.sin
 
 object SoundManager {
     private val scope = CoroutineScope(Dispatchers.Default)
-    private var bgmJob: Job? = null
+    private var appContext: Context? = null
+    private var mediaPlayer: MediaPlayer? = null
 
     var isSfxEnabled: Boolean = true
     var isBgmEnabled: Boolean = false
+    private var isAppInForeground: Boolean = true
 
     private const val SAMPLE_RATE = 22050
+    private var currentTrackResId: Int? = null
+
+    val bgmTracks = listOf(
+        R.raw.bgm_01_little_idea,
+        R.raw.bgm_02_sunny,
+        R.raw.bgm_03_light_playful,
+        R.raw.bgm_04_refreshing,
+        R.raw.bgm_05_caves_of_dawn,
+        R.raw.bgm_06_battle_dragons,
+        R.raw.bgm_07_melody_nature
+    )
+
+    fun initialize(context: Context) {
+        appContext = context.applicationContext
+    }
+
+    fun onAppFocusChanged(isFocused: Boolean) {
+        isAppInForeground = isFocused
+        if (!isFocused) {
+            pauseBgm()
+        } else if (isBgmEnabled) {
+            resumeBgm()
+        }
+    }
+
+    fun pauseBgm() {
+        try {
+            if (mediaPlayer?.isPlaying == true) {
+                mediaPlayer?.pause()
+            }
+        } catch (_: Exception) {}
+    }
+
+    fun resumeBgm() {
+        if (!isBgmEnabled || !isAppInForeground) return
+        try {
+            if (mediaPlayer != null) {
+                mediaPlayer?.start()
+            } else {
+                playRandomBgm()
+            }
+        } catch (_: Exception) {
+            playRandomBgm()
+        }
+    }
+
+    fun setBgmState(enabled: Boolean) {
+        isBgmEnabled = enabled
+        if (enabled) {
+            resumeBgm()
+        } else {
+            stopBgm()
+        }
+    }
+
+    fun stopBgm() {
+        try {
+            mediaPlayer?.stop()
+            mediaPlayer?.release()
+        } catch (_: Exception) {
+        } finally {
+            mediaPlayer = null
+        }
+    }
+
+    /**
+     * 當使用者切換至不同遊戲畫面時呼叫，自動換一首音樂
+     */
+    fun onGameSwitched() {
+        if (isBgmEnabled && isAppInForeground) {
+            playRandomBgm(forceNew = true)
+        }
+    }
+
+    fun playRandomBgm(forceNew: Boolean = false) {
+        if (!isBgmEnabled || !isAppInForeground) return
+        val context = appContext ?: return
+        val availableTracks = if (bgmTracks.size > 1 && currentTrackResId != null) {
+            bgmTracks.filter { it != currentTrackResId }
+        } else {
+            bgmTracks
+        }
+        val nextResId = availableTracks.randomOrNull() ?: return
+        playTrack(context, nextResId)
+    }
+
+    private fun playTrack(context: Context, resId: Int) {
+        stopBgm()
+        try {
+            currentTrackResId = resId
+            mediaPlayer = MediaPlayer.create(context, resId)?.apply {
+                setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_GAME)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .build()
+                )
+                setVolume(0.35f, 0.35f)
+                isLooping = false
+                setOnCompletionListener {
+                    playRandomBgm(forceNew = true)
+                }
+                start()
+            }
+        } catch (_: Exception) {
+            mediaPlayer = null
+        }
+    }
 
     fun playClick() {
         if (!isSfxEnabled) return
@@ -59,7 +170,6 @@ object SoundManager {
     fun playCatMeow() {
         if (!isSfxEnabled) return
         scope.launch {
-            // Frequency sweep to simulate cute meow chime
             val durationMs = 180
             val numSamples = (SAMPLE_RATE * (durationMs / 1000.0)).toInt()
             val samples = ShortArray(numSamples)
@@ -74,38 +184,6 @@ object SoundManager {
         }
     }
 
-    fun setBgmState(enabled: Boolean) {
-        isBgmEnabled = enabled
-        if (enabled) {
-            startBgm()
-        } else {
-            stopBgm()
-        }
-    }
-
-    private fun startBgm() {
-        bgmJob?.cancel()
-        bgmJob = scope.launch {
-            // Calm ambient pentatonic arpeggio sequence
-            val bgmNotes = listOf(
-                261.63, 293.66, 329.63, 392.00, 440.00, 523.25,
-                392.00, 329.63, 293.66, 261.63, 329.63, 392.00
-            )
-            var index = 0
-            while (isActive && isBgmEnabled) {
-                val freq = bgmNotes[index % bgmNotes.size]
-                playTone(freq, 220, 0.08f)
-                index++
-                delay(350)
-            }
-        }
-    }
-
-    private fun stopBgm() {
-        bgmJob?.cancel()
-        bgmJob = null
-    }
-
     private fun playTone(freq: Double, durationMs: Int, volume: Float, isSawtooth: Boolean = false) {
         try {
             val numSamples = (SAMPLE_RATE * (durationMs / 1000.0)).toInt().coerceAtLeast(1)
@@ -117,7 +195,6 @@ object SoundManager {
                 } else {
                     sin(2.0 * Math.PI * freq * t)
                 }
-                // Smooth attack and release envelope to prevent click artifacts
                 val attackSamples = (numSamples * 0.1).toInt().coerceAtLeast(1)
                 val releaseSamples = (numSamples * 0.3).toInt().coerceAtLeast(1)
                 val env = when {
@@ -169,3 +246,4 @@ object SoundManager {
         }
     }
 }
+

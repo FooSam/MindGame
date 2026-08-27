@@ -31,6 +31,8 @@ import com.example.ui.screens.FocusTrainScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.SpeedMatchScreen
 import com.example.ui.screens.SudokuScreen
+import com.example.ui.screens.turtlesoup.TurtleSoupScreen
+import com.example.ui.screens.turtlesoup.TurtleSoupPlayState
 import com.example.game.sudoku.SudokuConfig
 import com.example.game.sudoku.SudokuGameConfig
 import com.example.ui.theme.MyApplicationTheme
@@ -41,6 +43,8 @@ import android.app.Activity
 import com.example.ad.AdManager
 import com.example.ui.viewmodel.GameStatus
 
+import com.example.audio.SoundManager
+
 class MainActivity : ComponentActivity() {
 
     private val viewModel: GameViewModel by viewModels()
@@ -48,6 +52,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        SoundManager.initialize(applicationContext)
         AdManager.initialize(this)
 
         setContent {
@@ -56,6 +61,31 @@ class MainActivity : ComponentActivity() {
                 MainApp(viewModel = viewModel)
             }
         }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        SoundManager.onAppFocusChanged(hasFocus)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        SoundManager.resumeBgm()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        SoundManager.pauseBgm()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        SoundManager.pauseBgm()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        SoundManager.resumeBgm()
     }
 }
 
@@ -117,6 +147,25 @@ fun MainApp(viewModel: GameViewModel) {
     val catSudokuElapsedTimeMillis by viewModel.catSudokuElapsedTimeMillis.collectAsStateWithLifecycle()
     val catSudokuWrongCount by viewModel.catSudokuWrongCount.collectAsStateWithLifecycle()
 
+    // Turtle Soup state
+    val turtleSoupPuzzles by viewModel.turtleSoupPuzzles.collectAsStateWithLifecycle()
+    val turtleSoupCurrentPuzzle by viewModel.turtleSoupCurrentPuzzle.collectAsStateWithLifecycle()
+    val turtleSoupPlayState by viewModel.turtleSoupPlayState.collectAsStateWithLifecycle()
+    val turtleSoupQueryLogs by viewModel.turtleSoupQueryLogs.collectAsStateWithLifecycle()
+    val turtleSoupSelectedDimensions by viewModel.turtleSoupSelectedDimensions.collectAsStateWithLifecycle()
+    val turtleSoupDiscoveredCoreCount by viewModel.turtleSoupDiscoveredCoreCount.collectAsStateWithLifecycle()
+    val turtleSoupShowAdDialog by viewModel.turtleSoupShowAdDialog.collectAsStateWithLifecycle()
+    val turtleSoupUnlockedQuestions by viewModel.turtleSoupUnlockedQuestions.collectAsStateWithLifecycle()
+    val turtleSoupSelectedSlots by viewModel.turtleSoupSelectedSlots.collectAsStateWithLifecycle()
+    val turtleSoupRemainingChances by viewModel.turtleSoupRemainingChances.collectAsStateWithLifecycle()
+    val turtleSoupUsedChances by viewModel.turtleSoupUsedChances.collectAsStateWithLifecycle()
+    val turtleSoupElapsedSeconds by viewModel.turtleSoupElapsedSeconds.collectAsStateWithLifecycle()
+    val turtleSoupIsDeductionError by viewModel.turtleSoupIsDeductionError.collectAsStateWithLifecycle()
+    val turtleSoupFinalScore by viewModel.turtleSoupFinalScore.collectAsStateWithLifecycle()
+    val turtleSoupFinalStars by viewModel.turtleSoupFinalStars.collectAsStateWithLifecycle()
+    val turtleSoupUsedAdReward by viewModel.turtleSoupUsedAdReward.collectAsStateWithLifecycle()
+    val turtleSoupSaveData by viewModel.turtleSoupSaveData.collectAsStateWithLifecycle()
+
     val leaderboardList by viewModel.leaderboardList.collectAsStateWithLifecycle()
     val showLeaderboardDialog by viewModel.showLeaderboardDialog.collectAsStateWithLifecycle()
     val showNameDialog by viewModel.showNameDialog.collectAsStateWithLifecycle()
@@ -164,6 +213,11 @@ fun MainApp(viewModel: GameViewModel) {
     }
     LaunchedEffect(catSudokuStatus) {
         if (catSudokuStatus == GameStatus.COMPLETED) {
+            AdManager.recordGameFinished(context as? Activity)
+        }
+    }
+    LaunchedEffect(turtleSoupPlayState) {
+        if (turtleSoupPlayState == TurtleSoupPlayState.SUCCESS) {
             AdManager.recordGameFinished(context as? Activity)
         }
     }
@@ -302,6 +356,45 @@ fun MainApp(viewModel: GameViewModel) {
                     onUndoClick = { viewModel.undoCatSudokuMove() },
                     onResetBoardClick = { viewModel.clearCatSudokuBoard() },
                     onNewGameClick = { viewModel.resetCatSudokuGame() },
+                    onLeaderboardClick = { viewModel.openLeaderboardDialog() }
+                )
+            }
+
+            ScreenState.TURTLE_SOUP_GAME -> {
+                TurtleSoupScreen(
+                    difficulty = selectedDifficulty,
+                    puzzles = turtleSoupPuzzles,
+                    currentPuzzle = turtleSoupCurrentPuzzle,
+                    playState = turtleSoupPlayState,
+                    queryLogs = turtleSoupQueryLogs,
+                    selectedDimensions = turtleSoupSelectedDimensions,
+                    discoveredCoreCount = turtleSoupDiscoveredCoreCount,
+                    showAdDialog = turtleSoupShowAdDialog,
+                    unlockedQuestionIndices = turtleSoupUnlockedQuestions,
+                    selectedSlotIndices = turtleSoupSelectedSlots,
+                    remainingChances = turtleSoupRemainingChances,
+                    usedChances = turtleSoupUsedChances,
+                    elapsedSeconds = turtleSoupElapsedSeconds,
+                    isDeductionErrorFlash = turtleSoupIsDeductionError,
+                    finalScore = turtleSoupFinalScore,
+                    finalStars = turtleSoupFinalStars,
+                    usedAdReward = turtleSoupUsedAdReward,
+                    saveData = turtleSoupSaveData,
+                    language = language,
+                    onBackClick = { viewModel.navigateTo(ScreenState.CATEGORY_DETAIL) },
+                    onSelectPuzzle = { puzzle -> viewModel.selectTurtleSoupPuzzle(puzzle) },
+                    onSelectDimensionOption = { dimId, opt -> viewModel.selectTurtleSoupDimensionOption(dimId, opt) },
+                    onSubmitInquiry = { viewModel.submitTurtleSoupInquiry(context as? Activity) },
+                    onWatchAdForInquiry = { viewModel.watchAdForTurtleSoupInquiry(context as? Activity) },
+                    onCloseAdDialog = { viewModel.closeTurtleSoupAdDialog() },
+                    onUnlockQuestion = { qIdx -> viewModel.unlockTurtleSoupQuestion(qIdx) },
+                    onSelectSlotOption = { sIdx, oIdx -> viewModel.selectTurtleSoupSlotOption(sIdx, oIdx) },
+                    onStartSolving = { viewModel.startTurtleSoupSolving() },
+                    onBackToInvestigate = { viewModel.backToTurtleSoupInvestigate() },
+                    onSubmitDeduction = { viewModel.submitTurtleSoupDeduction() },
+                    onWatchAdForChances = { viewModel.watchAdForTurtleSoupChances() },
+                    onGiveUpGame = { viewModel.giveUpTurtleSoupGame() },
+                    onRestartPuzzle = { viewModel.restartTurtleSoupPuzzle() },
                     onLeaderboardClick = { viewModel.openLeaderboardDialog() }
                 )
             }

@@ -119,7 +119,21 @@ object AdManager {
         val shouldShowAd = counter.incrementAndCheck()
         Log.d(TAG, "Game completed. Total count in cycle: ${counter.currentCount}, Trigger ad: $shouldShowAd")
 
-        if (shouldShowAd && activity != null && interstitialAd != null) {
+        if (shouldShowAd) {
+            showAdNow(activity, onAdClosed)
+        } else {
+            if (interstitialAd == null && activity != null) {
+                loadInterstitialAd(activity.applicationContext)
+            }
+            onAdClosed()
+        }
+    }
+
+    /**
+     * 直接展示廣告（例如獎勵回補或看廣告提問），關閉後執行回調
+     */
+    fun showAdNow(activity: Activity?, onAdClosed: () -> Unit = {}) {
+        if (activity != null && interstitialAd != null) {
             val ad = interstitialAd
             ad?.fullScreenContentCallback = object : FullScreenContentCallback() {
                 override fun onAdDismissedFullScreenContent() {
@@ -142,7 +156,6 @@ object AdManager {
             }
             ad?.show(activity)
         } else {
-            // 廣告尚未載入或未達 3 局，背景嘗試預載入
             if (interstitialAd == null && activity != null) {
                 loadInterstitialAd(activity.applicationContext)
             }

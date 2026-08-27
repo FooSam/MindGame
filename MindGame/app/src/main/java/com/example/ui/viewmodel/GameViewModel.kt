@@ -1,10 +1,12 @@
 package com.example.ui.viewmodel
 
+import android.app.Activity
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.ad.AdManager
 import com.example.audio.SoundManager
 import com.example.data.db.AppDatabase
 import com.example.data.db.ScoreRecord
@@ -13,6 +15,7 @@ import com.example.data.model.AppLanguage
 import com.example.data.model.GameCategory
 import com.example.data.model.GameDifficulty
 import com.example.data.model.GameType
+import com.example.data.model.QuestionAnswer
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +32,11 @@ import com.example.game.catsudoku.CatSudokuPuzzle
 import com.example.game.sudoku.SudokuConfig
 import com.example.game.sudoku.SudokuGenerator
 import com.example.game.sudoku.SudokuMove
+import com.example.data.model.TurtleSoupPuzzle
+import com.example.data.model.TurtleSoupRecord
+import com.example.data.model.TurtleSoupSaveData
+import com.example.game.turtlesoup.TurtleSoupRepository
+import com.example.ui.screens.turtlesoup.TurtleSoupPlayState
 
 import com.example.data.model.WheelDifficultyConfig
 
@@ -39,7 +47,8 @@ enum class ScreenState {
     FOCUS_TRAIN_GAME,
     SPEED_MATCH_GAME,
     SUDOKU_GAME,
-    CAT_SUDOKU_GAME
+    CAT_SUDOKU_GAME,
+    TURTLE_SOUP_GAME
 }
 
 enum class GameStatus {
@@ -213,6 +222,58 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _catSudokuHistory = MutableStateFlow<List<List<CatCell>>>(emptyList())
 
+    // Turtle Soup Game State
+    private val _turtleSoupPuzzles = MutableStateFlow<List<TurtleSoupPuzzle>>(emptyList())
+    val turtleSoupPuzzles: StateFlow<List<TurtleSoupPuzzle>> = _turtleSoupPuzzles.asStateFlow()
+
+    private val _turtleSoupCurrentPuzzle = MutableStateFlow<TurtleSoupPuzzle?>(null)
+    val turtleSoupCurrentPuzzle: StateFlow<TurtleSoupPuzzle?> = _turtleSoupCurrentPuzzle.asStateFlow()
+
+    private val _turtleSoupPlayState = MutableStateFlow(TurtleSoupPlayState.PUZZLE_SELECT)
+    val turtleSoupPlayState: StateFlow<TurtleSoupPlayState> = _turtleSoupPlayState.asStateFlow()
+
+    private val _turtleSoupUnlockedQuestions = MutableStateFlow<Set<Int>>(emptySet())
+    val turtleSoupUnlockedQuestions: StateFlow<Set<Int>> = _turtleSoupUnlockedQuestions.asStateFlow()
+
+    private val _turtleSoupQueryLogs = MutableStateFlow<List<com.example.data.model.InvestigationQueryLog>>(emptyList())
+    val turtleSoupQueryLogs: StateFlow<List<com.example.data.model.InvestigationQueryLog>> = _turtleSoupQueryLogs.asStateFlow()
+
+    private val _turtleSoupSelectedDimensions = MutableStateFlow<Map<String, String>>(emptyMap())
+    val turtleSoupSelectedDimensions: StateFlow<Map<String, String>> = _turtleSoupSelectedDimensions.asStateFlow()
+
+    private val _turtleSoupDiscoveredCoreCount = MutableStateFlow(0)
+    val turtleSoupDiscoveredCoreCount: StateFlow<Int> = _turtleSoupDiscoveredCoreCount.asStateFlow()
+
+    private val _turtleSoupShowAdDialog = MutableStateFlow(false)
+    val turtleSoupShowAdDialog: StateFlow<Boolean> = _turtleSoupShowAdDialog.asStateFlow()
+
+    private val _turtleSoupSelectedSlots = MutableStateFlow<Map<Int, Int>>(emptyMap())
+    val turtleSoupSelectedSlots: StateFlow<Map<Int, Int>> = _turtleSoupSelectedSlots.asStateFlow()
+
+    private val _turtleSoupRemainingChances = MutableStateFlow(4)
+    val turtleSoupRemainingChances: StateFlow<Int> = _turtleSoupRemainingChances.asStateFlow()
+
+    private val _turtleSoupUsedChances = MutableStateFlow(0)
+    val turtleSoupUsedChances: StateFlow<Int> = _turtleSoupUsedChances.asStateFlow()
+
+    private val _turtleSoupElapsedSeconds = MutableStateFlow(0L)
+    val turtleSoupElapsedSeconds: StateFlow<Long> = _turtleSoupElapsedSeconds.asStateFlow()
+
+    private val _turtleSoupIsDeductionError = MutableStateFlow(false)
+    val turtleSoupIsDeductionError: StateFlow<Boolean> = _turtleSoupIsDeductionError.asStateFlow()
+
+    private val _turtleSoupFinalScore = MutableStateFlow(0)
+    val turtleSoupFinalScore: StateFlow<Int> = _turtleSoupFinalScore.asStateFlow()
+
+    private val _turtleSoupFinalStars = MutableStateFlow(0)
+    val turtleSoupFinalStars: StateFlow<Int> = _turtleSoupFinalStars.asStateFlow()
+
+    private val _turtleSoupUsedAdReward = MutableStateFlow(false)
+    val turtleSoupUsedAdReward: StateFlow<Boolean> = _turtleSoupUsedAdReward.asStateFlow()
+
+    private val _turtleSoupSaveData = MutableStateFlow(TurtleSoupSaveData())
+    val turtleSoupSaveData: StateFlow<TurtleSoupSaveData> = _turtleSoupSaveData.asStateFlow()
+
     // Dialogs & Settings
     private val _leaderboardList = MutableStateFlow<List<ScoreRecord>>(emptyList())
     val leaderboardList: StateFlow<List<ScoreRecord>> = _leaderboardList.asStateFlow()
@@ -237,6 +298,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private var speedMatchTimerJob: Job? = null
     private var sudokuTimerJob: Job? = null
     private var catSudokuTimerJob: Job? = null
+    private var turtleSoupTimerJob: Job? = null
     private var leaderboardJob: Job? = null
 
     init {
@@ -245,6 +307,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         setupInitialGrid(GameDifficulty.BEGINNER)
         setupFocusTrainGame(GameDifficulty.BEGINNER)
         setupSpeedMatchInitialGrid(GameDifficulty.BEGINNER)
+        loadTurtleSoupPuzzles()
+        loadTurtleSoupSaveData()
         loadLeaderboard(_selectedCategory.value.key, _selectedGameType.value.key, GameDifficulty.BEGINNER.key)
     }
 
@@ -298,6 +362,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun selectCategory(category: GameCategory) {
         _selectedCategory.value = category
         when (category) {
+            GameCategory.DEDUCTION -> {
+                _selectedGameType.value = GameType.TURTLE_SOUP
+            }
             GameCategory.BRAIN -> {
                 _selectedGameType.value = GameType.SUDOKU
             }
@@ -324,8 +391,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun selectDifficultyAndStart(difficulty: GameDifficulty) {
         _selectedDifficulty.value = difficulty
         loadLeaderboard(_selectedCategory.value.key, _selectedGameType.value.key, difficulty.key)
+        SoundManager.onGameSwitched()
 
-        if (_selectedGameType.value == GameType.SPEED_MATCH) {
+        if (_selectedGameType.value == GameType.TURTLE_SOUP) {
+            setupTurtleSoupGame(difficulty)
+            _currentScreen.value = ScreenState.TURTLE_SOUP_GAME
+        } else if (_selectedGameType.value == GameType.SPEED_MATCH) {
             setupSpeedMatchInitialGrid(difficulty)
             _currentScreen.value = ScreenState.SPEED_MATCH_GAME
         } else if (_selectedGameType.value == GameType.FOCUS_TRAIN) {
@@ -1020,5 +1091,264 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 selectedDifficulty.value.key
             )
         }
+    }
+
+    // --- Turtle Soup Game Logic ---
+    private fun loadTurtleSoupPuzzles() {
+        val app = getApplication<Application>()
+        val list = TurtleSoupRepository.loadPuzzles(app)
+        _turtleSoupPuzzles.value = list
+    }
+
+    private fun loadTurtleSoupSaveData() {
+        val app = getApplication<Application>()
+        val data = TurtleSoupRepository.loadSaveData(app)
+        _turtleSoupSaveData.value = data
+    }
+
+    fun setupTurtleSoupGame(difficulty: GameDifficulty, puzzle: TurtleSoupPuzzle? = null) {
+        turtleSoupTimerJob?.cancel()
+        _turtleSoupElapsedSeconds.value = 0L
+        _turtleSoupUnlockedQuestions.value = emptySet()
+        _turtleSoupQueryLogs.value = emptyList()
+        _turtleSoupSelectedDimensions.value = emptyMap()
+        _turtleSoupDiscoveredCoreCount.value = 0
+        _turtleSoupShowAdDialog.value = false
+        _turtleSoupSelectedSlots.value = emptyMap()
+        _turtleSoupIsDeductionError.value = false
+        _turtleSoupFinalScore.value = 0
+        _turtleSoupFinalStars.value = 0
+        _turtleSoupUsedAdReward.value = false
+
+        if (puzzle != null) {
+            selectTurtleSoupPuzzle(puzzle)
+        } else {
+            _turtleSoupCurrentPuzzle.value = null
+            _turtleSoupPlayState.value = TurtleSoupPlayState.PUZZLE_SELECT
+        }
+    }
+
+    fun selectTurtleSoupPuzzle(puzzle: TurtleSoupPuzzle) {
+        turtleSoupTimerJob?.cancel()
+        _turtleSoupCurrentPuzzle.value = puzzle
+        val initial = TurtleSoupRepository.getInitialChances(puzzle.difficulty)
+        _turtleSoupRemainingChances.value = initial
+        _turtleSoupUsedChances.value = 0
+        _turtleSoupElapsedSeconds.value = 0L
+        _turtleSoupUnlockedQuestions.value = emptySet()
+        _turtleSoupQueryLogs.value = emptyList()
+        _turtleSoupDiscoveredCoreCount.value = 0
+        _turtleSoupShowAdDialog.value = false
+        _turtleSoupSelectedSlots.value = emptyMap()
+        _turtleSoupIsDeductionError.value = false
+        _turtleSoupFinalScore.value = 0
+        _turtleSoupFinalStars.value = 0
+        _turtleSoupUsedAdReward.value = false
+
+        // 預設選取各維度的第 1 個選項
+        val dims = TurtleSoupRepository.getEffectiveDimensions(puzzle, _language.value)
+        val defaultSelections = mutableMapOf<String, String>()
+        dims.forEach { dim ->
+            val opts = dim.options.get(_language.value)
+            if (opts.isNotEmpty()) {
+                defaultSelections[dim.id] = opts[0]
+            }
+        }
+        _turtleSoupSelectedDimensions.value = defaultSelections
+
+        _turtleSoupPlayState.value = TurtleSoupPlayState.INVESTIGATING
+        startTurtleSoupTimer()
+    }
+
+    fun selectTurtleSoupDimensionOption(dimensionId: String, option: String) {
+        val current = _turtleSoupSelectedDimensions.value.toMutableMap()
+        current[dimensionId] = option
+        _turtleSoupSelectedDimensions.value = current
+        SoundManager.playClick()
+    }
+
+    fun submitTurtleSoupInquiry(activity: Activity? = null) {
+        val puzzle = _turtleSoupCurrentPuzzle.value ?: return
+        if (_turtleSoupPlayState.value != TurtleSoupPlayState.INVESTIGATING) return
+
+        if (_turtleSoupRemainingChances.value <= 0) {
+            _turtleSoupShowAdDialog.value = true
+            return
+        }
+
+        val selections = _turtleSoupSelectedDimensions.value
+        if (selections.isEmpty()) return
+
+        // 扣除 1 次機會
+        _turtleSoupRemainingChances.value = _turtleSoupRemainingChances.value - 1
+        _turtleSoupUsedChances.value = _turtleSoupUsedChances.value + 1
+
+        val log = TurtleSoupRepository.evaluateQuery(puzzle, selections, _language.value)
+
+        // 判斷是否點亮核心線索
+        if (log.isCore) {
+            val isAlreadyDiscovered = _turtleSoupQueryLogs.value.any { it.isCore && it.detail == log.detail }
+            if (!isAlreadyDiscovered) {
+                _turtleSoupDiscoveredCoreCount.value = _turtleSoupDiscoveredCoreCount.value + 1
+            }
+            SoundManager.playSuccess()
+        } else if (log.answer == QuestionAnswer.YES) {
+            SoundManager.playClick()
+        } else if (log.answer == QuestionAnswer.NO) {
+            SoundManager.playError()
+        } else {
+            SoundManager.playClick()
+        }
+
+        _turtleSoupQueryLogs.value = _turtleSoupQueryLogs.value + log
+    }
+
+    fun closeTurtleSoupAdDialog() {
+        _turtleSoupShowAdDialog.value = false
+    }
+
+    fun watchAdForTurtleSoupInquiry(activity: Activity?) {
+        closeTurtleSoupAdDialog()
+        AdManager.showAdNow(activity) {
+            val puzzle = _turtleSoupCurrentPuzzle.value
+            val rewardCount = puzzle?.adRewardChances ?: 3
+            _turtleSoupRemainingChances.value = _turtleSoupRemainingChances.value + rewardCount
+            _turtleSoupUsedAdReward.value = true
+            SoundManager.playSuccess()
+            // 獲得次數後自動送出當前詢問
+            submitTurtleSoupInquiry(activity)
+        }
+    }
+
+    private fun startTurtleSoupTimer() {
+        turtleSoupTimerJob?.cancel()
+        val startTimeNano = System.nanoTime() - (_turtleSoupElapsedSeconds.value * 1_000_000_000L)
+        turtleSoupTimerJob = viewModelScope.launch {
+            while (isActive && _turtleSoupPlayState.value != TurtleSoupPlayState.SUCCESS) {
+                val nowNano = System.nanoTime()
+                _turtleSoupElapsedSeconds.value = (nowNano - startTimeNano) / 1_000_000_000L
+                delay(500)
+            }
+        }
+    }
+
+    fun unlockTurtleSoupQuestion(questionIndex: Int) {
+        if (_turtleSoupPlayState.value != TurtleSoupPlayState.INVESTIGATING) return
+        if (_turtleSoupUnlockedQuestions.value.contains(questionIndex)) return
+        if (_turtleSoupRemainingChances.value <= 0) return
+
+        SoundManager.playClick()
+        _turtleSoupRemainingChances.value = _turtleSoupRemainingChances.value - 1
+        _turtleSoupUsedChances.value = _turtleSoupUsedChances.value + 1
+        _turtleSoupUnlockedQuestions.value = _turtleSoupUnlockedQuestions.value + questionIndex
+
+        val currentPuzzle = _turtleSoupCurrentPuzzle.value
+        if (currentPuzzle != null && currentPuzzle.questions.getOrNull(questionIndex)?.isCore == true) {
+            SoundManager.playSuccess()
+        }
+    }
+
+    fun selectTurtleSoupSlotOption(slotIndex: Int, optionIndex: Int) {
+        val current = _turtleSoupSelectedSlots.value.toMutableMap()
+        current[slotIndex] = optionIndex
+        _turtleSoupSelectedSlots.value = current
+        SoundManager.playClick()
+    }
+
+    fun startTurtleSoupSolving() {
+        if (_turtleSoupPlayState.value != TurtleSoupPlayState.INVESTIGATING) return
+        SoundManager.playClick()
+        _turtleSoupPlayState.value = TurtleSoupPlayState.SOLVING
+    }
+
+    fun backToTurtleSoupInvestigate() {
+        if (_turtleSoupPlayState.value != TurtleSoupPlayState.SOLVING) return
+        SoundManager.playClick()
+        _turtleSoupPlayState.value = TurtleSoupPlayState.INVESTIGATING
+    }
+
+    fun submitTurtleSoupDeduction() {
+        val puzzle = _turtleSoupCurrentPuzzle.value ?: return
+        val slots = puzzle.slotDeduction.slots
+        val selected = _turtleSoupSelectedSlots.value
+
+        // 驗證是否全部正確
+        val isAllCorrect = slots.indices.all { idx ->
+            selected[idx] == slots[idx].correctIndex
+        }
+
+        if (isAllCorrect) {
+            // 通關成功
+            turtleSoupTimerJob?.cancel()
+            val (score, stars) = TurtleSoupRepository.calculateScoreAndStars(
+                difficulty = puzzle.difficulty,
+                usedChances = _turtleSoupUsedChances.value,
+                remainingChances = _turtleSoupRemainingChances.value,
+                elapsedSeconds = _turtleSoupElapsedSeconds.value,
+                usedAdReward = _turtleSoupUsedAdReward.value
+            )
+
+            _turtleSoupFinalScore.value = score
+            _turtleSoupFinalStars.value = stars
+            _turtleSoupPlayState.value = TurtleSoupPlayState.SUCCESS
+            SoundManager.playWin()
+
+            // 儲存至本機存檔
+            val app = getApplication<Application>()
+            val updatedSave = TurtleSoupRepository.savePuzzleCleared(
+                context = app,
+                puzzleId = puzzle.id,
+                difficulty = puzzle.difficulty,
+                stars = stars,
+                usedChances = _turtleSoupUsedChances.value,
+                score = score
+            )
+            _turtleSoupSaveData.value = updatedSave
+
+            // 寫入 Room 排行榜
+            viewModelScope.launch {
+                val record = ScoreRecord(
+                    playerName = _playerName.value,
+                    categoryKey = _selectedCategory.value.key,
+                    gameTypeKey = GameType.TURTLE_SOUP.key,
+                    difficultyKey = _selectedDifficulty.value.key,
+                    timeMillis = _turtleSoupElapsedSeconds.value * 1000L,
+                    score = score,
+                    wrongCount = _turtleSoupUsedChances.value,
+                    timestamp = System.currentTimeMillis()
+                )
+                repository.insertScore(record)
+            }
+        } else {
+            // 答錯：扣除 2 次機會，退回 INVESTIGATING 並提示錯誤
+            SoundManager.playError()
+            _turtleSoupRemainingChances.value = (_turtleSoupRemainingChances.value - 2).coerceAtLeast(0)
+            _turtleSoupUsedChances.value = _turtleSoupUsedChances.value + 2
+            _turtleSoupIsDeductionError.value = true
+
+            viewModelScope.launch {
+                delay(600)
+                _turtleSoupIsDeductionError.value = false
+                _turtleSoupPlayState.value = TurtleSoupPlayState.INVESTIGATING
+            }
+        }
+    }
+
+    fun watchAdForTurtleSoupChances() {
+        val puzzle = _turtleSoupCurrentPuzzle.value
+        val rewardCount = puzzle?.adRewardChances ?: 3
+        _turtleSoupRemainingChances.value = _turtleSoupRemainingChances.value + rewardCount
+        _turtleSoupUsedAdReward.value = true
+        SoundManager.playSuccess()
+    }
+
+    fun giveUpTurtleSoupGame() {
+        turtleSoupTimerJob?.cancel()
+        _turtleSoupPlayState.value = TurtleSoupPlayState.PUZZLE_SELECT
+    }
+
+    fun restartTurtleSoupPuzzle() {
+        turtleSoupTimerJob?.cancel()
+        _turtleSoupPlayState.value = TurtleSoupPlayState.PUZZLE_SELECT
     }
 }

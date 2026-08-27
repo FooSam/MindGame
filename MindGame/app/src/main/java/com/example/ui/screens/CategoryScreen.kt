@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.Leaderboard
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Timer
@@ -65,14 +66,22 @@ fun CategoryScreen(
     onDifficultySelect: (GameDifficulty) -> Unit,
     onLeaderboardClick: () -> Unit
 ) {
-    val levelItems = listOf(
-        LevelItem(GameDifficulty.BEGINNER, "diff_name_beginner", Color(0xFF10B981)),      // Mint Emerald
-        LevelItem(GameDifficulty.INTERMEDIATE, "diff_name_intermediate", Color(0xFF0EA5E9)),  // Sky Blue
-        LevelItem(GameDifficulty.ADVANCED, "diff_name_advanced", Color(0xFF6366F1)),      // Indigo
-        LevelItem(GameDifficulty.HARD, "diff_name_hard", Color(0xFFF59E0B)),          // Amber
-        LevelItem(GameDifficulty.HELL, "diff_name_hell", Color(0xFFEF4444)),          // Red
-        LevelItem(GameDifficulty.EPIC, "diff_name_epic", Color(0xFF8B5CF6))           // Purple
-    )
+    val levelItems = if (selectedGameType == GameType.TURTLE_SOUP) {
+        listOf(
+            LevelItem(GameDifficulty.BEGINNER, "turtle_soup_diff_easy", Color(0xFF10B981)),      // 簡單 Easy
+            LevelItem(GameDifficulty.INTERMEDIATE, "turtle_soup_diff_medium", Color(0xFF0EA5E9)),  // 普通 Medium
+            LevelItem(GameDifficulty.HARD, "turtle_soup_diff_hard", Color(0xFFEF4444))          // 困難 Hard
+        )
+    } else {
+        listOf(
+            LevelItem(GameDifficulty.BEGINNER, "diff_name_beginner", Color(0xFF10B981)),      // Mint Emerald
+            LevelItem(GameDifficulty.INTERMEDIATE, "diff_name_intermediate", Color(0xFF0EA5E9)),  // Sky Blue
+            LevelItem(GameDifficulty.ADVANCED, "diff_name_advanced", Color(0xFF6366F1)),      // Indigo
+            LevelItem(GameDifficulty.HARD, "diff_name_hard", Color(0xFFF59E0B)),          // Amber
+            LevelItem(GameDifficulty.HELL, "diff_name_hell", Color(0xFFEF4444)),          // Red
+            LevelItem(GameDifficulty.EPIC, "diff_name_epic", Color(0xFF8B5CF6))           // Purple
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -137,7 +146,42 @@ fun CategoryScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            if (category == GameCategory.BRAIN) {
+            if (category == GameCategory.DEDUCTION) {
+                // Deduction Game: 海龜湯推理問答
+                val isTurtleSoup = selectedGameType == GameType.TURTLE_SOUP
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .border(
+                            width = if (isTurtleSoup) 2.dp else 1.dp,
+                            color = if (isTurtleSoup) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        .clickable { onGameTypeSelect(GameType.TURTLE_SOUP) },
+                    color = if (isTurtleSoup) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lightbulb,
+                            contentDescription = null,
+                            tint = if (isTurtleSoup) MaterialTheme.colorScheme.primary else Color.Gray,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = Localization.getString("game_turtle_soup", language),
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = if (isTurtleSoup) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isTurtleSoup) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                            )
+                        )
+                    }
+                }
+            } else if (category == GameCategory.BRAIN) {
                 // Game 1: 數獨遊戲
                 val isSudoku = selectedGameType == GameType.SUDOKU
                 Surface(
@@ -345,6 +389,7 @@ fun CategoryScreen(
                                 GameType.SUDOKU -> Icons.Default.GridOn
                                 GameType.CAT_SUDOKU -> Icons.Default.Pets
                                 GameType.FOCUS_TRAIN -> Icons.Default.TrackChanges
+                                GameType.TURTLE_SOUP -> Icons.Default.Lightbulb
                                 else -> Icons.Default.Timer
                             },
                             contentDescription = null,
@@ -420,6 +465,11 @@ fun CategoryScreen(
                         GameDifficulty.HELL -> "8x8 (放8隻貓)"
                         GameDifficulty.EPIC -> "9x9 (放9隻貓)"
                     }
+                    GameType.TURTLE_SOUP -> when (item.difficulty) {
+                        GameDifficulty.BEGINNER -> "簡單 (初階案件 / 4次提問 / 2條核心)"
+                        GameDifficulty.INTERMEDIATE -> "普通 (進階案件 / 3次提問 / 2~3條核心)"
+                        else -> "困難 (深度案件 / 3次提問 / 3~4條核心)"
+                    }
                     else -> "${item.difficulty.totalCells} 格 (1~${item.difficulty.totalCells})"
                 }
 
@@ -443,6 +493,11 @@ fun CategoryScreen(
                         GameDifficulty.HARD -> "7x7"
                         GameDifficulty.HELL -> "8x8"
                         GameDifficulty.EPIC -> "9x9"
+                    }
+                    GameType.TURTLE_SOUP -> when (item.difficulty) {
+                        GameDifficulty.BEGINNER -> "Easy"
+                        GameDifficulty.INTERMEDIATE -> "Medium"
+                        else -> "Hard"
                     }
                     else -> "${item.difficulty.gridDim}x${item.difficulty.gridDim}"
                 }

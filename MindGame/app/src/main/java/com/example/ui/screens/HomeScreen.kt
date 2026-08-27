@@ -99,7 +99,7 @@ fun HomeScreen(
             descKey = "category_deduction_desc",
             icon = Icons.Default.Lightbulb,
             iconBgColor = Color(0xFF10B981), // Emerald
-            isAvailable = false
+            isAvailable = true
         ),
         CategoryItem(
             category = GameCategory.CASUAL,
