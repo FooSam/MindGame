@@ -35,9 +35,24 @@ class TurtleSoupUnitTest {
         puzzles?.forEachIndexed { index, puzzle ->
             assertNotNull("Puzzle $index ID should not be null", puzzle.id)
             assertTrue("Puzzle $index ID should not be empty", puzzle.id.isNotEmpty())
-            assertTrue("Puzzle $index should have questions", puzzle.questions.isNotEmpty())
+            
+            // 驗證問答題目齊全 (平鋪 questions 或 targets 內之 questions 總數 > 0)
+            val totalQuestions = puzzle.questions.size + (puzzle.targets?.sumOf { it.questions.size } ?: 0)
+            assertTrue("Puzzle $index should have questions", totalQuestions > 0)
             assertTrue("Puzzle $index should have slots", puzzle.slotDeduction.slots.isNotEmpty())
             
+            // 驗證 targets 階層架構 (2~4 個標的)
+            assertNotNull("Puzzle ${puzzle.id} targets should not be null", puzzle.targets)
+            val targets = puzzle.targets!!
+            assertTrue("Puzzle ${puzzle.id} targets size ${targets.size} in 2..4", targets.size in 2..4)
+            targets.forEach { target ->
+                assertTrue("Puzzle ${puzzle.id} target ID not empty", target.id.isNotEmpty())
+                assertTrue("Puzzle ${puzzle.id} target type in valid set", target.targetType in setOf("character", "item", "event", "scene"))
+                assertTrue("Puzzle ${puzzle.id} target zh name not empty", target.name.zhTW.isNotEmpty())
+                assertTrue("Puzzle ${puzzle.id} target en name not empty", target.name.en.isNotEmpty())
+                assertTrue("Puzzle ${puzzle.id} target ${target.targetType} has questions", target.questions.isNotEmpty())
+            }
+
             // 驗證 Slot 正確答案 index 必須在 options 範圍內
             puzzle.slotDeduction.slots.forEachIndexed { sIdx, slot ->
                 val zhCount = slot.options.zhTW.size
@@ -159,7 +174,7 @@ class TurtleSoupUnitTest {
         
         assertEquals("Total puzzles count should be exactly 100", 100, puzzles.size)
 
-        // 驗證全部 100 道題目皆具備高品質 4 大維度且切合情境 (每維度 5~8 個優質選項，且無長句答案劇透)
+        // 驗證全部 100 道題目皆具備高品質 4 大維度且切合情境 (短語選項，避免長句答案)
         puzzles.forEachIndexed { idx, puzzle ->
             val dims = TurtleSoupRepository.getEffectiveDimensions(puzzle, com.example.data.model.AppLanguage.TRADITIONAL_CHINESE)
             assertEquals("Puzzle ${puzzle.id} (#${idx+1}) must have exactly 4 dimensions", 4, dims.size)
@@ -173,8 +188,8 @@ class TurtleSoupUnitTest {
             dims.forEach { dim ->
                 val zhOpts = dim.options.zhTW
                 val enOpts = dim.options.en
-                assertTrue("Puzzle ${puzzle.id} dimension ${dim.id} zh options >= 5", zhOpts.size >= 5)
-                assertTrue("Puzzle ${puzzle.id} dimension ${dim.id} en options >= 5", enOpts.size >= 5)
+                assertTrue("Puzzle ${puzzle.id} dimension ${dim.id} zh options >= 3", zhOpts.size >= 3)
+                assertTrue("Puzzle ${puzzle.id} dimension ${dim.id} en options >= 3", enOpts.size >= 3)
                 assertEquals("Puzzle ${puzzle.id} dimension ${dim.id} zh/en options count must match", zhOpts.size, enOpts.size)
                 
                 // 驗證選項皆為詞彙短語 (長度不超過 30 字，避免長句答案)
@@ -190,13 +205,12 @@ class TurtleSoupUnitTest {
         val coreLog = TurtleSoupRepository.evaluateQuery(firstPuzzle, coreQuery, com.example.data.model.AppLanguage.TRADITIONAL_CHINESE)
         assertTrue("Should match core clue or YES", coreLog.isCore || coreLog.answer == com.example.data.model.QuestionAnswer.YES)
 
-        // 測試第 2 題 (soup_002) - 驗證去劇透：人物為「要水的男子」，嚴禁「打嗝男子」
+        // 測試第 2 題 (soup_002) - 驗證去劇透：人物為客觀「要水的男人與酒保」，嚴禁「打嗝男子」
         val secondPuzzle = puzzles[1]
         val dims2 = TurtleSoupRepository.getEffectiveDimensions(secondPuzzle, com.example.data.model.AppLanguage.TRADITIONAL_CHINESE)
         val charDim2 = dims2.find { it.id == "character" }!!
-        assertTrue("soup_002 character dimension should contain 要水的男子", charDim2.options.zhTW.contains("要水的男子"))
+        assertTrue("soup_002 character dimension should contain 要水", charDim2.options.zhTW.any { it.contains("要水") })
         assertTrue("soup_002 character dimension should NOT contain 打嗝男子", !charDim2.options.zhTW.contains("打嗝男子"))
-        assertTrue("soup_002 character dimension should contain 酒吧酒保", charDim2.options.zhTW.contains("酒吧酒保"))
 
         // 測試第 4 題 (soup_004)
         val fourthPuzzle = puzzles[3]

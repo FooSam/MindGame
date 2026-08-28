@@ -142,84 +142,108 @@ object TurtleSoupRepository {
     }
 
     /**
-     * 取得該題目的有效調查維度 (若題庫已有 dimensions 則使用，否則依題目結構動態生成 3~4 個維度)
+     * 取得該題目的有效調查維度 (優先直通讀取題庫標準 dimensions 欄位，若無則依 targets 提取純淨客觀選項，嚴禁引用 slotDeduction)
      */
     fun getEffectiveDimensions(puzzle: TurtleSoupPuzzle, language: AppLanguage): List<com.example.data.model.InvestigationDimension> {
+        // 1. 優先直接讀取題庫 JSON 定義的標準 dimensions
         if (!puzzle.dimensions.isNullOrEmpty()) {
             return puzzle.dimensions
         }
 
-        // 動態從題目 SlotDeduction 與 Questions 中提取維度
-        val dimensions = mutableListOf<com.example.data.model.InvestigationDimension>()
-        val slots = puzzle.slotDeduction.slots
+        // 2. 若題庫僅有 targets，依 targets 建立 4 大純淨維度 (絕不讀取 slotDeduction)
+        if (!puzzle.targets.isNullOrEmpty()) {
+            val dimensions = mutableListOf<com.example.data.model.InvestigationDimension>()
+            val targetOrder = listOf("character", "item", "event", "scene")
+            val targetLabelMapZh = mapOf(
+                "character" to "人物對象",
+                "item" to "物件媒介",
+                "event" to "事件動機",
+                "scene" to "地點場景"
+            )
+            val targetLabelMapEn = mapOf(
+                "character" to "Character",
+                "item" to "Item/Object",
+                "event" to "Event/Motive",
+                "scene" to "Location/Scene"
+            )
 
-        // 1. 人物/身分維度
-        val charOptionsZh = mutableListOf<String>()
-        val charOptionsEn = mutableListOf<String>()
-        val charSlot = slots.firstOrNull { it.slotId.contains("1") || it.label.zhTW.contains("身分") || it.label.zhTW.contains("人") }
-        if (charSlot != null) {
-            charOptionsZh.addAll(charSlot.options.zhTW)
-            charOptionsEn.addAll(charSlot.options.en)
-        } else {
-            charOptionsZh.addAll(listOf("主角/男子", "警方/調查員", "受害者", "目擊證人", "陌生人"))
-            charOptionsEn.addAll(listOf("Main Character", "Police/Detective", "Victim", "Eyewitness", "Stranger"))
+            // 安全客觀無暴雷之干擾選項
+            val safeDistractorsZh = mapOf(
+                "character" to listOf("案情主角", "現場調查員", "受害人/關係人", "目擊證人"),
+                "item" to listOf("現場關鍵物證", "個人隨身物品", "通訊設備", "環境道具"),
+                "event" to listOf("職業背景關聯", "突發反常舉動", "心裡恐慌自危", "意外事故"),
+                "scene" to listOf("案發核心現場", "戶外公共區域", "室內密閉空間", "沿途移動路線")
+            )
+            val safeDistractorsEn = mapOf(
+                "character" to listOf("Protagonist", "Investigator", "Victim/Relative", "Eyewitness"),
+                "item" to listOf("Key Physical Clue", "Personal Belonging", "Communication Device", "Scene Prop"),
+                "event" to listOf("Occupation Link", "Abnormal Action", "Panic/Fear", "Accident"),
+                "scene" to listOf("Core Scene", "Outdoor Public Area", "Indoor Sealed Space", "Movement Route")
+            )
+
+            targetOrder.forEach { type ->
+                val target = puzzle.targets.find { it.targetType == type }
+                val labelZh = targetLabelMapZh[type] ?: "調查標的"
+                val labelEn = targetLabelMapEn[type] ?: "Target"
+
+                val optionsZh = mutableListOf<String>()
+                val optionsEn = mutableListOf<String>()
+
+                if (target != null) {
+                    optionsZh.add(target.name.zhTW)
+                    optionsEn.add(target.name.en)
+                }
+
+                // 加入客觀安全干擾項，杜絕 slotDeduction 劇透
+                safeDistractorsZh[type]?.let { optionsZh.addAll(it) }
+                safeDistractorsEn[type]?.let { optionsEn.addAll(it) }
+
+                dimensions.add(
+                    com.example.data.model.InvestigationDimension(
+                        id = type,
+                        label = com.example.data.model.LocalizedText(zhTW = labelZh, en = labelEn),
+                        options = com.example.data.model.LocalizedOptions(zhTW = optionsZh.distinct(), en = optionsEn.distinct())
+                    )
+                )
+            }
+            return dimensions
         }
-        dimensions.add(
+
+        // 3. 通用後備安全維度 (純客觀通用選項)
+        return listOf(
             com.example.data.model.InvestigationDimension(
                 id = "character",
                 label = com.example.data.model.LocalizedText(zhTW = "人物對象", en = "Character"),
-                options = com.example.data.model.LocalizedOptions(zhTW = charOptionsZh.distinct(), en = charOptionsEn.distinct())
-            )
-        )
-
-        // 2. 物件/道具維度
-        val itemOptionsZh = mutableListOf<String>()
-        val itemOptionsEn = mutableListOf<String>()
-        puzzle.questions.forEach { q ->
-            val kwZh = q.keyword.zhTW
-            val kwEn = q.keyword.en
-            if (kwZh.isNotEmpty() && !kwZh.contains("動機") && !kwZh.contains("身分")) {
-                itemOptionsZh.add(kwZh)
-                itemOptionsEn.add(kwEn)
-            }
-        }
-        val itemSlot = slots.firstOrNull { it.slotId.contains("2") || it.label.zhTW.contains("手法") || it.label.zhTW.contains("物") }
-        if (itemSlot != null) {
-            itemOptionsZh.addAll(itemSlot.options.zhTW)
-            itemOptionsEn.addAll(itemSlot.options.en)
-        }
-        if (itemOptionsZh.isEmpty()) {
-            itemOptionsZh.addAll(listOf("案發現場物品", "隨身攜帶物", "通訊工具", "凶器道具"))
-            itemOptionsEn.addAll(listOf("Scene Object", "Personal Belonging", "Communication Device", "Tool/Weapon"))
-        }
-        dimensions.add(
+                options = com.example.data.model.LocalizedOptions(
+                    zhTW = listOf("主角/男子", "警方/調查員", "受害者", "目擊證人"),
+                    en = listOf("Main Character", "Police/Detective", "Victim", "Eyewitness")
+                )
+            ),
             com.example.data.model.InvestigationDimension(
                 id = "item",
                 label = com.example.data.model.LocalizedText(zhTW = "物件媒介", en = "Item/Object"),
-                options = com.example.data.model.LocalizedOptions(zhTW = itemOptionsZh.distinct(), en = itemOptionsEn.distinct())
-            )
-        )
-
-        // 3. 事件/動機/行為維度
-        val eventOptionsZh = mutableListOf<String>()
-        val eventOptionsEn = mutableListOf<String>()
-        val eventSlot = slots.firstOrNull { it.slotId.contains("3") || it.label.zhTW.contains("原因") || it.label.zhTW.contains("破綻") || it.label.zhTW.contains("動機") }
-        if (eventSlot != null) {
-            eventOptionsZh.addAll(eventSlot.options.zhTW)
-            eventOptionsEn.addAll(eventSlot.options.en)
-        } else {
-            eventOptionsZh.addAll(listOf("職業身分關聯", "意外事故", "預謀犯罪", "心裡恐慌", "不在場證明失效"))
-            eventOptionsEn.addAll(listOf("Occupation Link", "Accident", "Premeditated Crime", "Panic", "Alibi Ruined"))
-        }
-        dimensions.add(
+                options = com.example.data.model.LocalizedOptions(
+                    zhTW = listOf("案發現場物品", "隨身攜帶物", "通訊工具", "關鍵道具"),
+                    en = listOf("Scene Object", "Personal Belonging", "Communication Device", "Key Tool")
+                )
+            ),
             com.example.data.model.InvestigationDimension(
                 id = "event",
                 label = com.example.data.model.LocalizedText(zhTW = "事件動機", en = "Event/Motive"),
-                options = com.example.data.model.LocalizedOptions(zhTW = eventOptionsZh.distinct(), en = eventOptionsEn.distinct())
+                options = com.example.data.model.LocalizedOptions(
+                    zhTW = listOf("職業身分關聯", "意外事故", "反常舉止", "心裡恐慌"),
+                    en = listOf("Occupation Link", "Accident", "Abnormal Behavior", "Panic")
+                )
+            ),
+            com.example.data.model.InvestigationDimension(
+                id = "scene",
+                label = com.example.data.model.LocalizedText(zhTW = "地點場景", en = "Location/Scene"),
+                options = com.example.data.model.LocalizedOptions(
+                    zhTW = listOf("核心案發現場", "密閉室內空間", "戶外公共區域", "移動路線周圍"),
+                    en = listOf("Core Scene", "Indoor Sealed Space", "Outdoor Public Area", "Movement Route")
+                )
             )
         )
-
-        return dimensions
     }
 
     /**
@@ -251,7 +275,7 @@ object TurtleSoupRepository {
             }
         }
 
-        // 2. 比對題庫內置 questions
+        // 2. 比對題庫內置 questions (涵蓋 flat questions 與 targets 內之 questions)
         var bestQuestion: com.example.data.model.PuzzleQuestion? = null
         var bestScore = 0
 
@@ -279,10 +303,17 @@ object TurtleSoupRepository {
         val distinctTokensZh = wordTokensZh.distinct()
         val distinctTokensEn = wordTokensEn.distinct()
 
-        puzzle.questions.forEach { q ->
+        val allQuestions = mutableListOf<com.example.data.model.PuzzleQuestion>()
+        allQuestions.addAll(puzzle.questions)
+        puzzle.targets?.forEach { target ->
+            allQuestions.addAll(target.questions)
+        }
+        val distinctQuestions = allQuestions.distinctBy { it.id }
+
+        distinctQuestions.forEach { q ->
             var score = 0
-            val kwZh = q.keyword.zhTW
-            val kwEn = q.keyword.en
+            val kwZh = q.keyword?.zhTW ?: ""
+            val kwEn = q.keyword?.en ?: ""
             val qTextZh = q.question.zhTW
             val qTextEn = q.question.en
             val detailZh = q.detail.zhTW

@@ -48,7 +48,7 @@ enum class QuestionAnswer(val key: String) {
 @JsonClass(generateAdapter = true)
 data class PuzzleQuestion(
     @Json(name = "id") val id: String,
-    @Json(name = "keyword") val keyword: LocalizedText,
+    @Json(name = "keyword") val keyword: LocalizedText = LocalizedText(),
     @Json(name = "question") val question: LocalizedText,
     @Json(name = "answer") val answer: String,
     @Json(name = "detail") val detail: LocalizedText,
@@ -57,6 +57,14 @@ data class PuzzleQuestion(
     val answerType: QuestionAnswer
         get() = QuestionAnswer.fromString(answer)
 }
+
+@JsonClass(generateAdapter = true)
+data class InvestigationTarget(
+    @Json(name = "id") val id: String,
+    @Json(name = "target_type") val targetType: String,
+    @Json(name = "name") val name: LocalizedText,
+    @Json(name = "questions") val questions: List<PuzzleQuestion> = emptyList()
+)
 
 @JsonClass(generateAdapter = true)
 data class DeductionSlot(
@@ -112,6 +120,7 @@ data class TurtleSoupPuzzle(
     @Json(name = "ad_reward_chances") val adRewardChances: Int = 3,
     @Json(name = "required_core_clues_count") val requiredCoreCluesCount: Int = 2,
     @Json(name = "questions") val questions: List<PuzzleQuestion> = emptyList(),
+    @Json(name = "targets") val targets: List<InvestigationTarget>? = null,
     @Json(name = "dimensions") val dimensions: List<InvestigationDimension>? = null,
     @Json(name = "rules") val rules: List<CombinationRule>? = null,
     @Json(name = "slot_deduction") val slotDeduction: SlotDeduction,
