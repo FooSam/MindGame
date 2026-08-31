@@ -31,6 +31,8 @@ import com.example.ui.screens.FocusTrainScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.SpeedMatchScreen
 import com.example.ui.screens.SudokuScreen
+import com.example.ui.screens.AvatarWhackScreen
+import com.example.ui.screens.StroopScreen
 import com.example.ui.screens.turtlesoup.TurtleSoupScreen
 import com.example.ui.screens.turtlesoup.TurtleSoupPlayState
 import com.example.game.sudoku.SudokuConfig
@@ -166,6 +168,32 @@ fun MainApp(viewModel: GameViewModel) {
     val turtleSoupUsedAdReward by viewModel.turtleSoupUsedAdReward.collectAsStateWithLifecycle()
     val turtleSoupSaveData by viewModel.turtleSoupSaveData.collectAsStateWithLifecycle()
 
+    // Avatar Whack state
+    val whackStatus by viewModel.whackStatus.collectAsStateWithLifecycle()
+    val whackConfig by viewModel.whackConfig.collectAsStateWithLifecycle()
+    val whackHoles by viewModel.whackHoles.collectAsStateWithLifecycle()
+    val whackScore by viewModel.whackScore.collectAsStateWithLifecycle()
+    val whackCombo by viewModel.whackCombo.collectAsStateWithLifecycle()
+    val whackMaxCombo by viewModel.whackMaxCombo.collectAsStateWithLifecycle()
+    val whackHits by viewModel.whackHits.collectAsStateWithLifecycle()
+    val whackMisses by viewModel.whackMisses.collectAsStateWithLifecycle()
+    val whackBombHits by viewModel.whackBombHits.collectAsStateWithLifecycle()
+    val whackRemainingMs by viewModel.whackRemainingMs.collectAsStateWithLifecycle()
+    val whackLastCompletedScore by viewModel.whackLastCompletedScore.collectAsStateWithLifecycle()
+
+    // Stroop Effect state
+    val stroopStatus by viewModel.stroopStatus.collectAsStateWithLifecycle()
+    val stroopCurrentQuestion by viewModel.stroopCurrentQuestion.collectAsStateWithLifecycle()
+    val stroopScore by viewModel.stroopScore.collectAsStateWithLifecycle()
+    val stroopCombo by viewModel.stroopCombo.collectAsStateWithLifecycle()
+    val stroopMaxCombo by viewModel.stroopMaxCombo.collectAsStateWithLifecycle()
+    val stroopCorrectCount by viewModel.stroopCorrectCount.collectAsStateWithLifecycle()
+    val stroopWrongCount by viewModel.stroopWrongCount.collectAsStateWithLifecycle()
+    val stroopRemainingGameTimeMs by viewModel.stroopRemainingGameTimeMs.collectAsStateWithLifecycle()
+    val stroopQuestionTimeProgress by viewModel.stroopQuestionTimeProgress.collectAsStateWithLifecycle()
+    val stroopIsWrongFlash by viewModel.stroopIsWrongFlash.collectAsStateWithLifecycle()
+    val stroopLastCompletedScore by viewModel.stroopLastCompletedScore.collectAsStateWithLifecycle()
+
     val leaderboardList by viewModel.leaderboardList.collectAsStateWithLifecycle()
     val showLeaderboardDialog by viewModel.showLeaderboardDialog.collectAsStateWithLifecycle()
     val showNameDialog by viewModel.showNameDialog.collectAsStateWithLifecycle()
@@ -218,6 +246,16 @@ fun MainApp(viewModel: GameViewModel) {
     }
     LaunchedEffect(turtleSoupPlayState) {
         if (turtleSoupPlayState == TurtleSoupPlayState.SUCCESS) {
+            AdManager.recordGameFinished(context as? Activity)
+        }
+    }
+    LaunchedEffect(whackStatus) {
+        if (whackStatus == GameStatus.COMPLETED) {
+            AdManager.recordGameFinished(context as? Activity)
+        }
+    }
+    LaunchedEffect(stroopStatus) {
+        if (stroopStatus == GameStatus.COMPLETED) {
             AdManager.recordGameFinished(context as? Activity)
         }
     }
@@ -395,6 +433,51 @@ fun MainApp(viewModel: GameViewModel) {
                     onWatchAdForChances = { viewModel.watchAdForTurtleSoupChances() },
                     onGiveUpGame = { viewModel.giveUpTurtleSoupGame() },
                     onRestartPuzzle = { viewModel.restartTurtleSoupPuzzle() },
+                    onLeaderboardClick = { viewModel.openLeaderboardDialog() }
+                )
+            }
+
+            ScreenState.AVATAR_WHACK_GAME -> {
+                AvatarWhackScreen(
+                    difficulty = selectedDifficulty,
+                    gameStatus = whackStatus,
+                    config = whackConfig,
+                    holes = whackHoles,
+                    score = whackScore,
+                    combo = whackCombo,
+                    maxCombo = whackMaxCombo,
+                    hits = whackHits,
+                    misses = whackMisses,
+                    bombHits = whackBombHits,
+                    remainingTimeMs = whackRemainingMs,
+                    lastCompletedScore = whackLastCompletedScore,
+                    language = language,
+                    onBackClick = { viewModel.navigateTo(ScreenState.CATEGORY_DETAIL) },
+                    onStartClick = { viewModel.startAvatarWhackGame() },
+                    onResetClick = { viewModel.resetAvatarWhackGame() },
+                    onHoleClick = { index -> viewModel.onWhackHoleTapped(index) },
+                    onLeaderboardClick = { viewModel.openLeaderboardDialog() }
+                )
+            }
+
+            ScreenState.STROOP_EFFECT_GAME -> {
+                StroopScreen(
+                    difficulty = selectedDifficulty,
+                    gameStatus = stroopStatus,
+                    question = stroopCurrentQuestion,
+                    score = stroopScore,
+                    combo = stroopCombo,
+                    maxCombo = stroopMaxCombo,
+                    correctCount = stroopCorrectCount,
+                    wrongCount = stroopWrongCount,
+                    remainingGameTimeMs = stroopRemainingGameTimeMs,
+                    questionTimeProgress = stroopQuestionTimeProgress,
+                    isWrongFlash = stroopIsWrongFlash,
+                    language = language,
+                    onBackClick = { viewModel.navigateTo(ScreenState.CATEGORY_DETAIL) },
+                    onStartClick = { viewModel.startStroopGame() },
+                    onResetClick = { viewModel.resetStroopGame() },
+                    onOptionSelected = { option -> viewModel.onStroopOptionSelected(option) },
                     onLeaderboardClick = { viewModel.openLeaderboardDialog() }
                 )
             }

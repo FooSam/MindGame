@@ -40,6 +40,16 @@ import com.example.ui.screens.turtlesoup.TurtleSoupPlayState
 
 import com.example.data.model.WheelDifficultyConfig
 
+import com.example.game.whack.AvatarCatalog
+import com.example.game.whack.AvatarExpression
+import com.example.game.whack.AvatarType
+import com.example.game.whack.CharacterAvatar
+import com.example.game.whack.WhackDifficultyConfig
+import com.example.game.whack.WhackHoleState
+import com.example.game.stroop.StroopGenerator
+import com.example.game.stroop.StroopOption
+import com.example.game.stroop.StroopQuestion
+
 enum class ScreenState {
     HOME,
     CATEGORY_DETAIL,
@@ -48,7 +58,9 @@ enum class ScreenState {
     SPEED_MATCH_GAME,
     SUDOKU_GAME,
     CAT_SUDOKU_GAME,
-    TURTLE_SOUP_GAME
+    TURTLE_SOUP_GAME,
+    AVATAR_WHACK_GAME,
+    STROOP_EFFECT_GAME
 }
 
 enum class GameStatus {
@@ -274,6 +286,77 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val _turtleSoupSaveData = MutableStateFlow(TurtleSoupSaveData())
     val turtleSoupSaveData: StateFlow<TurtleSoupSaveData> = _turtleSoupSaveData.asStateFlow()
 
+    // Avatar Whack Game State
+    private val _whackStatus = MutableStateFlow(GameStatus.IDLE)
+    val whackStatus: StateFlow<GameStatus> = _whackStatus.asStateFlow()
+
+    private val _whackConfig = MutableStateFlow(WhackDifficultyConfig.getConfig(GameDifficulty.BEGINNER))
+    val whackConfig: StateFlow<WhackDifficultyConfig> = _whackConfig.asStateFlow()
+
+    private val _whackHoles = MutableStateFlow<List<WhackHoleState>>(emptyList())
+    val whackHoles: StateFlow<List<WhackHoleState>> = _whackHoles.asStateFlow()
+
+    private val _whackScore = MutableStateFlow(0)
+    val whackScore: StateFlow<Int> = _whackScore.asStateFlow()
+
+    private val _whackCombo = MutableStateFlow(0)
+    val whackCombo: StateFlow<Int> = _whackCombo.asStateFlow()
+
+    private val _whackMaxCombo = MutableStateFlow(0)
+    val whackMaxCombo: StateFlow<Int> = _whackMaxCombo.asStateFlow()
+
+    private val _whackHits = MutableStateFlow(0)
+    val whackHits: StateFlow<Int> = _whackHits.asStateFlow()
+
+    private val _whackMisses = MutableStateFlow(0)
+    val whackMisses: StateFlow<Int> = _whackMisses.asStateFlow()
+
+    private val _whackBombHits = MutableStateFlow(0)
+    val whackBombHits: StateFlow<Int> = _whackBombHits.asStateFlow()
+
+    private val _whackRemainingMs = MutableStateFlow(45_000L)
+    val whackRemainingMs: StateFlow<Long> = _whackRemainingMs.asStateFlow()
+
+    private val _whackLastCompletedScore = MutableStateFlow<Int?>(null)
+    val whackLastCompletedScore: StateFlow<Int?> = _whackLastCompletedScore.asStateFlow()
+
+    // Stroop Effect Game State
+    private val _stroopStatus = MutableStateFlow(GameStatus.IDLE)
+    val stroopStatus: StateFlow<GameStatus> = _stroopStatus.asStateFlow()
+
+    private val _stroopCurrentQuestion = MutableStateFlow<StroopQuestion?>(null)
+    val stroopCurrentQuestion: StateFlow<StroopQuestion?> = _stroopCurrentQuestion.asStateFlow()
+
+    private val _stroopScore = MutableStateFlow(0)
+    val stroopScore: StateFlow<Int> = _stroopScore.asStateFlow()
+
+    private val _stroopCombo = MutableStateFlow(0)
+    val stroopCombo: StateFlow<Int> = _stroopCombo.asStateFlow()
+
+    private val _stroopMaxCombo = MutableStateFlow(0)
+    val stroopMaxCombo: StateFlow<Int> = _stroopMaxCombo.asStateFlow()
+
+    private val _stroopCorrectCount = MutableStateFlow(0)
+    val stroopCorrectCount: StateFlow<Int> = _stroopCorrectCount.asStateFlow()
+
+    private val _stroopWrongCount = MutableStateFlow(0)
+    val stroopWrongCount: StateFlow<Int> = _stroopWrongCount.asStateFlow()
+
+    private val _stroopRemainingGameTimeMs = MutableStateFlow(45_000L)
+    val stroopRemainingGameTimeMs: StateFlow<Long> = _stroopRemainingGameTimeMs.asStateFlow()
+
+    private val _stroopQuestionRemainingMs = MutableStateFlow(3_000L)
+    val stroopQuestionRemainingMs: StateFlow<Long> = _stroopQuestionRemainingMs.asStateFlow()
+
+    private val _stroopQuestionTimeProgress = MutableStateFlow(1f)
+    val stroopQuestionTimeProgress: StateFlow<Float> = _stroopQuestionTimeProgress.asStateFlow()
+
+    private val _stroopIsWrongFlash = MutableStateFlow(false)
+    val stroopIsWrongFlash: StateFlow<Boolean> = _stroopIsWrongFlash.asStateFlow()
+
+    private val _stroopLastCompletedScore = MutableStateFlow<Int?>(null)
+    val stroopLastCompletedScore: StateFlow<Int?> = _stroopLastCompletedScore.asStateFlow()
+
     // Dialogs & Settings
     private val _leaderboardList = MutableStateFlow<List<ScoreRecord>>(emptyList())
     val leaderboardList: StateFlow<List<ScoreRecord>> = _leaderboardList.asStateFlow()
@@ -299,6 +382,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private var sudokuTimerJob: Job? = null
     private var catSudokuTimerJob: Job? = null
     private var turtleSoupTimerJob: Job? = null
+    private var whackTimerJob: Job? = null
+    private var whackLoopJob: Job? = null
+    private var stroopGameTimerJob: Job? = null
+    private var stroopQuestionTimerJob: Job? = null
     private var leaderboardJob: Job? = null
 
     init {
@@ -307,6 +394,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         setupInitialGrid(GameDifficulty.BEGINNER)
         setupFocusTrainGame(GameDifficulty.BEGINNER)
         setupSpeedMatchInitialGrid(GameDifficulty.BEGINNER)
+        setupAvatarWhackGame(GameDifficulty.BEGINNER)
+        setupStroopGame(GameDifficulty.BEGINNER)
         loadTurtleSoupPuzzles()
         loadTurtleSoupSaveData()
         loadLeaderboard(_selectedCategory.value.key, _selectedGameType.value.key, GameDifficulty.BEGINNER.key)
@@ -371,7 +460,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             GameCategory.TEST -> {
                 if (_selectedGameType.value != GameType.FOCUS_TEST && 
                     _selectedGameType.value != GameType.FOCUS_TRAIN && 
-                    _selectedGameType.value != GameType.SPEED_MATCH) {
+                    _selectedGameType.value != GameType.SPEED_MATCH &&
+                    _selectedGameType.value != GameType.AVATAR_WHACK &&
+                    _selectedGameType.value != GameType.STROOP_EFFECT) {
                     _selectedGameType.value = GameType.FOCUS_TEST
                 }
             }
@@ -408,6 +499,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         } else if (_selectedGameType.value == GameType.CAT_SUDOKU) {
             setupCatSudokuGame(difficulty)
             _currentScreen.value = ScreenState.CAT_SUDOKU_GAME
+        } else if (_selectedGameType.value == GameType.AVATAR_WHACK) {
+            setupAvatarWhackGame(difficulty)
+            _currentScreen.value = ScreenState.AVATAR_WHACK_GAME
+        } else if (_selectedGameType.value == GameType.STROOP_EFFECT) {
+            setupStroopGame(difficulty)
+            _currentScreen.value = ScreenState.STROOP_EFFECT_GAME
         } else {
             setupInitialGrid(difficulty)
             _currentScreen.value = ScreenState.FOCUS_GAME
@@ -1350,5 +1447,378 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun restartTurtleSoupPuzzle() {
         turtleSoupTimerJob?.cancel()
         _turtleSoupPlayState.value = TurtleSoupPlayState.PUZZLE_SELECT
+    }
+
+    // ==========================================
+    // --- Avatar Whack (打那個誰反應戰) Logic ---
+    // ==========================================
+    fun setupAvatarWhackGame(difficulty: GameDifficulty) {
+        whackTimerJob?.cancel()
+        whackLoopJob?.cancel()
+        val config = WhackDifficultyConfig.getConfig(difficulty)
+        _whackConfig.value = config
+        _whackStatus.value = GameStatus.IDLE
+        _whackScore.value = 0
+        _whackCombo.value = 0
+        _whackMaxCombo.value = 0
+        _whackHits.value = 0
+        _whackMisses.value = 0
+        _whackBombHits.value = 0
+        _whackRemainingMs.value = config.gameDurationMs
+        _whackLastCompletedScore.value = null
+        _whackHoles.value = List(config.totalHoles) { idx ->
+            WhackHoleState(holeIndex = idx)
+        }
+    }
+
+    fun startAvatarWhackGame() {
+        whackTimerJob?.cancel()
+        whackLoopJob?.cancel()
+        val diff = _selectedDifficulty.value
+        val config = WhackDifficultyConfig.getConfig(diff)
+        _whackConfig.value = config
+        _whackScore.value = 0
+        _whackCombo.value = 0
+        _whackMaxCombo.value = 0
+        _whackHits.value = 0
+        _whackMisses.value = 0
+        _whackBombHits.value = 0
+        _whackRemainingMs.value = config.gameDurationMs
+        _whackLastCompletedScore.value = null
+        _whackHoles.value = List(config.totalHoles) { idx ->
+            WhackHoleState(holeIndex = idx)
+        }
+        _whackStatus.value = GameStatus.PLAYING
+
+        val startTime = System.currentTimeMillis()
+        val duration = config.gameDurationMs
+
+        // 1. 全局遊戲倒數計時器
+        whackTimerJob = viewModelScope.launch {
+            while (isActive && _whackStatus.value == GameStatus.PLAYING) {
+                val elapsed = System.currentTimeMillis() - startTime
+                val remaining = (duration - elapsed).coerceAtLeast(0L)
+                _whackRemainingMs.value = remaining
+
+                if (remaining <= 0L) {
+                    finishAvatarWhackGame()
+                    break
+                }
+                delay(50)
+            }
+        }
+
+        // 2. 出擊與縮回排程循環
+        whackLoopJob = viewModelScope.launch {
+            while (isActive && _whackStatus.value == GameStatus.PLAYING) {
+                spawnAvatarsRound()
+                delay(config.spawnIntervalMs)
+            }
+        }
+    }
+
+    private fun spawnAvatarsRound() {
+        val config = _whackConfig.value
+        val currentHoles = _whackHoles.value
+        val availableHoles = currentHoles.filter { !it.isPopping && !it.isHit }
+        if (availableHoles.isEmpty()) return
+
+        val spawnCount = config.simultaneousTargets.coerceAtMost(availableHoles.size)
+        val selectedHoles = availableHoles.shuffled().take(spawnCount)
+        val now = System.currentTimeMillis()
+
+        val updatedList = currentHoles.toMutableList()
+
+        for (hole in selectedHoles) {
+            val rand = Math.random().toFloat()
+            val isBomb = rand < config.bombProb
+            val isBonus = !isBomb && rand < (config.bombProb + config.bonusProb)
+            val isFakeOut = !isBomb && !isBonus && (Math.random().toFloat() < config.fakeOutProb)
+
+            val type = when {
+                isBomb -> AvatarType.BOMB
+                isBonus -> AvatarType.BONUS
+                else -> AvatarType.NORMAL
+            }
+
+            val expression = if (isFakeOut) AvatarExpression.FAKE_OUT else AvatarExpression.NORMAL
+            val avatarIdx = AvatarCatalog.getRandomAvatarIndex()
+
+            val stayMs = if (isFakeOut) config.stayDurationMs / 2 else config.stayDurationMs
+
+            val newHoleState = WhackHoleState(
+                holeIndex = hole.holeIndex,
+                avatar = CharacterAvatar(
+                    id = "avatar_${hole.holeIndex}_$now",
+                    avatarIndex = avatarIdx,
+                    type = type,
+                    expression = expression
+                ),
+                isPopping = true,
+                isHit = false,
+                isFakeOut = isFakeOut,
+                spawnTimeMs = now,
+                stayDurationMs = stayMs
+            )
+            updatedList[hole.holeIndex] = newHoleState
+
+            // 啟動單個洞口超時自動縮回
+            viewModelScope.launch {
+                delay(stayMs)
+                val current = _whackHoles.value.getOrNull(hole.holeIndex)
+                if (current != null && current.isPopping && !current.isHit) {
+                    // 若是正常/黃金目標且玩家沒打到，判定為漏打 (Miss)，重置 Combo
+                    if (current.avatar?.type == AvatarType.NORMAL || current.avatar?.type == AvatarType.BONUS) {
+                        if (!current.isFakeOut) {
+                            _whackCombo.value = 0
+                            _whackMisses.value = _whackMisses.value + 1
+                        }
+                    }
+                    // 縮回洞中
+                    val resetHole = WhackHoleState(holeIndex = hole.holeIndex)
+                    val list = _whackHoles.value.toMutableList()
+                    list[hole.holeIndex] = resetHole
+                    _whackHoles.value = list
+                }
+            }
+        }
+
+        _whackHoles.value = updatedList
+    }
+
+    fun onWhackHoleTapped(holeIndex: Int) {
+        if (_whackStatus.value != GameStatus.PLAYING) return
+        val currentHoles = _whackHoles.value
+        val hole = currentHoles.getOrNull(holeIndex) ?: return
+        if (!hole.isPopping || hole.isHit) return
+
+        val avatar = hole.avatar ?: return
+        val list = currentHoles.toMutableList()
+
+        when (avatar.type) {
+            AvatarType.BOMB -> {
+                // 誤擊炸彈：扣分、中斷 Combo
+                SoundManager.playError()
+                _whackScore.value = (_whackScore.value - 200).coerceAtLeast(0)
+                _whackCombo.value = 0
+                _whackBombHits.value = _whackBombHits.value + 1
+                list[holeIndex] = hole.copy(isHit = true)
+                _whackHoles.value = list
+            }
+            AvatarType.BONUS -> {
+                // 擊中幸運黃金星：高額加分 + Combo
+                SoundManager.playWin()
+                val currentCombo = _whackCombo.value + 1
+                _whackCombo.value = currentCombo
+                if (currentCombo > _whackMaxCombo.value) {
+                    _whackMaxCombo.value = currentCombo
+                }
+                val gain = 250 + (currentCombo * 30)
+                _whackScore.value = _whackScore.value + gain
+                _whackHits.value = _whackHits.value + 1
+                list[holeIndex] = hole.copy(isHit = true, avatar = avatar.copy(expression = AvatarExpression.HIT))
+                _whackHoles.value = list
+            }
+            AvatarType.NORMAL -> {
+                // 正常目標或假動作探頭中
+                SoundManager.playSuccess()
+                val currentCombo = _whackCombo.value + 1
+                _whackCombo.value = currentCombo
+                if (currentCombo > _whackMaxCombo.value) {
+                    _whackMaxCombo.value = currentCombo
+                }
+                val base = if (hole.isFakeOut) 150 else 100
+                val comboBonus = currentCombo * 20
+                _whackScore.value = _whackScore.value + base + comboBonus
+                _whackHits.value = _whackHits.value + 1
+                list[holeIndex] = hole.copy(isHit = true, avatar = avatar.copy(expression = AvatarExpression.HIT))
+                _whackHoles.value = list
+            }
+        }
+
+        // 擊中後短暫停頓 400ms 後縮回
+        viewModelScope.launch {
+            delay(400)
+            val updated = _whackHoles.value.toMutableList()
+            if (updated.indices.contains(holeIndex) && updated[holeIndex].isHit) {
+                updated[holeIndex] = WhackHoleState(holeIndex = holeIndex)
+                _whackHoles.value = updated
+            }
+        }
+    }
+
+    private fun finishAvatarWhackGame() {
+        whackTimerJob?.cancel()
+        whackLoopJob?.cancel()
+        _whackStatus.value = GameStatus.COMPLETED
+        val finalScore = _whackScore.value
+        _whackLastCompletedScore.value = finalScore
+        SoundManager.playWin()
+
+        viewModelScope.launch {
+            val record = ScoreRecord(
+                playerName = _playerName.value,
+                categoryKey = _selectedCategory.value.key,
+                gameTypeKey = GameType.AVATAR_WHACK.key,
+                difficultyKey = _selectedDifficulty.value.key,
+                timeMillis = _whackConfig.value.gameDurationMs,
+                score = finalScore,
+                wrongCount = _whackMisses.value + _whackBombHits.value,
+                timestamp = System.currentTimeMillis()
+            )
+            repository.insertScore(record)
+        }
+    }
+
+    fun resetAvatarWhackGame() {
+        setupAvatarWhackGame(_selectedDifficulty.value)
+    }
+
+    // ==========================================
+    // --- Stroop Effect (斯特魯普效應) Logic ---
+    // ==========================================
+    fun setupStroopGame(difficulty: GameDifficulty) {
+        stroopGameTimerJob?.cancel()
+        stroopQuestionTimerJob?.cancel()
+        _stroopStatus.value = GameStatus.IDLE
+        _stroopScore.value = 0
+        _stroopCombo.value = 0
+        _stroopMaxCombo.value = 0
+        _stroopCorrectCount.value = 0
+        _stroopWrongCount.value = 0
+        _stroopRemainingGameTimeMs.value = 45_000L
+        _stroopQuestionTimeProgress.value = 1f
+        _stroopIsWrongFlash.value = false
+        _stroopLastCompletedScore.value = null
+        _stroopCurrentQuestion.value = StroopGenerator.generateQuestion(difficulty)
+    }
+
+    fun startStroopGame() {
+        stroopGameTimerJob?.cancel()
+        stroopQuestionTimerJob?.cancel()
+        val diff = _selectedDifficulty.value
+        _stroopScore.value = 0
+        _stroopCombo.value = 0
+        _stroopMaxCombo.value = 0
+        _stroopCorrectCount.value = 0
+        _stroopWrongCount.value = 0
+        _stroopRemainingGameTimeMs.value = 45_000L
+        _stroopIsWrongFlash.value = false
+        _stroopLastCompletedScore.value = null
+        _stroopStatus.value = GameStatus.PLAYING
+
+        nextStroopQuestion()
+
+        val startTime = System.currentTimeMillis()
+        val duration = 45_000L
+
+        // 1. 全局 45 秒倒數
+        stroopGameTimerJob = viewModelScope.launch {
+            while (isActive && _stroopStatus.value == GameStatus.PLAYING) {
+                val elapsed = System.currentTimeMillis() - startTime
+                val remaining = (duration - elapsed).coerceAtLeast(0L)
+                _stroopRemainingGameTimeMs.value = remaining
+
+                if (remaining <= 0L) {
+                    finishStroopGame()
+                    break
+                }
+                delay(50)
+            }
+        }
+    }
+
+    private fun nextStroopQuestion() {
+        stroopQuestionTimerJob?.cancel()
+        if (_stroopStatus.value != GameStatus.PLAYING) return
+
+        val diff = _selectedDifficulty.value
+        val q = StroopGenerator.generateQuestion(diff)
+        _stroopCurrentQuestion.value = q
+        _stroopQuestionRemainingMs.value = q.timeLimitMs
+        _stroopQuestionTimeProgress.value = 1f
+
+        val qStartTime = System.currentTimeMillis()
+        val qDuration = q.timeLimitMs
+
+        stroopQuestionTimerJob = viewModelScope.launch {
+            while (isActive && _stroopStatus.value == GameStatus.PLAYING) {
+                val elapsed = System.currentTimeMillis() - qStartTime
+                val remaining = (qDuration - elapsed).coerceAtLeast(0L)
+                _stroopQuestionRemainingMs.value = remaining
+                _stroopQuestionTimeProgress.value = (remaining.toFloat() / qDuration.toFloat()).coerceIn(0f, 1f)
+
+                if (remaining <= 0L) {
+                    // 本題超時：視為答錯，扣分並進入下一題
+                    SoundManager.playError()
+                    _stroopCombo.value = 0
+                    _stroopWrongCount.value = _stroopWrongCount.value + 1
+                    _stroopScore.value = (_stroopScore.value - 50).coerceAtLeast(0)
+                    nextStroopQuestion()
+                    break
+                }
+                delay(30)
+            }
+        }
+    }
+
+    fun onStroopOptionSelected(option: StroopOption) {
+        if (_stroopStatus.value != GameStatus.PLAYING) return
+        val currentQ = _stroopCurrentQuestion.value ?: return
+
+        if (option.isCorrect) {
+            // 答對！
+            SoundManager.playSuccess()
+            val currentCombo = _stroopCombo.value + 1
+            _stroopCombo.value = currentCombo
+            if (currentCombo > _stroopMaxCombo.value) {
+                _stroopMaxCombo.value = currentCombo
+            }
+            val speedBonus = (_stroopQuestionTimeProgress.value * 50).toInt()
+            val comboBonus = currentCombo * 15
+            _stroopScore.value = _stroopScore.value + 100 + speedBonus + comboBonus
+            _stroopCorrectCount.value = _stroopCorrectCount.value + 1
+            nextStroopQuestion()
+        } else {
+            // 答錯！
+            SoundManager.playError()
+            _stroopCombo.value = 0
+            _stroopWrongCount.value = _stroopWrongCount.value + 1
+            _stroopScore.value = (_stroopScore.value - 50).coerceAtLeast(0)
+            _stroopIsWrongFlash.value = true
+
+            viewModelScope.launch {
+                delay(200)
+                _stroopIsWrongFlash.value = false
+                nextStroopQuestion()
+            }
+        }
+    }
+
+    private fun finishStroopGame() {
+        stroopGameTimerJob?.cancel()
+        stroopQuestionTimerJob?.cancel()
+        _stroopStatus.value = GameStatus.COMPLETED
+        val finalScore = _stroopScore.value
+        _stroopLastCompletedScore.value = finalScore
+        SoundManager.playWin()
+
+        viewModelScope.launch {
+            val record = ScoreRecord(
+                playerName = _playerName.value,
+                categoryKey = _selectedCategory.value.key,
+                gameTypeKey = GameType.STROOP_EFFECT.key,
+                difficultyKey = _selectedDifficulty.value.key,
+                timeMillis = 45_000L,
+                score = finalScore,
+                wrongCount = _stroopWrongCount.value,
+                timestamp = System.currentTimeMillis()
+            )
+            repository.insertScore(record)
+        }
+    }
+
+    fun resetStroopGame() {
+        setupStroopGame(_selectedDifficulty.value)
     }
 }

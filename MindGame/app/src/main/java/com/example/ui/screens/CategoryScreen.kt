@@ -26,6 +26,10 @@ import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TrackChanges
 import com.example.data.model.WheelDifficultyConfig
@@ -252,111 +256,56 @@ fun CategoryScreen(
                     }
                 }
             } else {
-                // Game 1: 專注力測驗
-                val isFocus = selectedGameType == GameType.FOCUS_TEST
-                Surface(
+                // GameCategory.TEST: 5 款測驗遊戲 (支援水平滾動平滑選取)
+                Row(
                     modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(14.dp))
-                        .border(
-                            width = if (isFocus) 2.dp else 1.dp,
-                            color = if (isFocus) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                            shape = RoundedCornerShape(14.dp)
-                        )
-                        .clickable { onGameTypeSelect(GameType.FOCUS_TEST) },
-                    color = if (isFocus) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Timer,
-                            contentDescription = null,
-                            tint = if (isFocus) MaterialTheme.colorScheme.primary else Color.Gray,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = Localization.getString("game_focus_test", language),
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = if (isFocus) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isFocus) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
-                            ),
-                            maxLines = 1
-                        )
-                    }
-                }
+                    val testGames = listOf(
+                        Triple(GameType.FOCUS_TEST, "game_focus_test", Icons.Default.Timer),
+                        Triple(GameType.FOCUS_TRAIN, "game_focus_train", Icons.Default.TrackChanges),
+                        Triple(GameType.SPEED_MATCH, "game_speed_match", Icons.Default.Bolt),
+                        Triple(GameType.AVATAR_WHACK, "game_avatar_whack", Icons.Default.SportsEsports),
+                        Triple(GameType.STROOP_EFFECT, "game_stroop_effect", Icons.Default.Psychology)
+                    )
 
-                // Game 2: 專注力訓練 (動態舒爾特圓盤)
-                val isTrain = selectedGameType == GameType.FOCUS_TRAIN
-                Surface(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(14.dp))
-                        .border(
-                            width = if (isTrain) 2.dp else 1.dp,
-                            color = if (isTrain) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                            shape = RoundedCornerShape(14.dp)
-                        )
-                        .clickable { onGameTypeSelect(GameType.FOCUS_TRAIN) },
-                    color = if (isTrain) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
-                ) {
-                    Column(
-                        modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.TrackChanges,
-                            contentDescription = null,
-                            tint = if (isTrain) MaterialTheme.colorScheme.primary else Color.Gray,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = Localization.getString("game_focus_train", language),
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = if (isTrain) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isTrain) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
-                            ),
-                            maxLines = 1
-                        )
-                    }
-                }
-
-                // Game 3: 極速配對
-                val isSpeed = selectedGameType == GameType.SPEED_MATCH
-                Surface(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(14.dp))
-                        .border(
-                            width = if (isSpeed) 2.dp else 1.dp,
-                            color = if (isSpeed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                            shape = RoundedCornerShape(14.dp)
-                        )
-                        .clickable { onGameTypeSelect(GameType.SPEED_MATCH) },
-                    color = if (isSpeed) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
-                ) {
-                    Column(
-                        modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Bolt,
-                            contentDescription = null,
-                            tint = if (isSpeed) MaterialTheme.colorScheme.primary else Color.Gray,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = Localization.getString("game_speed_match", language),
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = if (isSpeed) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSpeed) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
-                            ),
-                            maxLines = 1
-                        )
+                    testGames.forEach { (type, nameKey, icon) ->
+                        val isSelected = selectedGameType == type
+                        Surface(
+                            modifier = Modifier
+                                .width(98.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .border(
+                                    width = if (isSelected) 2.dp else 1.dp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                                    shape = RoundedCornerShape(14.dp)
+                                )
+                                .clickable { onGameTypeSelect(type) },
+                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = null,
+                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = Localization.getString(nameKey, language),
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                                    ),
+                                    maxLines = 1
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -390,6 +339,8 @@ fun CategoryScreen(
                                 GameType.CAT_SUDOKU -> Icons.Default.Pets
                                 GameType.FOCUS_TRAIN -> Icons.Default.TrackChanges
                                 GameType.TURTLE_SOUP -> Icons.Default.Lightbulb
+                                GameType.AVATAR_WHACK -> Icons.Default.SportsEsports
+                                GameType.STROOP_EFFECT -> Icons.Default.Psychology
                                 else -> Icons.Default.Timer
                             },
                             contentDescription = null,
@@ -470,6 +421,22 @@ fun CategoryScreen(
                         GameDifficulty.INTERMEDIATE -> "普通 (進階案件 / 3次提問 / 2~3條核心)"
                         else -> "困難 (深度案件 / 3次提問 / 3~4條核心)"
                     }
+                    GameType.AVATAR_WHACK -> when (item.difficulty) {
+                        GameDifficulty.BEGINNER -> "2x2(4洞) / 1.5s 暖身"
+                        GameDifficulty.INTERMEDIATE -> "2x3(6洞) / 1.2s 假動作"
+                        GameDifficulty.ADVANCED -> "3x3(9洞) / 0.9s 炸彈"
+                        GameDifficulty.HARD -> "3x3(9洞) / 0.7s 雙目標"
+                        GameDifficulty.HELL -> "3x4(12洞) / 0.5s 連擊"
+                        GameDifficulty.EPIC -> "3x4(12洞) / 0.35s 狂暴"
+                    }
+                    GameType.STROOP_EFFECT -> when (item.difficulty) {
+                        GameDifficulty.BEGINNER -> "經典字色辨識 (4基本色)"
+                        GameDifficulty.INTERMEDIATE -> "雙向指令 (字義/顏色)"
+                        GameDifficulty.ADVANCED -> "左右雙字比對 (是/否)"
+                        GameDifficulty.HARD -> "干擾按鈕模式 (色彩衝突)"
+                        GameDifficulty.HELL -> "動態計時閃爍 (1.5s 旋轉)"
+                        GameDifficulty.EPIC -> "複合多重認知 (否定句 1.2s)"
+                    }
                     else -> "${item.difficulty.totalCells} 格 (1~${item.difficulty.totalCells})"
                 }
 
@@ -498,6 +465,20 @@ fun CategoryScreen(
                         GameDifficulty.BEGINNER -> "Easy"
                         GameDifficulty.INTERMEDIATE -> "Medium"
                         else -> "Hard"
+                    }
+                    GameType.AVATAR_WHACK -> when (item.difficulty) {
+                        GameDifficulty.BEGINNER -> "2x2"
+                        GameDifficulty.INTERMEDIATE -> "2x3"
+                        GameDifficulty.ADVANCED, GameDifficulty.HARD -> "3x3"
+                        GameDifficulty.HELL, GameDifficulty.EPIC -> "3x4"
+                    }
+                    GameType.STROOP_EFFECT -> when (item.difficulty) {
+                        GameDifficulty.BEGINNER -> "4色"
+                        GameDifficulty.INTERMEDIATE -> "雙向"
+                        GameDifficulty.ADVANCED -> "比對"
+                        GameDifficulty.HARD -> "干擾"
+                        GameDifficulty.HELL -> "動態"
+                        GameDifficulty.EPIC -> "複合"
                     }
                     else -> "${item.difficulty.gridDim}x${item.difficulty.gridDim}"
                 }

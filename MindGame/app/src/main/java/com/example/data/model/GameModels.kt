@@ -13,7 +13,9 @@ enum class GameType(val key: String, val titleKey: String, val descKey: String) 
     SPEED_MATCH("SPEED_MATCH", "game_speed_match", "game_speed_match_desc"),
     SUDOKU("SUDOKU", "game_sudoku", "game_sudoku_desc"),
     CAT_SUDOKU("CAT_SUDOKU", "game_cat_sudoku", "game_cat_sudoku_desc"),
-    TURTLE_SOUP("TURTLE_SOUP", "game_turtle_soup", "game_turtle_soup_desc");
+    TURTLE_SOUP("TURTLE_SOUP", "game_turtle_soup", "game_turtle_soup_desc"),
+    AVATAR_WHACK("AVATAR_WHACK", "game_avatar_whack", "game_avatar_whack_desc"),
+    STROOP_EFFECT("STROOP_EFFECT", "game_stroop_effect", "game_stroop_effect_desc");
 
     companion object {
         fun fromKey(key: String): GameType {
