@@ -36,6 +36,9 @@ object SoundManager {
 
     fun initialize(context: Context) {
         appContext = context.applicationContext
+        scope.launch {
+            initShortSfxTracks()
+        }
     }
 
     fun onAppFocusChanged(isFocused: Boolean) {
@@ -131,10 +134,83 @@ object SoundManager {
         }
     }
 
+    private val cachedErrorSamples: ShortArray by lazy {
+        generateToneSamples(180.0, 120, 0.35f, isSawtooth = true)
+    }
+
+    private val cachedClickSamples: ShortArray by lazy {
+        generateToneSamples(880.0, 45, 0.2f, isSawtooth = false)
+    }
+
+    private var errorAudioTrack: AudioTrack? = null
+    private var clickAudioTrack: AudioTrack? = null
+
+    private fun initShortSfxTracks() {
+        try {
+            if (errorAudioTrack == null) {
+                errorAudioTrack = createStaticTrack(cachedErrorSamples)
+            }
+            if (clickAudioTrack == null) {
+                clickAudioTrack = createStaticTrack(cachedClickSamples)
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun createStaticTrack(samples: ShortArray): AudioTrack? {
+        return try {
+            val minBufferSize = AudioTrack.getMinBufferSize(
+                SAMPLE_RATE,
+                AudioFormat.CHANNEL_OUT_MONO,
+                AudioFormat.ENCODING_PCM_16BIT
+            )
+            val bufferSize = maxOf(minBufferSize, samples.size * 2)
+            AudioTrack.Builder()
+                .setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_GAME)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build()
+                )
+                .setAudioFormat(
+                    AudioFormat.Builder()
+                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                        .setSampleRate(SAMPLE_RATE)
+                        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                        .build()
+                )
+                .setBufferSizeInBytes(bufferSize)
+                .setTransferMode(AudioTrack.MODE_STATIC)
+                .build().apply {
+                    write(samples, 0, samples.size)
+                }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun playPreloadedTrack(track: AudioTrack?): Boolean {
+        if (track == null) return false
+        return try {
+            if (track.state == AudioTrack.STATE_INITIALIZED) {
+                track.stop()
+                track.reloadStaticData()
+                track.play()
+                true
+            } else {
+                false
+            }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     fun playClick() {
         if (!isSfxEnabled) return
-        scope.launch {
-            playTone(880.0, 45, 0.2f)
+        if (!playPreloadedTrack(clickAudioTrack)) {
+            scope.launch {
+                playPcm(cachedClickSamples)
+            }
         }
     }
 
@@ -162,8 +238,11 @@ object SoundManager {
 
     fun playError() {
         if (!isSfxEnabled) return
-        scope.launch {
-            playTone(180.0, 120, 0.35f, isSawtooth = true)
+        // 優先透過快取的預載 AudioTrack 即刻播放（0ms延遲）
+        if (!playPreloadedTrack(errorAudioTrack)) {
+            scope.launch {
+                playPcm(cachedErrorSamples)
+            }
         }
     }
 
@@ -184,26 +263,31 @@ object SoundManager {
         }
     }
 
+    private fun generateToneSamples(freq: Double, durationMs: Int, volume: Float, isSawtooth: Boolean = false): ShortArray {
+        val numSamples = (SAMPLE_RATE * (durationMs / 1000.0)).toInt().coerceAtLeast(1)
+        val samples = ShortArray(numSamples)
+        for (i in 0 until numSamples) {
+            val t = i.toDouble() / SAMPLE_RATE
+            val wave = if (isSawtooth) {
+                2.0 * (t * freq - Math.floor(t * freq + 0.5))
+            } else {
+                sin(2.0 * Math.PI * freq * t)
+            }
+            val attackSamples = (numSamples * 0.1).toInt().coerceAtLeast(1)
+            val releaseSamples = (numSamples * 0.3).toInt().coerceAtLeast(1)
+            val env = when {
+                i < attackSamples -> i.toDouble() / attackSamples
+                i > numSamples - releaseSamples -> (numSamples - i).toDouble() / releaseSamples
+                else -> 1.0
+            }
+            samples[i] = (wave * env * volume * Short.MAX_VALUE).toInt().toShort()
+        }
+        return samples
+    }
+
     private fun playTone(freq: Double, durationMs: Int, volume: Float, isSawtooth: Boolean = false) {
         try {
-            val numSamples = (SAMPLE_RATE * (durationMs / 1000.0)).toInt().coerceAtLeast(1)
-            val samples = ShortArray(numSamples)
-            for (i in 0 until numSamples) {
-                val t = i.toDouble() / SAMPLE_RATE
-                val wave = if (isSawtooth) {
-                    2.0 * (t * freq - Math.floor(t * freq + 0.5))
-                } else {
-                    sin(2.0 * Math.PI * freq * t)
-                }
-                val attackSamples = (numSamples * 0.1).toInt().coerceAtLeast(1)
-                val releaseSamples = (numSamples * 0.3).toInt().coerceAtLeast(1)
-                val env = when {
-                    i < attackSamples -> i.toDouble() / attackSamples
-                    i > numSamples - releaseSamples -> (numSamples - i).toDouble() / releaseSamples
-                    else -> 1.0
-                }
-                samples[i] = (wave * env * volume * Short.MAX_VALUE).toInt().toShort()
-            }
+            val samples = generateToneSamples(freq, durationMs, volume, isSawtooth)
             playPcm(samples)
         } catch (_: Exception) {
         }

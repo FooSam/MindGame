@@ -49,16 +49,24 @@ class AvatarWhackGameLogicTest {
         assertEquals(4, hell.rows)
         assertEquals(3, hell.cols)
         assertEquals(12, hell.totalHoles)
-        assertEquals(500L, hell.stayDurationMs)
+        assertEquals(550L, hell.stayDurationMs)
         assertEquals(0.40f, hell.fakeOutProb, 0.001f)
 
         val epic = WhackDifficultyConfig.getConfig(GameDifficulty.EPIC)
         assertEquals(4, epic.rows)
         assertEquals(3, epic.cols)
         assertEquals(12, epic.totalHoles)
-        assertEquals(350L, epic.stayDurationMs)
+        assertEquals(450L, epic.stayDurationMs)
         assertEquals(0.50f, epic.fakeOutProb, 0.001f)
         assertEquals(3, epic.simultaneousTargets)
+
+        // 驗證假動作停留時間範圍與隨機浮動
+        for (diff in GameDifficulty.entries) {
+            val cfg = WhackDifficultyConfig.getConfig(diff)
+            val fakeStay = cfg.calculateStayDuration(isFakeOut = true)
+            assertTrue("Stay duration should be at least 380ms", fakeStay >= 380L)
+            assertTrue("Stay duration should not exceed stayDurationMs", fakeStay <= cfg.stayDurationMs)
+        }
     }
 
     @Test

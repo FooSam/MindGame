@@ -1,5 +1,10 @@
 package com.example.ui.screens
 
+import android.content.Context
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -43,6 +48,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +56,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -84,7 +91,15 @@ fun StroopScreen(
     onOptionSelected: (StroopOption) -> Unit,
     onLeaderboardClick: () -> Unit
 ) {
+    val context = LocalContext.current
     val totalSeconds = (remainingGameTimeMs / 1000).coerceAtLeast(0)
+
+    // 觸覺震動回饋：答錯時短促震動
+    LaunchedEffect(isWrongFlash) {
+        if (isWrongFlash) {
+            triggerErrorVibration(context)
+        }
+    }
 
     // Dynamic rotation animation for HELL & EPIC
     val infiniteTransition = rememberInfiniteTransition(label = "stroopRotation")
@@ -98,13 +113,21 @@ fun StroopScreen(
         label = "dynamicAngle"
     )
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(if (isWrongFlash) Color(0x33EF4444) else MaterialTheme.colorScheme.background)
-            .padding(horizontal = 20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .then(
+                if (isWrongFlash) Modifier.border(6.dp, Color(0xFFEF4444))
+                else Modifier
+            )
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
         Spacer(modifier = Modifier.height(12.dp))
 
         // Top Bar
@@ -268,15 +291,16 @@ fun StroopScreen(
             Surface(
                 shape = RoundedCornerShape(20.dp),
                 color = MaterialTheme.colorScheme.primaryContainer,
+                shadowElevation = 3.dp,
                 modifier = Modifier.padding(horizontal = 8.dp)
             ) {
                 Text(
                     text = Localization.getString(question.instruction.key, language),
-                    style = MaterialTheme.typography.labelLarge.copy(
+                    style = MaterialTheme.typography.titleSmall.copy(
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.ExtraBold
                     ),
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
                     textAlign = TextAlign.Center
                 )
             }
@@ -292,10 +316,14 @@ fun StroopScreen(
                         if (difficulty == GameDifficulty.HELL || difficulty == GameDifficulty.EPIC) {
                             rotationZ = dynamicRotation
                         }
-                    },
+                    }
+                    .then(
+                        if (isWrongFlash) Modifier.border(4.dp, Color(0xFFEF4444), RoundedCornerShape(28.dp))
+                        else Modifier
+                    ),
                 shape = RoundedCornerShape(28.dp),
                 colors = CardDefaults.elevatedCardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = if (isWrongFlash) Color(0xFFFFEBEE) else MaterialTheme.colorScheme.surface
                 )
             ) {
                 Box(
@@ -661,9 +689,33 @@ fun StroopScreen(
                 }
             }
         }
+        }
     }
 }
 
 private fun remainingGameTimeTime(ms: Long): Boolean {
     return ms < 10_000L
+}
+
+private fun triggerErrorVibration(context: Context) {
+    try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+            vibratorManager?.defaultVibrator?.vibrate(
+                VibrationEffect.createOneShot(120, VibrationEffect.DEFAULT_AMPLITUDE)
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator?.vibrate(
+                    VibrationEffect.createOneShot(120, VibrationEffect.DEFAULT_AMPLITUDE)
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator?.vibrate(120)
+            }
+        }
+    } catch (_: Exception) {
+    }
 }

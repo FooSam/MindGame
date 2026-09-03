@@ -33,7 +33,9 @@ enum class StroopInstruction(val key: String) {
     CHOOSE_TEXT("stroop_inst_choose_text"),            // 請選文字本身的【字義】
     COMPARE_EQUAL("stroop_inst_compare_equal"),        // 左邊字義 是否等於 右邊顏色？
     DISTRACTED_CHOOSE("stroop_inst_distracted"),       // 請選上方文字的【顏色】(注意選項干擾)
+    DISTRACTED_TEXT("stroop_inst_distracted_text"),    // 請選上方文字的【字義】(注意選項干擾)
     DYNAMIC_FAST("stroop_inst_dynamic_fast"),          // 極速辨識文字【顏色】(動態旋轉干擾)
+    DYNAMIC_TEXT("stroop_inst_dynamic_text"),          // 極速辨識文字【字義】(動態旋轉干擾)
     COMPOSITE_NOT("stroop_inst_composite_not")         // 複合指令：排除指定條件
 }
 
@@ -73,21 +75,37 @@ object StroopGenerator {
     private val basic4Colors = listOf(StroopColor.RED, StroopColor.BLUE, StroopColor.GREEN, StroopColor.YELLOW)
     private val all6Colors = StroopColor.entries
 
-    fun generateQuestion(difficulty: GameDifficulty): StroopQuestion {
+    fun pickRoundInstruction(difficulty: GameDifficulty): StroopInstruction {
         return when (difficulty) {
-            GameDifficulty.BEGINNER -> generateBeginnerQuestion()
-            GameDifficulty.INTERMEDIATE -> generateIntermediateQuestion()
-            GameDifficulty.ADVANCED -> generateAdvancedQuestion()
-            GameDifficulty.HARD -> generateHardQuestion()
-            GameDifficulty.HELL -> generateHellQuestion()
-            GameDifficulty.EPIC -> generateEpicQuestion()
+            GameDifficulty.BEGINNER -> if (listOf(true, false).random()) StroopInstruction.CHOOSE_COLOR else StroopInstruction.CHOOSE_TEXT
+            GameDifficulty.INTERMEDIATE -> if (listOf(true, false).random()) StroopInstruction.CHOOSE_TEXT else StroopInstruction.CHOOSE_COLOR
+            GameDifficulty.ADVANCED -> StroopInstruction.COMPARE_EQUAL
+            GameDifficulty.HARD -> if (listOf(true, false).random()) StroopInstruction.DISTRACTED_CHOOSE else StroopInstruction.DISTRACTED_TEXT
+            GameDifficulty.HELL -> if (listOf(true, false).random()) StroopInstruction.DYNAMIC_FAST else StroopInstruction.DYNAMIC_TEXT
+            GameDifficulty.EPIC -> StroopInstruction.COMPOSITE_NOT
         }
     }
 
-    // 1. 初級：經典字色辨識 (4基本色，選字色)
-    private fun generateBeginnerQuestion(): StroopQuestion {
+    fun generateQuestion(
+        difficulty: GameDifficulty,
+        roundInstruction: StroopInstruction? = null
+    ): StroopQuestion {
+        val instruction = roundInstruction ?: pickRoundInstruction(difficulty)
+        return when (difficulty) {
+            GameDifficulty.BEGINNER -> generateBeginnerQuestion(instruction)
+            GameDifficulty.INTERMEDIATE -> generateIntermediateQuestion(instruction)
+            GameDifficulty.ADVANCED -> generateAdvancedQuestion(instruction)
+            GameDifficulty.HARD -> generateHardQuestion(instruction)
+            GameDifficulty.HELL -> generateHellQuestion(instruction)
+            GameDifficulty.EPIC -> generateEpicQuestion(instruction)
+        }
+    }
+
+    // 1. 初級：經典字色/字義辨識 (4基本色)
+    private fun generateBeginnerQuestion(instruction: StroopInstruction): StroopQuestion {
         val wordMeaning = basic4Colors.random()
         val displayColor = (basic4Colors.filter { it != wordMeaning }).random()
+        val targetColor = if (instruction == StroopInstruction.CHOOSE_TEXT) wordMeaning else displayColor
 
         val options = basic4Colors.shuffled().map { color ->
             StroopOption(
@@ -96,14 +114,14 @@ object StroopGenerator {
                 labelEn = color.enName,
                 displayColor = Color.White,
                 bgColor = color.color,
-                isCorrect = (color == displayColor),
+                isCorrect = (color == targetColor),
                 associatedColor = color
             )
         }
 
         return StroopQuestion(
             difficulty = GameDifficulty.BEGINNER,
-            instruction = StroopInstruction.CHOOSE_COLOR,
+            instruction = instruction,
             mainWord = wordMeaning,
             displayColor = displayColor,
             options = options,
@@ -111,9 +129,9 @@ object StroopGenerator {
         )
     }
 
-    // 2. 中級：雙向指令切換 (隨機選字義或選顏色)
-    private fun generateIntermediateQuestion(): StroopQuestion {
-        val isChooseMeaning = listOf(true, false).random()
+    // 2. 中級：單局固定指令 (選字義 或 選顏色，整局 45s 固定)
+    private fun generateIntermediateQuestion(instruction: StroopInstruction): StroopQuestion {
+        val isChooseMeaning = (instruction == StroopInstruction.CHOOSE_TEXT)
         val wordMeaning = all6Colors.random()
         val displayColor = (all6Colors.filter { it != wordMeaning }).random()
 
@@ -144,7 +162,7 @@ object StroopGenerator {
     }
 
     // 3. 高級：左右雙字比對 (左字義 == 右顏色？ 是/否 快速二選一)
-    private fun generateAdvancedQuestion(): StroopQuestion {
+    private fun generateAdvancedQuestion(instruction: StroopInstruction): StroopQuestion {
         val leftMeaning = all6Colors.random()
         val leftDisplay = (all6Colors.filter { it != leftMeaning }).random()
 
@@ -179,18 +197,18 @@ object StroopGenerator {
         )
     }
 
-    // 4. 困難級：干擾按鈕模式 (按鈕自身的文字與顏色也是衝突的)
-    private fun generateHardQuestion(): StroopQuestion {
+    // 4. 困難級：干擾按鈕模式 (單局固定：選上方顏色 或 選上方字義，面對文字與背景衝突按鈕)
+    private fun generateHardQuestion(instruction: StroopInstruction): StroopQuestion {
         val wordMeaning = all6Colors.random()
         val displayColor = (all6Colors.filter { it != wordMeaning }).random()
-        val targetColor = displayColor // 目標是選上方字顯示的顏色
+        val isChooseMeaning = (instruction == StroopInstruction.DISTRACTED_TEXT)
+        val targetColor = if (isChooseMeaning) wordMeaning else displayColor
 
         // 產生 4 個干擾按鈕：每個按鈕的文字和背景色都不同
         val candidateColors = (listOf(targetColor) + (all6Colors.filter { it != targetColor }).shuffled().take(3)).shuffled()
 
         val options = candidateColors.map { color ->
             val isTarget = (color == targetColor)
-            // 按鈕文字是 color 的名稱，但按鈕背景色隨機挑選另一種顏色來干擾
             val conflictBg = (all6Colors.filter { it != color }).random()
             StroopOption(
                 id = color.key,
@@ -205,7 +223,7 @@ object StroopGenerator {
 
         return StroopQuestion(
             difficulty = GameDifficulty.HARD,
-            instruction = StroopInstruction.DISTRACTED_CHOOSE,
+            instruction = if (isChooseMeaning) StroopInstruction.DISTRACTED_TEXT else StroopInstruction.DISTRACTED_CHOOSE,
             mainWord = wordMeaning,
             displayColor = displayColor,
             options = options,
@@ -213,9 +231,9 @@ object StroopGenerator {
         )
     }
 
-    // 5. 地獄級：動態計時閃爍 (限時 1.5s，旋轉閃爍干擾)
-    private fun generateHellQuestion(): StroopQuestion {
-        val isChooseMeaning = listOf(true, false).random()
+    // 5. 地獄級：動態旋轉干擾 (單局固定：動態辨色 或 動態選字義，限時 1.5s)
+    private fun generateHellQuestion(instruction: StroopInstruction): StroopQuestion {
+        val isChooseMeaning = (instruction == StroopInstruction.DYNAMIC_TEXT || instruction == StroopInstruction.CHOOSE_TEXT)
         val wordMeaning = all6Colors.random()
         val displayColor = (all6Colors.filter { it != wordMeaning }).random()
         val targetColor = if (isChooseMeaning) wordMeaning else displayColor
@@ -237,7 +255,7 @@ object StroopGenerator {
 
         return StroopQuestion(
             difficulty = GameDifficulty.HELL,
-            instruction = if (isChooseMeaning) StroopInstruction.CHOOSE_TEXT else StroopInstruction.DYNAMIC_FAST,
+            instruction = if (isChooseMeaning) StroopInstruction.DYNAMIC_TEXT else StroopInstruction.DYNAMIC_FAST,
             mainWord = wordMeaning,
             displayColor = displayColor,
             options = options,
@@ -246,7 +264,7 @@ object StroopGenerator {
     }
 
     // 6. 史詩級：複合多重認知 (形狀 + 否定句，限時 1.2s)
-    private fun generateEpicQuestion(): StroopQuestion {
+    private fun generateEpicQuestion(instruction: StroopInstruction): StroopQuestion {
         val shape = StroopShape.entries.random()
         val wordMeaning = all6Colors.random()
         val displayColor = (all6Colors.filter { it != wordMeaning }).random()

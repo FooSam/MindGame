@@ -324,6 +324,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val _stroopStatus = MutableStateFlow(GameStatus.IDLE)
     val stroopStatus: StateFlow<GameStatus> = _stroopStatus.asStateFlow()
 
+    private val _stroopRoundInstruction = MutableStateFlow<com.example.game.stroop.StroopInstruction?>(null)
+    val stroopRoundInstruction: StateFlow<com.example.game.stroop.StroopInstruction?> = _stroopRoundInstruction.asStateFlow()
+
     private val _stroopCurrentQuestion = MutableStateFlow<StroopQuestion?>(null)
     val stroopCurrentQuestion: StateFlow<StroopQuestion?> = _stroopCurrentQuestion.asStateFlow()
 
@@ -1544,7 +1547,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             val expression = if (isFakeOut) AvatarExpression.FAKE_OUT else AvatarExpression.NORMAL
             val avatarIdx = AvatarCatalog.getRandomAvatarIndex()
 
-            val stayMs = if (isFakeOut) config.stayDurationMs / 2 else config.stayDurationMs
+            val stayMs = config.calculateStayDuration(isFakeOut)
 
             val newHoleState = WhackHoleState(
                 holeIndex = hole.holeIndex,
@@ -1680,6 +1683,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun setupStroopGame(difficulty: GameDifficulty) {
         stroopGameTimerJob?.cancel()
         stroopQuestionTimerJob?.cancel()
+        val inst = StroopGenerator.pickRoundInstruction(difficulty)
+        _stroopRoundInstruction.value = inst
         _stroopStatus.value = GameStatus.IDLE
         _stroopScore.value = 0
         _stroopCombo.value = 0
@@ -1690,13 +1695,15 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _stroopQuestionTimeProgress.value = 1f
         _stroopIsWrongFlash.value = false
         _stroopLastCompletedScore.value = null
-        _stroopCurrentQuestion.value = StroopGenerator.generateQuestion(difficulty)
+        _stroopCurrentQuestion.value = StroopGenerator.generateQuestion(difficulty, inst)
     }
 
     fun startStroopGame() {
         stroopGameTimerJob?.cancel()
         stroopQuestionTimerJob?.cancel()
         val diff = _selectedDifficulty.value
+        val inst = _stroopRoundInstruction.value ?: StroopGenerator.pickRoundInstruction(diff)
+        _stroopRoundInstruction.value = inst
         _stroopScore.value = 0
         _stroopCombo.value = 0
         _stroopMaxCombo.value = 0
@@ -1733,7 +1740,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         if (_stroopStatus.value != GameStatus.PLAYING) return
 
         val diff = _selectedDifficulty.value
-        val q = StroopGenerator.generateQuestion(diff)
+        val inst = _stroopRoundInstruction.value ?: StroopGenerator.pickRoundInstruction(diff)
+        val q = StroopGenerator.generateQuestion(diff, inst)
         _stroopCurrentQuestion.value = q
         _stroopQuestionRemainingMs.value = q.timeLimitMs
         _stroopQuestionTimeProgress.value = 1f
@@ -1788,7 +1796,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             _stroopIsWrongFlash.value = true
 
             viewModelScope.launch {
-                delay(200)
+                delay(350)
                 _stroopIsWrongFlash.value = false
                 nextStroopQuestion()
             }
