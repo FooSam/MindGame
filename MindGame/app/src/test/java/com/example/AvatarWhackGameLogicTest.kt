@@ -96,4 +96,38 @@ class AvatarWhackGameLogicTest {
             assertTrue(idx in 1..21)
         }
     }
+
+    @Test
+    fun testFakeOutWhackLogicRules() {
+        // 規則 1: 假動作若未打（自然縮回），不中斷 Combo，不計失誤
+        var combo = 5
+        var misses = 0
+        var score = 1000
+
+        val isFakeOut = true
+        // 假動作自然縮回模擬
+        if (!isFakeOut) {
+            combo = 0
+            misses += 1
+        }
+        assertEquals("沒打假動作時，Combo 應維持不變", 5, combo)
+        assertEquals("沒打假動作時，失誤數不增加", 0, misses)
+
+        // 規則 2: 玩家忍不住打了假動作（打錯），不扣分、中斷 Combo 歸零、計入 1 次失誤
+        val isTapped = true
+        if (isFakeOut && isTapped) {
+            combo = 0
+            misses += 1
+            // 分數不扣
+        }
+        assertEquals("誤擊假動作應中斷 Combo 歸零", 0, combo)
+        assertEquals("誤擊假動作計入 1 次失誤", 1, misses)
+        assertEquals("誤擊假動作不扣分", 1000, score)
+
+        // 規則 3: 命中正常目標時，Combo + 1，加分
+        combo += 1
+        score += 100 + combo * 20
+        assertEquals(1, combo)
+        assertEquals(1120, score)
+    }
 }

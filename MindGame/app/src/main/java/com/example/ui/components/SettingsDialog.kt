@@ -54,6 +54,8 @@ import com.example.data.model.AppLanguage
 import com.example.data.model.Localization
 import com.example.ui.theme.AppThemeStyle
 
+import com.example.data.model.Country
+
 private enum class SettingsTab {
     THEME,
     LANGUAGE,
@@ -65,11 +67,13 @@ private enum class SettingsTab {
 fun SettingsDialog(
     currentTheme: AppThemeStyle,
     currentLanguage: AppLanguage,
+    currentCountry: Country = Country.DEFAULT,
     isFullScreenEnabled: Boolean,
     isSfxEnabled: Boolean,
     isBgmEnabled: Boolean,
     onSelectTheme: (AppThemeStyle) -> Unit,
     onSelectLanguage: (AppLanguage) -> Unit,
+    onSelectCountry: (Country) -> Unit = {},
     onToggleFullScreen: (Boolean) -> Unit,
     onToggleSfx: (Boolean) -> Unit,
     onToggleBgm: (Boolean) -> Unit,
@@ -208,11 +212,22 @@ fun SettingsDialog(
                         }
 
                         SettingsTab.LANGUAGE -> {
-                            Column(
+                            LazyColumn(
                                 verticalArrangement = Arrangement.spacedBy(10.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                AppLanguage.values().forEach { lang ->
+                                item {
+                                    Text(
+                                        text = Localization.getString("language_selector", currentLanguage),
+                                        style = MaterialTheme.typography.labelMedium.copy(
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.Bold
+                                        ),
+                                        modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)
+                                    )
+                                }
+
+                                items(AppLanguage.values()) { lang ->
                                     val isSelected = lang == currentLanguage
                                     Surface(
                                         onClick = { onSelectLanguage(lang) },
@@ -226,12 +241,12 @@ fun SettingsDialog(
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
                                             modifier = Modifier
-                                                .padding(horizontal = 16.dp, vertical = 14.dp)
+                                                .padding(horizontal = 14.dp, vertical = 12.dp)
                                                 .fillMaxWidth()
                                         ) {
                                             Text(
                                                 text = lang.displayName,
-                                                style = MaterialTheme.typography.bodyLarge.copy(
+                                                style = MaterialTheme.typography.bodyMedium.copy(
                                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                                     color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                                                 ),
@@ -242,7 +257,69 @@ fun SettingsDialog(
                                                     imageVector = Icons.Default.Check,
                                                     contentDescription = "Selected",
                                                     tint = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.size(20.dp)
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                item {
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    HorizontalDivider(
+                                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                                        thickness = 1.dp
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = Localization.getString("country_selector_title", currentLanguage),
+                                        style = MaterialTheme.typography.labelMedium.copy(
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.Bold
+                                        ),
+                                        modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)
+                                    )
+                                    Text(
+                                        text = Localization.getString("country_selector_hint", currentLanguage),
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontSize = 11.sp
+                                        ),
+                                        modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+                                    )
+                                }
+
+                                items(Country.ALL_COUNTRIES) { country ->
+                                    val isSelected = country.code == currentCountry.code
+                                    Surface(
+                                        onClick = { onSelectCountry(country) },
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                                        border = if (isSelected) {
+                                            androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+                                        } else null,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier
+                                                .padding(horizontal = 14.dp, vertical = 10.dp)
+                                                .fillMaxWidth()
+                                        ) {
+                                            Text(
+                                                text = "${country.flagEmoji}  ${country.getDisplayName(currentLanguage)} (${country.code})",
+                                                style = MaterialTheme.typography.bodyMedium.copy(
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                                ),
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            if (isSelected) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Check,
+                                                    contentDescription = "Selected",
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(18.dp)
                                                 )
                                             }
                                         }

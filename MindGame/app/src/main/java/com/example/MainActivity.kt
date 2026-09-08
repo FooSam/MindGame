@@ -1,6 +1,7 @@
 package com.example
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -195,6 +196,12 @@ fun MainApp(viewModel: GameViewModel) {
     val stroopLastCompletedScore by viewModel.stroopLastCompletedScore.collectAsStateWithLifecycle()
 
     val leaderboardList by viewModel.leaderboardList.collectAsStateWithLifecycle()
+    val globalLeaderboardList by viewModel.globalLeaderboardList.collectAsStateWithLifecycle()
+    val myGlobalRankEntry by viewModel.myGlobalRankEntry.collectAsStateWithLifecycle()
+    val isFetchingGlobalLeaderboard by viewModel.isFetchingGlobalLeaderboard.collectAsStateWithLifecycle()
+    val isUploadingGlobalScore by viewModel.isUploadingGlobalScore.collectAsStateWithLifecycle()
+    val globalUploadMessage by viewModel.globalUploadMessage.collectAsStateWithLifecycle()
+    val selectedCountry by viewModel.selectedCountry.collectAsStateWithLifecycle()
     val showLeaderboardDialog by viewModel.showLeaderboardDialog.collectAsStateWithLifecycle()
     val showNameDialog by viewModel.showNameDialog.collectAsStateWithLifecycle()
     val showSettingsDialog by viewModel.showSettingsDialog.collectAsStateWithLifecycle()
@@ -203,6 +210,13 @@ fun MainApp(viewModel: GameViewModel) {
     val isBgmEnabled by viewModel.isBgmEnabled.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
+    LaunchedEffect(globalUploadMessage) {
+        globalUploadMessage?.let { msgKey ->
+            val text = com.example.data.model.Localization.getString(msgKey, language)
+            Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+            viewModel.clearGlobalUploadMessage()
+        }
+    }
     LaunchedEffect(isFullScreenEnabled) {
         val activity = context as? ComponentActivity
         activity?.let { act ->
@@ -501,6 +515,7 @@ fun MainApp(viewModel: GameViewModel) {
             SettingsDialog(
                 currentTheme = appTheme,
                 currentLanguage = language,
+                currentCountry = selectedCountry,
                 isFullScreenEnabled = isFullScreenEnabled,
                 isSfxEnabled = isSfxEnabled,
                 isBgmEnabled = isBgmEnabled,
@@ -509,6 +524,9 @@ fun MainApp(viewModel: GameViewModel) {
                 },
                 onSelectLanguage = { selectedLang ->
                     viewModel.setLanguage(selectedLang)
+                },
+                onSelectCountry = { country ->
+                    viewModel.setSelectedCountry(country)
                 },
                 onToggleFullScreen = { enabled ->
                     viewModel.toggleFullScreen(enabled)
@@ -528,12 +546,22 @@ fun MainApp(viewModel: GameViewModel) {
                 selectedDifficulty = selectedDifficulty,
                 selectedGameType = selectedGameType,
                 scores = leaderboardList,
+                globalScores = globalLeaderboardList,
+                myGlobalRankEntry = myGlobalRankEntry,
+                isFetchingGlobal = isFetchingGlobalLeaderboard,
+                isUploadingGlobal = isUploadingGlobalScore,
                 language = language,
                 onDifficultySelected = { diff ->
                     viewModel.setLeaderboardDifficultyFilter(diff)
                 },
                 onClearScores = {
                     viewModel.clearScoresForCurrentLevel()
+                },
+                onUploadToGlobal = {
+                    viewModel.uploadBestScoreToGlobal()
+                },
+                onRefreshGlobal = {
+                    viewModel.loadGlobalLeaderboard()
                 },
                 onDismiss = { viewModel.closeLeaderboardDialog() }
             )

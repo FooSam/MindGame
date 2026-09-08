@@ -16,6 +16,11 @@ import com.example.data.model.GameCategory
 import com.example.data.model.GameDifficulty
 import com.example.data.model.GameType
 import com.example.data.model.QuestionAnswer
+import com.example.data.model.Country
+import com.example.data.model.GlobalLeaderboardResponse
+import com.example.data.model.GlobalScoreEntry
+import com.example.data.repository.GlobalLeaderboardRepository
+import java.util.UUID
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -94,6 +99,20 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _playerName = MutableStateFlow(prefs.getString("pref_player_name", "玩家 1") ?: "玩家 1")
     val playerName: StateFlow<String> = _playerName.asStateFlow()
+
+    private val _playerId = MutableStateFlow(
+        prefs.getString("pref_player_uuid", null) ?: run {
+            val newId = UUID.randomUUID().toString()
+            prefs.edit().putString("pref_player_uuid", newId).apply()
+            newId
+        }
+    )
+    val playerId: StateFlow<String> = _playerId.asStateFlow()
+
+    private val _selectedCountry = MutableStateFlow(
+        prefs.getString("pref_country_code", null)?.let { Country.fromCode(it) } ?: Country.detectDefaultCountry()
+    )
+    val selectedCountry: StateFlow<Country> = _selectedCountry.asStateFlow()
 
     private val _isFullScreenEnabled = MutableStateFlow(prefs.getBoolean("pref_fullscreen", true))
     val isFullScreenEnabled: StateFlow<Boolean> = _isFullScreenEnabled.asStateFlow()
@@ -360,9 +379,25 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val _stroopLastCompletedScore = MutableStateFlow<Int?>(null)
     val stroopLastCompletedScore: StateFlow<Int?> = _stroopLastCompletedScore.asStateFlow()
 
-    // Dialogs & Settings
+    private val globalRepository = GlobalLeaderboardRepository()
+
     private val _leaderboardList = MutableStateFlow<List<ScoreRecord>>(emptyList())
     val leaderboardList: StateFlow<List<ScoreRecord>> = _leaderboardList.asStateFlow()
+
+    private val _globalLeaderboardList = MutableStateFlow<List<GlobalScoreEntry>>(emptyList())
+    val globalLeaderboardList: StateFlow<List<GlobalScoreEntry>> = _globalLeaderboardList.asStateFlow()
+
+    private val _myGlobalRankEntry = MutableStateFlow<GlobalScoreEntry?>(null)
+    val myGlobalRankEntry: StateFlow<GlobalScoreEntry?> = _myGlobalRankEntry.asStateFlow()
+
+    private val _isFetchingGlobalLeaderboard = MutableStateFlow(false)
+    val isFetchingGlobalLeaderboard: StateFlow<Boolean> = _isFetchingGlobalLeaderboard.asStateFlow()
+
+    private val _isUploadingGlobalScore = MutableStateFlow(false)
+    val isUploadingGlobalScore: StateFlow<Boolean> = _isUploadingGlobalScore.asStateFlow()
+
+    private val _globalUploadMessage = MutableStateFlow<String?>(null)
+    val globalUploadMessage: StateFlow<String?> = _globalUploadMessage.asStateFlow()
 
     private val _showLeaderboardDialog = MutableStateFlow(false)
     val showLeaderboardDialog: StateFlow<Boolean> = _showLeaderboardDialog.asStateFlow()
@@ -514,8 +549,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun setSelectedCountry(country: Country) {
+        _selectedCountry.value = country
+        prefs.edit().putString("pref_country_code", country.code).apply()
+    }
+
     fun setLeaderboardDifficultyFilter(difficulty: GameDifficulty) {
         loadLeaderboard(_selectedCategory.value.key, _selectedGameType.value.key, difficulty.key)
+        loadGlobalLeaderboard(_selectedGameType.value.key, difficulty.key)
     }
 
     private fun loadLeaderboard(categoryKey: String, gameTypeKey: String, difficultyKey: String) {
@@ -524,6 +565,88 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             repository.getTopScores(categoryKey, gameTypeKey, difficultyKey, 10).collectLatest { scores ->
                 _leaderboardList.value = scores
             }
+        }
+        loadGlobalLeaderboard(gameTypeKey, difficultyKey)
+    }
+
+    fun loadGlobalLeaderboard(gameTypeKey: String? = null, difficultyKey: String? = null) {
+        val gKey = gameTypeKey ?: _selectedGameType.value.key
+        val dKey = difficultyKey ?: _selectedDifficulty.value.key
+        _isFetchingGlobalLeaderboard.value = true
+        viewModelScope.launch {
+            val result = globalRepository.fetchGlobalLeaderboard(gKey, dKey, _playerId.value)
+            _isFetchingGlobalLeaderboard.value = false
+            result.onSuccess { resp ->
+                _globalLeaderboardList.value = resp.topScores
+                _myGlobalRankEntry.value = resp.myRankEntry
+            }.onFailure {
+                // Keep current state on error
+            }
+        }
+    }
+
+    fun uploadBestScoreToGlobal(onComplete: ((Boolean, String) -> Unit)? = null) {
+        val currentScores = _leaderboardList.value
+        if (currentScores.isEmpty()) {
+            _globalUploadMessage.value = "upload_no_best_record"
+            onComplete?.invoke(false, "upload_no_best_record")
+            return
+        }
+        val best = currentScores.first()
+        val entry = GlobalScoreEntry(
+            playerId = _playerId.value,
+            playerName = _playerName.value,
+            countryCode = _selectedCountry.value.code,
+            categoryKey = best.categoryKey,
+            gameTypeKey = best.gameTypeKey,
+            difficultyKey = best.difficultyKey,
+            score = best.score,
+            timeMillis = best.timeMillis,
+            wrongCount = best.wrongCount,
+            timestamp = best.timestamp
+        )
+
+        _isUploadingGlobalScore.value = true
+        viewModelScope.launch {
+            val result = globalRepository.uploadScore(entry)
+            _isUploadingGlobalScore.value = false
+            result.onSuccess {
+                _globalUploadMessage.value = "upload_success"
+                loadGlobalLeaderboard(best.gameTypeKey, best.difficultyKey)
+                onComplete?.invoke(true, "upload_success")
+            }.onFailure {
+                _globalUploadMessage.value = "network_error"
+                onComplete?.invoke(false, "network_error")
+            }
+        }
+    }
+
+    fun clearGlobalUploadMessage() {
+        _globalUploadMessage.value = null
+    }
+
+    fun triggerVibration(durationMs: Long = 120L) {
+        try {
+            val app = getApplication<Application>()
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                val vibratorManager = app.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? android.os.VibratorManager
+                vibratorManager?.defaultVibrator?.vibrate(
+                    android.os.VibrationEffect.createOneShot(durationMs, android.os.VibrationEffect.DEFAULT_AMPLITUDE)
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                val vibrator = app.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    vibrator?.vibrate(
+                        android.os.VibrationEffect.createOneShot(durationMs, android.os.VibrationEffect.DEFAULT_AMPLITUDE)
+                    )
+                } else {
+                    @Suppress("DEPRECATION")
+                    vibrator?.vibrate(durationMs)
+                }
+            }
+        } catch (e: Exception) {
+            // Ignore hardware vibration exceptions
         }
     }
 
@@ -1600,8 +1723,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
         when (avatar.type) {
             AvatarType.BOMB -> {
-                // 誤擊炸彈：扣分、中斷 Combo
+                // 誤擊炸彈：扣分、中斷 Combo、震動
                 SoundManager.playError()
+                triggerVibration(150L)
                 _whackScore.value = (_whackScore.value - 200).coerceAtLeast(0)
                 _whackCombo.value = 0
                 _whackBombHits.value = _whackBombHits.value + 1
@@ -1623,19 +1747,29 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 _whackHoles.value = list
             }
             AvatarType.NORMAL -> {
-                // 正常目標或假動作探頭中
-                SoundManager.playSuccess()
-                val currentCombo = _whackCombo.value + 1
-                _whackCombo.value = currentCombo
-                if (currentCombo > _whackMaxCombo.value) {
-                    _whackMaxCombo.value = currentCombo
+                if (hole.isFakeOut) {
+                    // 誤擊假動作：判定為打錯，不扣分、中斷 Combo、計入 1 次失誤、播放錯誤音效與震動
+                    SoundManager.playError()
+                    triggerVibration(120L)
+                    _whackCombo.value = 0
+                    _whackMisses.value = _whackMisses.value + 1
+                    list[holeIndex] = hole.copy(isHit = true, avatar = avatar.copy(expression = AvatarExpression.HIT))
+                    _whackHoles.value = list
+                } else {
+                    // 正常目標命中
+                    SoundManager.playSuccess()
+                    val currentCombo = _whackCombo.value + 1
+                    _whackCombo.value = currentCombo
+                    if (currentCombo > _whackMaxCombo.value) {
+                        _whackMaxCombo.value = currentCombo
+                    }
+                    val base = 100
+                    val comboBonus = currentCombo * 20
+                    _whackScore.value = _whackScore.value + base + comboBonus
+                    _whackHits.value = _whackHits.value + 1
+                    list[holeIndex] = hole.copy(isHit = true, avatar = avatar.copy(expression = AvatarExpression.HIT))
+                    _whackHoles.value = list
                 }
-                val base = if (hole.isFakeOut) 150 else 100
-                val comboBonus = currentCombo * 20
-                _whackScore.value = _whackScore.value + base + comboBonus
-                _whackHits.value = _whackHits.value + 1
-                list[holeIndex] = hole.copy(isHit = true, avatar = avatar.copy(expression = AvatarExpression.HIT))
-                _whackHoles.value = list
             }
         }
 
