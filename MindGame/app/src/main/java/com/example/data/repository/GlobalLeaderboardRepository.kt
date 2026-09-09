@@ -1,5 +1,6 @@
 package com.example.data.repository
 
+import com.example.BuildConfig
 import com.example.data.model.Country
 import com.example.data.model.GameType
 import com.example.data.model.GlobalLeaderboardResponse
@@ -15,7 +16,23 @@ class GlobalLeaderboardRepository(
     private var customServerUrl: String = DEFAULT_SERVER_URL
 ) {
     companion object {
-        const val DEFAULT_SERVER_URL = "https://script.google.com/macros/s/AKfycbwb9W7gzFdccnHT1HAW6xpcJE4ns_ihaPbjVthi_ktU8CWsz_jRFyrYG1lh1i-5x2HB/exec"
+        /**
+         * 全球排行榜雲端後端 URL。
+         *
+         * 【安全規範與隱私保護原則】：
+         * 本專案支援透過 Google Apps Script (GAS) 搭配 Google 試算表作為輕量級全球排行榜微後端。
+         * 為了避免個人私有的 Google Drive 試算表或部署 Web App URL 公開洩漏於 GitHub 開源儲存庫中，
+         * 本專案已將正式私有端點 URL 徹底抽離，統一由本機被 .gitignore 忽略的 `local.properties`
+         * （或 CI/CD 環境變數 `GLOBAL_LEADERBOARD_URL`）在編譯期安全注入至 `BuildConfig.GLOBAL_LEADERBOARD_URL`。
+         *
+         * 若本地未配置 `GLOBAL_LEADERBOARD_URL`，預設為空字串 `""`，此時系統將自動平滑降級至
+         * 「本地記憶體快取與模擬排行榜機制」，確保所有離線、本機測試與開源單元測試均可 100% 獨立運行。
+         *
+         * 若欲啟用您專屬的 Google 試算表全球排行榜微後端，請依照 README.md 中的說明部署 Apps Script，
+         * 並在專案的 `MindGame/local.properties` 檔案中加入：
+         * GLOBAL_LEADERBOARD_URL=https\://script.google.com/macros/s/YOUR_SCRIPT_ID/exec
+         */
+        val DEFAULT_SERVER_URL: String = BuildConfig.GLOBAL_LEADERBOARD_URL
     }
 
     // 本地記憶體模擬與快取池 (確保離線或通訊異常時，UI與互動能完整無礙運行與自我驗證)
@@ -175,7 +192,7 @@ class GlobalLeaderboardRepository(
                 }
             }
 
-            // 本地快取池更新（保留或覆蓋玩家最佳成績）
+            // 本地快取池更新（保留最佳成績並支援改名/換國旗資訊即時同步）
             val existingIndex = localGlobalCache.indexOfFirst {
                 it.playerId == entry.playerId &&
                 it.gameTypeKey == entry.gameTypeKey &&
@@ -201,6 +218,14 @@ class GlobalLeaderboardRepository(
 
                 if (isBetter) {
                     localGlobalCache[existingIndex] = entry
+                } else {
+                    // 若成績相同或未破紀錄，以最後更新的資料為準：
+                    // 維持原最佳成績數值（score / timeMillis / wrongCount），但立即同步最新玩家名稱、國家與時間戳記！
+                    localGlobalCache[existingIndex] = existing.copy(
+                        playerName = entry.playerName,
+                        countryCode = entry.countryCode,
+                        timestamp = entry.timestamp
+                    )
                 }
             } else {
                 localGlobalCache.add(entry)

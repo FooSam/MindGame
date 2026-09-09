@@ -49,16 +49,36 @@
 
 ---
 
+## 🌍 全球排行榜與自訂資訊即時同步 (Global Leaderboard)
+
+- 🌐 **跨國即時排行榜**：各遊戲與難度均支援前 100 筆全球高手排行（包含排名、國旗 Emoji、玩家暱稱、成績與上傳日期）。
+- 🏅 **個人最佳名次獨立卡片**：若玩家最佳紀錄不在前 100 名內，底部提供專屬高亮卡片呈現您的全球精確排名與總參賽人數。
+- 🔄 **玩家資訊即時同步機制**：
+  - 玩家修改名稱或更換國家/地區後，點擊「上傳至全球排行榜」，即使成績相同未破紀錄，**系統亦會以最後更新的資料為準，立即同步最新名稱、國旗與更新時間**至排行榜，同時維護歷史最佳戰績。
+  - 每一位玩家在各遊戲難度維持單一最佳紀錄，杜絕重複刷榜或惡意霸榜行為。
+- 🛡️ **私有雲端微後端與隱私保護架構**：
+  - 本專案支援 Google Apps Script (GAS) 搭配 Google 試算表作為全球排行榜雲端後端。
+  - **私密 URL 隔離原則**：為保障隱私與金鑰安全，正式私有 Google Drive 試算表及 GAS 部署網址**絕不公開於 Git 儲存庫**。
+  - **本地配置說明**：正式端點統一由本機被 `.gitignore` 忽略之 `MindGame/local.properties`（或 CI/CD 環境變數 `GLOBAL_LEADERBOARD_URL`）注入：
+    ```properties
+    GLOBAL_LEADERBOARD_URL=https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec
+    ```
+  - 若未設定 `GLOBAL_LEADERBOARD_URL`，系統將自動無縫啟用本地離線快取池與模擬排行榜，確保無網路或開源者本機編譯測試均能 100% 正常運行。
+
+---
+
 ## 🛠️ 技術架構與技術棧 (Tech Stack)
 
 - **開發語言**: Kotlin 2.0+
 - **UI 框架**: Jetpack Compose (Material 3) + Canvas 極座標動態旋轉幾何運算
 - **狀態管理**: Kotlin Coroutines & StateFlow (響應式單向數據流架構)
 - **本地資料庫**: Android Room (SQLite)，離線儲存各遊戲模組排行榜成績
+- **全球排行榜後端**: Google Apps Script (GAS) RESTful API 微後端 + 本地快取雙軌容錯架構
 - **資料解析**: Moshi JSON 序列化引擎
 - **廣告系統**: Google Mobile Ads SDK (AdMob 23.6.0)，具備每 3 局插頁廣告與次數獎勵補給機制
 - **安全加固**: ProGuard / R8 程式碼混淆與無用資源壓縮
 - **單元測試**: Robolectric, JUnit4, Roborazzi
+
 
 ---
 

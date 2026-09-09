@@ -108,4 +108,49 @@ class GlobalLeaderboardTest {
             assertTrue(res.topScores[0].timeMillis <= res.topScores[1].timeMillis)
         }
     }
+
+    @Test
+    fun testSameScoreRetainsScoreButUpdatesPlayerNameAndCountry() = runBlocking {
+        val repo = GlobalLeaderboardRepository(customServerUrl = "")
+        val myId = "player_rename_test_id"
+        val gameKey = GameType.AVATAR_WHACK.key
+        val diffKey = GameDifficulty.BEGINNER.key
+
+        // 1. 首次以 "玩家1" 名稱上傳 600 分
+        val initialEntry = GlobalScoreEntry(
+            playerId = myId,
+            playerName = "玩家1",
+            countryCode = "TW",
+            categoryKey = "SPEED",
+            gameTypeKey = gameKey,
+            difficultyKey = diffKey,
+            score = 600,
+            timeMillis = 40000L,
+            wrongCount = 0,
+            timestamp = 1000L
+        )
+        val upload1 = repo.uploadScore(initialEntry)
+        assertTrue(upload1.isSuccess)
+
+        val res1 = repo.fetchGlobalLeaderboard(gameKey, diffKey, myId).getOrThrow()
+        assertEquals(600, res1.myRankEntry?.score)
+        assertEquals("玩家1", res1.myRankEntry?.playerName)
+        assertEquals("TW", res1.myRankEntry?.countryCode)
+
+        // 2. 玩家修改名稱為 "玩家2"、國家改為 "JP"，分數完全相同 (600 分)，再次上傳
+        val updatedEntry = initialEntry.copy(
+            playerName = "玩家2",
+            countryCode = "JP",
+            timestamp = 2000L
+        )
+        val upload2 = repo.uploadScore(updatedEntry)
+        assertTrue(upload2.isSuccess)
+
+        // 3. 驗證分數維持 600 分，但玩家名稱與國家即時更新為最新值
+        val res2 = repo.fetchGlobalLeaderboard(gameKey, diffKey, myId).getOrThrow()
+        assertEquals("成績應維持原最佳成績 600 分", 600, res2.myRankEntry?.score)
+        assertEquals("玩家名稱應成功更新為最新名稱", "玩家2", res2.myRankEntry?.playerName)
+        assertEquals("國家代碼應成功更新為最新國家", "JP", res2.myRankEntry?.countryCode)
+        assertEquals("時間戳記應更新為最新", 2000L, res2.myRankEntry?.timestamp)
+    }
 }

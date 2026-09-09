@@ -27,6 +27,16 @@ val (appVersionName, appVersionCode) = if (versionFile.exists()) {
   "1.00.00.01" to 1
 }
 
+val localProps = Properties().apply {
+  val localFile = rootProject.file("local.properties")
+  if (localFile.exists()) {
+    FileInputStream(localFile).use { load(it) }
+  }
+}
+val globalLeaderboardUrl = localProps.getProperty("GLOBAL_LEADERBOARD_URL")
+  ?: System.getenv("GLOBAL_LEADERBOARD_URL")
+  ?: ""
+
 android {
   namespace = "com.example"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
@@ -37,6 +47,8 @@ android {
     targetSdk = 36
     versionCode = appVersionCode
     versionName = appVersionName
+
+    buildConfigField("String", "GLOBAL_LEADERBOARD_URL", "\"$globalLeaderboardUrl\"")
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
