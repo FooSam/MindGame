@@ -137,6 +137,12 @@ googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.W
 // Some unused dependencies are commented out below instead of being removed.
 // This makes it easy to add them back in the future if needed.
 dependencies {
+  implementation(libs.androidx.fragment.ktx)
+  constraints {
+    implementation("androidx.fragment:fragment:1.8.6") {
+      because("Google Play SDK Index: force update outdated transitive fragment 1.1.0 to 1.8.6")
+    }
+  }
   implementation(libs.play.services.ads)
   implementation(platform(libs.androidx.compose.bom))
   implementation(platform(libs.firebase.bom))
