@@ -263,7 +263,7 @@ fun LeaderboardDialog(
                         )
                     )
                     val scoreHeaderLabel = when (selectedGameType) {
-                        GameType.SPEED_MATCH, GameType.TURTLE_SOUP, GameType.AVATAR_WHACK, GameType.STROOP_EFFECT -> Localization.getString("score_label", language)
+                        GameType.SPEED_MATCH, GameType.TURTLE_SOUP, GameType.AVATAR_WHACK, GameType.STROOP_EFFECT, GameType.BLOCK_PUZZLE -> Localization.getString("score_label", language)
                         GameType.SUDOKU, GameType.CAT_SUDOKU -> "${Localization.getString("time", language)} (${Localization.getString("mistakes_label", language)})"
                         else -> Localization.getString("time", language)
                     }
@@ -316,7 +316,7 @@ fun LeaderboardDialog(
 
                                 val scoreValueText = when (selectedGameType) {
                                     GameType.SPEED_MATCH -> "${record.score} 次"
-                                    GameType.TURTLE_SOUP, GameType.AVATAR_WHACK, GameType.STROOP_EFFECT -> "${record.score} 分"
+                                    GameType.TURTLE_SOUP, GameType.AVATAR_WHACK, GameType.STROOP_EFFECT, GameType.BLOCK_PUZZLE -> "${record.score} 分"
                                     GameType.SUDOKU, GameType.CAT_SUDOKU -> "${formatTimeMillis(record.timeMillis)} (${record.wrongCount}錯)"
                                     else -> formatTimeMillis(record.timeMillis)
                                 }
@@ -430,7 +430,7 @@ fun LeaderboardDialog(
 
                                 val scoreValueText = when (selectedGameType) {
                                     GameType.SPEED_MATCH -> "${record.score} 次"
-                                    GameType.TURTLE_SOUP, GameType.AVATAR_WHACK, GameType.STROOP_EFFECT -> "${record.score} 分"
+                                    GameType.TURTLE_SOUP, GameType.AVATAR_WHACK, GameType.STROOP_EFFECT, GameType.BLOCK_PUZZLE -> "${record.score} 分"
                                     GameType.SUDOKU, GameType.CAT_SUDOKU -> "${formatTimeMillis(record.timeMillis)} (${record.wrongCount}錯)"
                                     else -> formatTimeMillis(record.timeMillis)
                                 }

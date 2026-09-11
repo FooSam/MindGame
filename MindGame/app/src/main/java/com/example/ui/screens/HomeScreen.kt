@@ -106,8 +106,8 @@ fun HomeScreen(
             nameKey = "category_casual",
             descKey = "category_casual_desc",
             icon = Icons.Default.SportsEsports,
-            iconBgColor = Color(0xFFF59E0B), // Amber
-            isAvailable = false
+            iconBgColor = Color(0xFFE07A5F), // Terracotta Warm Amber
+            isAvailable = true
         )
     )
 

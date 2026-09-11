@@ -65,7 +65,9 @@ enum class ScreenState {
     CAT_SUDOKU_GAME,
     TURTLE_SOUP_GAME,
     AVATAR_WHACK_GAME,
-    STROOP_EFFECT_GAME
+    STROOP_EFFECT_GAME,
+    CASUAL_CATEGORY,
+    BLOCK_PUZZLE_GAME
 }
 
 enum class GameStatus {
@@ -504,12 +506,43 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     _selectedGameType.value = GameType.FOCUS_TEST
                 }
             }
-            else -> {
-                // Future categories
+            GameCategory.CASUAL -> {
+                _selectedGameType.value = GameType.BLOCK_PUZZLE
+                _selectedDifficulty.value = GameDifficulty.BEGINNER
+                loadLeaderboard(category.key, GameType.BLOCK_PUZZLE.key, GameDifficulty.BEGINNER.key)
+                _currentScreen.value = ScreenState.CASUAL_CATEGORY
+                return
             }
         }
         loadLeaderboard(category.key, _selectedGameType.value.key, _selectedDifficulty.value.key)
         _currentScreen.value = ScreenState.CATEGORY_DETAIL
+    }
+
+    private val _blockPuzzleBestScore = MutableStateFlow(prefs.getInt("pref_block_puzzle_best", 0))
+    val blockPuzzleBestScore: StateFlow<Int> = _blockPuzzleBestScore.asStateFlow()
+
+    fun startBlockPuzzleGame() {
+        SoundManager.onGameSwitched()
+        _currentScreen.value = ScreenState.BLOCK_PUZZLE_GAME
+    }
+
+    fun saveBlockPuzzleScore(score: Int) {
+        if (score > _blockPuzzleBestScore.value) {
+            _blockPuzzleBestScore.value = score
+            prefs.edit().putInt("pref_block_puzzle_best", score).apply()
+        }
+        viewModelScope.launch {
+            val record = com.example.data.db.ScoreRecord(
+                playerName = _playerName.value,
+                categoryKey = GameCategory.CASUAL.key,
+                gameTypeKey = GameType.BLOCK_PUZZLE.key,
+                difficultyKey = GameDifficulty.BEGINNER.key,
+                score = score,
+                timestamp = System.currentTimeMillis()
+            )
+            repository.insertScore(record)
+            loadLeaderboard(GameCategory.CASUAL.key, GameType.BLOCK_PUZZLE.key, GameDifficulty.BEGINNER.key)
+        }
     }
 
     fun selectGameType(gameType: GameType) {

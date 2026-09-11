@@ -31,7 +31,11 @@ object SoundManager {
         R.raw.bgm_04_refreshing,
         R.raw.bgm_05_caves_of_dawn,
         R.raw.bgm_06_battle_dragons,
-        R.raw.bgm_07_melody_nature
+        R.raw.bgm_07_melody_nature,
+        R.raw.bgm_08_lofi_study,
+        R.raw.bgm_09_clay_zen,
+        R.raw.bgm_10_peaceful_piano,
+        R.raw.bgm_11_ceramic_breeze
     )
 
     fun initialize(context: Context) {
@@ -260,6 +264,106 @@ object SoundManager {
                 samples[i] = (wave * envelope * Short.MAX_VALUE).toInt().toShort()
             }
             playPcm(samples)
+        }
+    }
+
+    /**
+     * 塊陶啊！陶塊落子沉穩叩擊聲 (Ceramic Click & Tap)
+     */
+    fun playClayDrop() {
+        if (!isSfxEnabled) return
+        scope.launch {
+            val durationMs = 65
+            val numSamples = (SAMPLE_RATE * (durationMs / 1000.0)).toInt()
+            val samples = ShortArray(numSamples)
+            for (i in 0 until numSamples) {
+                val t = i.toDouble() / SAMPLE_RATE
+                // 陶器敲擊物理諧波 (基頻 480Hz + 泛音 1320Hz + 指數快速衰減)
+                val decay = Math.exp(-45.0 * t)
+                val wave = 0.7 * sin(2.0 * Math.PI * 480.0 * t) + 0.3 * sin(2.0 * Math.PI * 1324.8 * t)
+                samples[i] = (wave * decay * 0.45 * Short.MAX_VALUE).toInt().toShort()
+            }
+            playPcm(samples)
+        }
+    }
+
+    /**
+     * 塊陶啊！消除連擊階梯爬升音階 (清脆水滴/水晶琴鍵)
+     */
+    fun playComboChime(comboLevel: Int) {
+        if (!isSfxEnabled) return
+        scope.launch {
+            // 連擊音階 (C5, D5, E5, G5, A5, C6, E6...)
+            val baseFreqs = listOf(523.25, 587.33, 659.25, 783.99, 880.00, 1046.50, 1318.51)
+            val freq = baseFreqs[(comboLevel - 1).coerceIn(0, baseFreqs.size - 1)]
+            val durationMs = 120
+            val numSamples = (SAMPLE_RATE * (durationMs / 1000.0)).toInt()
+            val samples = ShortArray(numSamples)
+            for (i in 0 until numSamples) {
+                val t = i.toDouble() / SAMPLE_RATE
+                val decay = Math.exp(-18.0 * t)
+                val wave = 0.75 * sin(2.0 * Math.PI * freq * t) + 0.25 * sin(2.0 * Math.PI * freq * 2.0 * t)
+                samples[i] = (wave * decay * 0.4 * Short.MAX_VALUE).toInt().toShort()
+            }
+            playPcm(samples)
+        }
+    }
+
+    /**
+     * 塊陶啊！蜈蚣竄逃滑稽滑音 (Pitch Slide) + 碎步聲
+     */
+    fun playCentipedeEscape() {
+        if (!isSfxEnabled) return
+        scope.launch {
+            val durationMs = 280
+            val numSamples = (SAMPLE_RATE * (durationMs / 1000.0)).toInt()
+            val samples = ShortArray(numSamples)
+            for (i in 0 until numSamples) {
+                val t = i.toDouble() / SAMPLE_RATE
+                val progress = i.toDouble() / numSamples
+                // 滑稽上滑音 380Hz -> 850Hz + 微小快速小腳踏步顫音
+                val freq = 380.0 + 470.0 * (progress * progress)
+                val footstepPatter = 1.0 + 0.3 * sin(2.0 * Math.PI * 32.0 * t)
+                val wave = sin(2.0 * Math.PI * freq * t) * footstepPatter
+                val decay = (1.0 - progress) * (if (progress < 0.1) progress * 10.0 else 1.0)
+                samples[i] = (wave * decay * 0.35 * Short.MAX_VALUE).toInt().toShort()
+            }
+            playPcm(samples)
+        }
+    }
+
+    /**
+     * 塊陶啊！雙向十字爆破共鳴音 (Cross Boom)
+     */
+    fun playCrossBoom() {
+        if (!isSfxEnabled) return
+        scope.launch {
+            val durationMs = 220
+            val numSamples = (SAMPLE_RATE * (durationMs / 1000.0)).toInt()
+            val samples = ShortArray(numSamples)
+            for (i in 0 until numSamples) {
+                val t = i.toDouble() / SAMPLE_RATE
+                val decay = Math.exp(-12.0 * t)
+                // 陶土瓦解低頻爆破 + 晶體碎裂
+                val lowBoom = sin(2.0 * Math.PI * 110.0 * t) * 0.6
+                val midCrack = sin(2.0 * Math.PI * 340.0 * t) * 0.3
+                val noise = ((Math.random() - 0.5) * 0.2)
+                val wave = lowBoom + midCrack + noise
+                samples[i] = (wave * decay * 0.5 * Short.MAX_VALUE).toInt().toShort()
+            }
+            playPcm(samples)
+        }
+    }
+
+    /**
+     * 靈光一閃方塊旋轉音
+     */
+    fun playRotate() {
+        if (!isSfxEnabled) return
+        scope.launch {
+            playTone(659.25, 50, 0.25f) // E5
+            delay(40)
+            playTone(880.00, 70, 0.3f)  // A5
         }
     }
 

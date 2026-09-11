@@ -10,7 +10,8 @@ class SoundManagerLogicTest {
 
     @Test
     fun testBgmTracksCount() {
-        assertEquals("Should have exactly 7 BGM tracks", 7, SoundManager.bgmTracks.size)
+        assertTrue("Should have at least 10 BGM tracks for variety", SoundManager.bgmTracks.size >= 10)
+        assertEquals(11, SoundManager.bgmTracks.size)
     }
 
     @Test

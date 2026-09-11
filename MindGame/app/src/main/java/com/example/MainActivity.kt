@@ -5,7 +5,6 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.SystemBarStyle
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -35,6 +34,8 @@ import com.example.ui.screens.SpeedMatchScreen
 import com.example.ui.screens.SudokuScreen
 import com.example.ui.screens.AvatarWhackScreen
 import com.example.ui.screens.StroopScreen
+import com.example.ui.screens.CasualCategoryScreen
+import com.example.ui.screens.BlockPuzzleScreen
 import com.example.ui.screens.turtlesoup.TurtleSoupScreen
 import com.example.ui.screens.turtlesoup.TurtleSoupPlayState
 import com.example.game.sudoku.SudokuConfig
@@ -54,16 +55,7 @@ class MainActivity : ComponentActivity() {
     private val viewModel: GameViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.auto(
-                android.graphics.Color.TRANSPARENT,
-                android.graphics.Color.TRANSPARENT
-            ),
-            navigationBarStyle = SystemBarStyle.auto(
-                android.graphics.Color.TRANSPARENT,
-                android.graphics.Color.TRANSPARENT
-            )
-        )
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         SoundManager.initialize(applicationContext)
         AdManager.initialize(this)
@@ -503,6 +495,27 @@ fun MainApp(viewModel: GameViewModel) {
                     onResetClick = { viewModel.resetStroopGame() },
                     onOptionSelected = { option -> viewModel.onStroopOptionSelected(option) },
                     onLeaderboardClick = { viewModel.openLeaderboardDialog() }
+                )
+            }
+
+            ScreenState.CASUAL_CATEGORY -> {
+                CasualCategoryScreen(
+                    language = language,
+                    appTheme = appTheme,
+                    onBackClick = { viewModel.navigateTo(ScreenState.HOME) },
+                    onPlayBlockPuzzle = { viewModel.startBlockPuzzleGame() },
+                    onLeaderboardClick = { viewModel.openLeaderboardDialog() }
+                )
+            }
+
+            ScreenState.BLOCK_PUZZLE_GAME -> {
+                val blockPuzzleBestScore by viewModel.blockPuzzleBestScore.collectAsStateWithLifecycle()
+                BlockPuzzleScreen(
+                    language = language,
+                    appTheme = appTheme,
+                    bestScore = blockPuzzleBestScore,
+                    onBackClick = { viewModel.navigateTo(ScreenState.CASUAL_CATEGORY) },
+                    onSaveScore = { score -> viewModel.saveBlockPuzzleScore(score) }
                 )
             }
         }
