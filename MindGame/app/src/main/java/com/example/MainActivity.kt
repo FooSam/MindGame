@@ -36,6 +36,7 @@ import com.example.ui.screens.AvatarWhackScreen
 import com.example.ui.screens.StroopScreen
 import com.example.ui.screens.CasualCategoryScreen
 import com.example.ui.screens.BlockPuzzleScreen
+import com.example.ui.screens.FruitMasterScreen
 import com.example.ui.screens.turtlesoup.TurtleSoupScreen
 import com.example.ui.screens.turtlesoup.TurtleSoupPlayState
 import com.example.game.sudoku.SudokuConfig
@@ -103,6 +104,7 @@ fun MainApp(viewModel: GameViewModel) {
     val selectedCategory by viewModel.selectedCategory.collectAsStateWithLifecycle()
     val selectedGameType by viewModel.selectedGameType.collectAsStateWithLifecycle()
     val selectedDifficulty by viewModel.selectedDifficulty.collectAsStateWithLifecycle()
+    val leaderboardDifficulty by viewModel.leaderboardDifficulty.collectAsStateWithLifecycle()
 
     // Focus Game state
     val gameStatus by viewModel.gameStatus.collectAsStateWithLifecycle()
@@ -504,6 +506,7 @@ fun MainApp(viewModel: GameViewModel) {
                     appTheme = appTheme,
                     onBackClick = { viewModel.navigateTo(ScreenState.HOME) },
                     onPlayBlockPuzzle = { viewModel.startBlockPuzzleGame() },
+                    onPlayFruitMaster = { viewModel.startFruitMasterGame() },
                     onLeaderboardClick = { viewModel.openLeaderboardDialog() }
                 )
             }
@@ -516,6 +519,22 @@ fun MainApp(viewModel: GameViewModel) {
                     bestScore = blockPuzzleBestScore,
                     onBackClick = { viewModel.navigateTo(ScreenState.CASUAL_CATEGORY) },
                     onSaveScore = { score -> viewModel.saveBlockPuzzleScore(score) }
+                )
+            }
+
+            ScreenState.FRUIT_MASTER_GAME -> {
+                val fruitHeartbeatBestScore by viewModel.fruitHeartbeatBestScore.collectAsStateWithLifecycle()
+                val fruitBladeBombBestScore by viewModel.fruitBladeBombBestScore.collectAsStateWithLifecycle()
+                val fruitWorkshopBestScore by viewModel.fruitWorkshopBestScore.collectAsStateWithLifecycle()
+                FruitMasterScreen(
+                    language = language,
+                    appTheme = appTheme,
+                    heartbeatBestScore = fruitHeartbeatBestScore,
+                    bladeBombBestScore = fruitBladeBombBestScore,
+                    workshopBestScore = fruitWorkshopBestScore,
+                    onBackClick = { viewModel.navigateTo(ScreenState.CASUAL_CATEGORY) },
+                    onSaveScore = { mode, score -> viewModel.saveFruitMasterScore(mode, score) },
+                    onLeaderboardClick = { viewModel.openLeaderboardDialog() }
                 )
             }
         }
@@ -566,7 +585,7 @@ fun MainApp(viewModel: GameViewModel) {
 
         if (showLeaderboardDialog) {
             LeaderboardDialog(
-                selectedDifficulty = selectedDifficulty,
+                selectedDifficulty = leaderboardDifficulty,
                 selectedGameType = selectedGameType,
                 scores = leaderboardList,
                 globalScores = globalLeaderboardList,

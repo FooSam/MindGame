@@ -202,7 +202,12 @@ fun LeaderboardDialog(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 // Difficulty Selector Tabs
-                val difficulties = GameDifficulty.entries
+                val isFruitMaster = selectedGameType == GameType.FRUIT_MASTER
+                val difficulties = if (isFruitMaster) {
+                    listOf(GameDifficulty.BEGINNER, GameDifficulty.INTERMEDIATE, GameDifficulty.ADVANCED)
+                } else {
+                    GameDifficulty.entries
+                }
                 val selectedIndex = difficulties.indexOf(selectedDifficulty)
 
                 ScrollableTabRow(
@@ -211,13 +216,21 @@ fun LeaderboardDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     difficulties.forEach { diff ->
-                        val labelKey = when (diff) {
-                            GameDifficulty.BEGINNER -> "diff_name_beginner"
-                            GameDifficulty.INTERMEDIATE -> "diff_name_intermediate"
-                            GameDifficulty.ADVANCED -> "diff_name_advanced"
-                            GameDifficulty.HARD -> "diff_name_hard"
-                            GameDifficulty.HELL -> "diff_name_hell"
-                            GameDifficulty.EPIC -> "diff_name_epic"
+                        val labelKey = if (isFruitMaster) {
+                            when (diff) {
+                                GameDifficulty.BEGINNER -> "mode_heartbeat_slicer"
+                                GameDifficulty.INTERMEDIATE -> "mode_blade_and_bomb"
+                                else -> "mode_workshop"
+                            }
+                        } else {
+                            when (diff) {
+                                GameDifficulty.BEGINNER -> "diff_name_beginner"
+                                GameDifficulty.INTERMEDIATE -> "diff_name_intermediate"
+                                GameDifficulty.ADVANCED -> "diff_name_advanced"
+                                GameDifficulty.HARD -> "diff_name_hard"
+                                GameDifficulty.HELL -> "diff_name_hell"
+                                GameDifficulty.EPIC -> "diff_name_epic"
+                            }
                         }
                         Tab(
                             selected = diff == selectedDifficulty,
@@ -263,7 +276,8 @@ fun LeaderboardDialog(
                         )
                     )
                     val scoreHeaderLabel = when (selectedGameType) {
-                        GameType.SPEED_MATCH, GameType.TURTLE_SOUP, GameType.AVATAR_WHACK, GameType.STROOP_EFFECT, GameType.BLOCK_PUZZLE -> Localization.getString("score_label", language)
+                        GameType.SPEED_MATCH -> Localization.getString("speed_match_score_label", language)
+                        GameType.TURTLE_SOUP, GameType.AVATAR_WHACK, GameType.STROOP_EFFECT, GameType.BLOCK_PUZZLE, GameType.FRUIT_MASTER -> Localization.getString("score_label", language)
                         GameType.SUDOKU, GameType.CAT_SUDOKU -> "${Localization.getString("time", language)} (${Localization.getString("mistakes_label", language)})"
                         else -> Localization.getString("time", language)
                     }
@@ -316,7 +330,7 @@ fun LeaderboardDialog(
 
                                 val scoreValueText = when (selectedGameType) {
                                     GameType.SPEED_MATCH -> "${record.score} 次"
-                                    GameType.TURTLE_SOUP, GameType.AVATAR_WHACK, GameType.STROOP_EFFECT, GameType.BLOCK_PUZZLE -> "${record.score} 分"
+                                    GameType.TURTLE_SOUP, GameType.AVATAR_WHACK, GameType.STROOP_EFFECT, GameType.BLOCK_PUZZLE, GameType.FRUIT_MASTER -> "${record.score} 分"
                                     GameType.SUDOKU, GameType.CAT_SUDOKU -> "${formatTimeMillis(record.timeMillis)} (${record.wrongCount}錯)"
                                     else -> formatTimeMillis(record.timeMillis)
                                 }
@@ -430,7 +444,7 @@ fun LeaderboardDialog(
 
                                 val scoreValueText = when (selectedGameType) {
                                     GameType.SPEED_MATCH -> "${record.score} 次"
-                                    GameType.TURTLE_SOUP, GameType.AVATAR_WHACK, GameType.STROOP_EFFECT, GameType.BLOCK_PUZZLE -> "${record.score} 分"
+                                    GameType.TURTLE_SOUP, GameType.AVATAR_WHACK, GameType.STROOP_EFFECT, GameType.BLOCK_PUZZLE, GameType.FRUIT_MASTER -> "${record.score} 分"
                                     GameType.SUDOKU, GameType.CAT_SUDOKU -> "${formatTimeMillis(record.timeMillis)} (${record.wrongCount}錯)"
                                     else -> formatTimeMillis(record.timeMillis)
                                 }
@@ -528,7 +542,7 @@ fun LeaderboardDialog(
                             if (myGlobalRankEntry != null) {
                                 val myScoreText = when (selectedGameType) {
                                     GameType.SPEED_MATCH -> "${myGlobalRankEntry.score} 次"
-                                    GameType.TURTLE_SOUP, GameType.AVATAR_WHACK, GameType.STROOP_EFFECT -> "${myGlobalRankEntry.score} 分"
+                                    GameType.TURTLE_SOUP, GameType.AVATAR_WHACK, GameType.STROOP_EFFECT, GameType.BLOCK_PUZZLE, GameType.FRUIT_MASTER -> "${myGlobalRankEntry.score} 分"
                                     GameType.SUDOKU, GameType.CAT_SUDOKU -> "${formatTimeMillis(myGlobalRankEntry.timeMillis)} (${myGlobalRankEntry.wrongCount}錯)"
                                     else -> formatTimeMillis(myGlobalRankEntry.timeMillis)
                                 }

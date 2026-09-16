@@ -146,17 +146,63 @@ object SoundManager {
         generateToneSamples(880.0, 45, 0.2f, isSawtooth = false)
     }
 
+    private val cachedWoodblockChopSamples: ShortArray by lazy {
+        val durationMs = 65
+        val numSamples = (SAMPLE_RATE * (durationMs / 1000.0)).toInt()
+        val samples = ShortArray(numSamples)
+        for (i in 0 until numSamples) {
+            val t = i.toDouble() / SAMPLE_RATE
+            val decay = Math.exp(-55.0 * t)
+            val wave = 0.75 * sin(2.0 * Math.PI * 960.0 * t) + 0.25 * sin(2.0 * Math.PI * 2180.0 * t)
+            samples[i] = (wave * decay * 0.55 * Short.MAX_VALUE).toInt().toShort()
+        }
+        samples
+    }
+
+    private val cachedMetalClangSamples: ShortArray by lazy {
+        val durationMs = 90
+        val numSamples = (SAMPLE_RATE * (durationMs / 1000.0)).toInt()
+        val samples = ShortArray(numSamples)
+        for (i in 0 until numSamples) {
+            val t = i.toDouble() / SAMPLE_RATE
+            val decay = Math.exp(-35.0 * t)
+            val wave = 0.5 * sin(2.0 * Math.PI * 1850.0 * t) + 0.5 * sin(2.0 * Math.PI * 2780.0 * t)
+            samples[i] = (wave * decay * 0.45 * Short.MAX_VALUE).toInt().toShort()
+        }
+        samples
+    }
+
+    private val cachedBlenderSamples: ShortArray by lazy {
+        val durationMs = 450
+        val numSamples = (SAMPLE_RATE * (durationMs / 1000.0)).toInt()
+        val samples = ShortArray(numSamples)
+        for (i in 0 until numSamples) {
+            val t = i.toDouble() / SAMPLE_RATE
+            val progress = i.toDouble() / numSamples
+            val baseFreq = 220.0 + sin(2.0 * Math.PI * 12.0 * t) * 50.0 + progress * 140.0
+            val wave = sin(2.0 * Math.PI * baseFreq * t) * 0.6 + (Math.random() - 0.5) * 0.4
+            val env = Math.sin(Math.PI * progress)
+            samples[i] = (wave * env * 0.38 * Short.MAX_VALUE).toInt().toShort()
+        }
+        samples
+    }
+
     private var errorAudioTrack: AudioTrack? = null
     private var clickAudioTrack: AudioTrack? = null
+    private var woodblockAudioTrack1: AudioTrack? = null
+    private var woodblockAudioTrack2: AudioTrack? = null
+    private var woodblockTrackToggle = false
+    private var metalAudioTrack: AudioTrack? = null
+    private var blenderAudioTrack: AudioTrack? = null
 
     private fun initShortSfxTracks() {
         try {
-            if (errorAudioTrack == null) {
-                errorAudioTrack = createStaticTrack(cachedErrorSamples)
-            }
-            if (clickAudioTrack == null) {
-                clickAudioTrack = createStaticTrack(cachedClickSamples)
-            }
+            if (errorAudioTrack == null) errorAudioTrack = createStaticTrack(cachedErrorSamples)
+            if (clickAudioTrack == null) clickAudioTrack = createStaticTrack(cachedClickSamples)
+            if (woodblockAudioTrack1 == null) woodblockAudioTrack1 = createStaticTrack(cachedWoodblockChopSamples)
+            if (woodblockAudioTrack2 == null) woodblockAudioTrack2 = createStaticTrack(cachedWoodblockChopSamples)
+            if (metalAudioTrack == null) metalAudioTrack = createStaticTrack(cachedMetalClangSamples)
+            if (blenderAudioTrack == null) blenderAudioTrack = createStaticTrack(cachedBlenderSamples)
         } catch (_: Exception) {
         }
     }
@@ -364,6 +410,182 @@ object SoundManager {
             playTone(659.25, 50, 0.25f) // E5
             delay(40)
             playTone(880.00, 70, 0.3f)  // A5
+        }
+    }
+
+    /**
+     * 水果切切樂：柔和清脆破空刀痕聲 (Swish)
+     */
+    fun playFruitSliceSwish() {
+        if (!isSfxEnabled) return
+        scope.launch {
+            val durationMs = 80
+            val numSamples = (SAMPLE_RATE * (durationMs / 1000.0)).toInt()
+            val samples = ShortArray(numSamples)
+            for (i in 0 until numSamples) {
+                val t = i.toDouble() / SAMPLE_RATE
+                val progress = i.toDouble() / numSamples
+                val freq = 1400.0 - progress * 900.0 // 1400Hz -> 500Hz 快速下掠
+                val sine = sin(2.0 * Math.PI * freq * t)
+                val noise = (Math.random() - 0.5) * 0.4
+                val decay = Math.sin(Math.PI * progress) * Math.exp(-progress * 2.5)
+                samples[i] = ((sine * 0.6 + noise * 0.4) * decay * 0.28 * Short.MAX_VALUE).toInt().toShort()
+            }
+            playPcm(samples)
+        }
+    }
+
+    /**
+     * 水果切切樂：多段和弦微調爆汁音 (真實破皮白噪音 + 和弦爆汁質感)
+     */
+    fun playFruitJuiceSplash() {
+        if (!isSfxEnabled) return
+        scope.launch {
+            val durationMs = 95
+            val numSamples = (SAMPLE_RATE * (durationMs / 1000.0)).toInt()
+            val samples = ShortArray(numSamples)
+            val baseFreq = listOf(440.0, 554.37, 659.25).random()
+            for (i in 0 until numSamples) {
+                val t = i.toDouble() / SAMPLE_RATE
+                val progress = i.toDouble() / numSamples
+                val decay = Math.exp(-32.0 * t)
+                val tone1 = sin(2.0 * Math.PI * baseFreq * t)
+                val tone2 = sin(2.0 * Math.PI * (baseFreq * 1.5) * t) * 0.4
+                val popNoise = if (progress < 0.25) (Math.random() - 0.5) * 0.6 else 0.0
+                val mixed = (tone1 * 0.5 + tone2 + popNoise) * decay
+                samples[i] = (mixed * 0.45 * Short.MAX_VALUE).toInt().toShort()
+            }
+            playPcm(samples)
+        }
+    }
+
+    /**
+     * 水果切切樂：切片工坊圓潤木質砧板打擊音 (Woodblock ASMR) - 0ms 極速無延遲
+     */
+    fun playWoodblockChop() {
+        if (!isSfxEnabled) return
+        woodblockTrackToggle = !woodblockTrackToggle
+        val track = if (woodblockTrackToggle) woodblockAudioTrack1 else woodblockAudioTrack2
+        if (!playPreloadedTrack(track)) {
+            scope.launch {
+                playPcm(cachedWoodblockChopSamples)
+            }
+        }
+    }
+
+    /**
+     * 水果切切樂：切片工坊金屬砧板彈刀清脆撞擊音 - 0ms 極速無延遲
+     */
+    fun playMetalClang() {
+        if (!isSfxEnabled) return
+        if (!playPreloadedTrack(metalAudioTrack)) {
+            scope.launch {
+                playPcm(cachedMetalClangSamples)
+            }
+        }
+    }
+
+    /**
+     * 水果切切樂：切片工坊特調果汁旋轉攪拌音 (Blender Whirl)
+     */
+    fun playBlenderWhir() {
+        if (!isSfxEnabled) return
+        if (!playPreloadedTrack(blenderAudioTrack)) {
+            scope.launch {
+                playPcm(cachedBlenderSamples)
+            }
+        }
+    }
+
+    /**
+     * 水果切切樂：心跳果刃戰低頻心跳脈衝音效 (咚-咚 雙擊，支援動態頻率加速)
+     */
+    fun playHeartbeatPulse(speedMultiplier: Float = 1.0f) {
+        if (!isSfxEnabled) return
+        scope.launch {
+            val durationMs = 70
+            val numSamples = (SAMPLE_RATE * (durationMs / 1000.0)).toInt()
+            val samples = ShortArray(numSamples)
+            // 第一跳：75Hz
+            for (i in 0 until numSamples) {
+                val t = i.toDouble() / SAMPLE_RATE
+                val env = Math.sin(Math.PI * (i.toDouble() / numSamples))
+                val wave = sin(2.0 * Math.PI * 75.0 * t)
+                samples[i] = (wave * env * 0.6 * Short.MAX_VALUE).toInt().toShort()
+            }
+            playPcm(samples)
+
+            val delayInterval = (90L / speedMultiplier.coerceAtLeast(1f)).toLong()
+            delay(delayInterval)
+
+            // 第二跳：90Hz 微弱
+            val samples2 = ShortArray(numSamples)
+            for (i in 0 until numSamples) {
+                val t = i.toDouble() / SAMPLE_RATE
+                val env = Math.sin(Math.PI * (i.toDouble() / numSamples))
+                val wave = sin(2.0 * Math.PI * 90.0 * t)
+                samples2[i] = (wave * env * 0.45 * Short.MAX_VALUE).toInt().toShort()
+            }
+            playPcm(samples2)
+        }
+    }
+
+    /**
+     * 水果切切樂：炸彈爆炸沉悶轟鳴音
+     */
+    fun playBombExplosion() {
+        if (!isSfxEnabled) return
+        scope.launch {
+            val durationMs = 220
+            val numSamples = (SAMPLE_RATE * (durationMs / 1000.0)).toInt()
+            val samples = ShortArray(numSamples)
+            for (i in 0 until numSamples) {
+                val t = i.toDouble() / SAMPLE_RATE
+                val decay = Math.exp(-14.0 * t)
+                val wave = sin(2.0 * Math.PI * 85.0 * t) * 0.5 + (Math.random() - 0.5) * 0.5
+                samples[i] = (wave * decay * 0.65 * Short.MAX_VALUE).toInt().toShort()
+            }
+            playPcm(samples)
+        }
+    }
+
+    /**
+     * 水果切切樂：冰凍香蕉寒冰晶瑩凝結音
+     */
+    fun playFreezeEffect() {
+        if (!isSfxEnabled) return
+        scope.launch {
+            playTone(1318.51, 60, 0.28f) // E6
+            delay(50)
+            playTone(1567.98, 90, 0.32f) // G6
+        }
+    }
+
+    /**
+     * 水果切切樂：彩虹西瓜全場引爆衝擊音
+     */
+    fun playRainbowExplosion() {
+        if (!isSfxEnabled) return
+        scope.launch {
+            val freqs = listOf(523.25, 659.25, 783.99, 1046.50, 1318.51)
+            for (f in freqs) {
+                playTone(f, 40, 0.22f)
+                delay(30)
+            }
+        }
+    }
+
+    /**
+     * 水果切切樂：狂熱模式啟動歡呼衝擊音
+     */
+    fun playFeverFanfare() {
+        if (!isSfxEnabled) return
+        scope.launch {
+            playTone(587.33, 60, 0.25f) // D5
+            delay(50)
+            playTone(880.00, 60, 0.3f)  // A5
+            delay(50)
+            playTone(1174.66, 120, 0.35f) // D6
         }
     }
 

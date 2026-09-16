@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -55,6 +56,7 @@ fun CasualCategoryScreen(
     appTheme: AppThemeStyle,
     onBackClick: () -> Unit,
     onPlayBlockPuzzle: () -> Unit,
+    onPlayFruitMaster: () -> Unit,
     onLeaderboardClick: () -> Unit
 ) {
     AppBackground(themeStyle = appTheme) {
@@ -131,8 +133,124 @@ fun CasualCategoryScreen(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // 第 1 款遊戲：《水果切切樂》（全新熱門大作）
                 item {
-                    // 第 1 款遊戲：《塊陶啊！》
+                    ElevatedCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(22.dp))
+                            .clickable {
+                                SoundManager.playClick()
+                                onPlayFruitMaster()
+                            },
+                        shape = RoundedCornerShape(22.dp),
+                        colors = CardDefaults.elevatedCardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp)
+                    ) {
+                        Column {
+                            // 遊戲封面大圖 (直立式海報大圖 9:16 原創適配)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(16f / 9f)
+                            ) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.cover_fruit_master),
+                                    contentDescription = "Fruit Master Cover",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+
+                                // 封面右上方精選特色標籤
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = Color(0xFFFF5722).copy(alpha = 0.9f), // 活力熱情橙紅
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(12.dp)
+                                ) {
+                                    Text(
+                                        text = "三大舒壓模式",
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                                    )
+                                }
+                            }
+
+                            // 下方說明與一鍵開玩按鈕
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = Localization.getString("game_fruit_master", language),
+                                    style = MaterialTheme.typography.titleLarge.copy(
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                )
+
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                Text(
+                                    text = Localization.getString("game_fruit_master_desc", language),
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        lineHeight = 20.sp
+                                    )
+                                )
+
+                                Spacer(modifier = Modifier.height(14.dp))
+
+                                // 特色標籤群
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    FeatureTag(text = "心跳果刃戰")
+                                    FeatureTag(text = "避雷狂刀客")
+                                    FeatureTag(text = "切片工坊")
+                                }
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                // 立即開玩按鈕
+                                Button(
+                                    onClick = {
+                                        SoundManager.playClick()
+                                        onPlayFruitMaster()
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(48.dp),
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFFFF5722)
+                                    )
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.PlayArrow,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = Localization.getString("fruit_master_play_now", language),
+                                            style = MaterialTheme.typography.titleMedium.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.White
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 第 2 款遊戲：《塊陶啊！》
+                item {
                     ElevatedCard(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -148,11 +266,11 @@ fun CasualCategoryScreen(
                         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp)
                     ) {
                         Column {
-                            // 遊戲封面大圖 (陶偶蜈蚣與 3D 陶瓷方塊)
+                            // 遊戲封面大圖 (直立式海報大圖 9:16 原創適配)
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(190.dp)
+                                    .aspectRatio(16f / 9f)
                             ) {
                                 Image(
                                     painter = painterResource(id = R.drawable.cover_block_puzzle),
@@ -161,22 +279,10 @@ fun CasualCategoryScreen(
                                     contentScale = ContentScale.Crop
                                 )
 
-                                // 封面底部漸層陰影
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(
-                                            Brush.verticalGradient(
-                                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.65f)),
-                                                startY = 100f
-                                            )
-                                        )
-                                )
-
                                 // 封面右上方精選特色標籤
                                 Surface(
                                     shape = RoundedCornerShape(12.dp),
-                                    color = Color(0xFFE07A5F),
+                                    color = Color(0xFFE07A5F).copy(alpha = 0.9f),
                                     modifier = Modifier
                                         .align(Alignment.TopEnd)
                                         .padding(12.dp)
@@ -185,29 +291,22 @@ fun CasualCategoryScreen(
                                         text = "3D 陶藝原創",
                                         color = Color.White,
                                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                    )
-                                }
-
-                                // 封面左下方大標題
-                                Column(
-                                    modifier = Modifier
-                                        .align(Alignment.BottomStart)
-                                        .padding(16.dp)
-                                ) {
-                                    Text(
-                                        text = Localization.getString("game_block_puzzle", language),
-                                        style = MaterialTheme.typography.titleLarge.copy(
-                                            fontWeight = FontWeight.ExtraBold,
-                                            color = Color.White,
-                                            fontSize = 24.sp
-                                        )
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                                     )
                                 }
                             }
 
                             // 下方說明與一鍵開玩按鈕
                             Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = Localization.getString("game_block_puzzle", language),
+                                    style = MaterialTheme.typography.titleLarge.copy(
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                )
+
+                                Spacer(modifier = Modifier.height(6.dp))
+
                                 Text(
                                     text = Localization.getString("game_block_puzzle_desc", language),
                                     style = MaterialTheme.typography.bodyMedium.copy(

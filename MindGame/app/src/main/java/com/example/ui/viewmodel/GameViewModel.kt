@@ -67,7 +67,8 @@ enum class ScreenState {
     AVATAR_WHACK_GAME,
     STROOP_EFFECT_GAME,
     CASUAL_CATEGORY,
-    BLOCK_PUZZLE_GAME
+    BLOCK_PUZZLE_GAME,
+    FRUIT_MASTER_GAME
 }
 
 enum class GameStatus {
@@ -131,6 +132,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _selectedDifficulty = MutableStateFlow(GameDifficulty.BEGINNER)
     val selectedDifficulty: StateFlow<GameDifficulty> = _selectedDifficulty.asStateFlow()
+
+    private val _leaderboardDifficulty = MutableStateFlow(GameDifficulty.BEGINNER)
+    val leaderboardDifficulty: StateFlow<GameDifficulty> = _leaderboardDifficulty.asStateFlow()
 
     // Focus Game State (Schulte Grid)
     private val _gameStatus = MutableStateFlow(GameStatus.IDLE)
@@ -545,6 +549,63 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // 水果切切樂三大模式最佳成績
+    private val _fruitHeartbeatBestScore = MutableStateFlow(prefs.getInt("pref_fruit_heartbeat_best", 0))
+    val fruitHeartbeatBestScore: StateFlow<Int> = _fruitHeartbeatBestScore.asStateFlow()
+
+    private val _fruitBladeBombBestScore = MutableStateFlow(prefs.getInt("pref_fruit_blade_bomb_best", 0))
+    val fruitBladeBombBestScore: StateFlow<Int> = _fruitBladeBombBestScore.asStateFlow()
+
+    private val _fruitWorkshopBestScore = MutableStateFlow(prefs.getInt("pref_fruit_workshop_best", 0))
+    val fruitWorkshopBestScore: StateFlow<Int> = _fruitWorkshopBestScore.asStateFlow()
+
+    fun startFruitMasterGame() {
+        SoundManager.onGameSwitched()
+        _selectedCategory.value = GameCategory.CASUAL
+        _selectedGameType.value = GameType.FRUIT_MASTER
+        _currentScreen.value = ScreenState.FRUIT_MASTER_GAME
+    }
+
+    fun saveFruitMasterScore(mode: com.example.game.fruit.FruitGameMode, score: Int) {
+        when (mode) {
+            com.example.game.fruit.FruitGameMode.HEARTBEAT_SLICER -> {
+                if (score > _fruitHeartbeatBestScore.value) {
+                    _fruitHeartbeatBestScore.value = score
+                    prefs.edit().putInt("pref_fruit_heartbeat_best", score).apply()
+                }
+            }
+            com.example.game.fruit.FruitGameMode.BLADE_AND_BOMB -> {
+                if (score > _fruitBladeBombBestScore.value) {
+                    _fruitBladeBombBestScore.value = score
+                    prefs.edit().putInt("pref_fruit_blade_bomb_best", score).apply()
+                }
+            }
+            com.example.game.fruit.FruitGameMode.WORKSHOP -> {
+                if (score > _fruitWorkshopBestScore.value) {
+                    _fruitWorkshopBestScore.value = score
+                    prefs.edit().putInt("pref_fruit_workshop_best", score).apply()
+                }
+            }
+        }
+        val diffKey = when (mode) {
+            com.example.game.fruit.FruitGameMode.HEARTBEAT_SLICER -> GameDifficulty.BEGINNER.key
+            com.example.game.fruit.FruitGameMode.BLADE_AND_BOMB -> GameDifficulty.INTERMEDIATE.key
+            com.example.game.fruit.FruitGameMode.WORKSHOP -> GameDifficulty.ADVANCED.key
+        }
+        viewModelScope.launch {
+            val record = com.example.data.db.ScoreRecord(
+                playerName = _playerName.value,
+                categoryKey = GameCategory.CASUAL.key,
+                gameTypeKey = GameType.FRUIT_MASTER.key,
+                difficultyKey = diffKey,
+                score = score,
+                timestamp = System.currentTimeMillis()
+            )
+            repository.insertScore(record)
+            loadLeaderboard(GameCategory.CASUAL.key, GameType.FRUIT_MASTER.key, diffKey)
+        }
+    }
+
     fun selectGameType(gameType: GameType) {
         _selectedGameType.value = gameType
         loadLeaderboard(_selectedCategory.value.key, gameType.key, _selectedDifficulty.value.key)
@@ -588,6 +649,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setLeaderboardDifficultyFilter(difficulty: GameDifficulty) {
+        _leaderboardDifficulty.value = difficulty
+        _selectedDifficulty.value = difficulty
         loadLeaderboard(_selectedCategory.value.key, _selectedGameType.value.key, difficulty.key)
         loadGlobalLeaderboard(_selectedGameType.value.key, difficulty.key)
     }
@@ -1324,6 +1387,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     // --- Dialogs ---
     fun openLeaderboardDialog() {
+        _leaderboardDifficulty.value = _selectedDifficulty.value
         _showLeaderboardDialog.value = true
     }
 
