@@ -68,7 +68,8 @@ enum class ScreenState {
     STROOP_EFFECT_GAME,
     CASUAL_CATEGORY,
     BLOCK_PUZZLE_GAME,
-    FRUIT_MASTER_GAME
+    FRUIT_MASTER_GAME,
+    GLASS_PUZZLE_CUBE_GAME
 }
 
 enum class GameStatus {
@@ -499,7 +500,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 _selectedGameType.value = GameType.TURTLE_SOUP
             }
             GameCategory.BRAIN -> {
-                _selectedGameType.value = GameType.SUDOKU
+                if (_selectedGameType.value != GameType.SUDOKU &&
+                    _selectedGameType.value != GameType.CAT_SUDOKU &&
+                    _selectedGameType.value != GameType.GLASS_PUZZLE_CUBE) {
+                    _selectedGameType.value = GameType.SUDOKU
+                }
             }
             GameCategory.TEST -> {
                 if (_selectedGameType.value != GameType.FOCUS_TEST && 
@@ -637,9 +642,36 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         } else if (_selectedGameType.value == GameType.STROOP_EFFECT) {
             setupStroopGame(difficulty)
             _currentScreen.value = ScreenState.STROOP_EFFECT_GAME
+        } else if (_selectedGameType.value == GameType.GLASS_PUZZLE_CUBE) {
+            startGlassPuzzleCubeGame(difficulty)
         } else {
             setupInitialGrid(difficulty)
             _currentScreen.value = ScreenState.FOCUS_GAME
+        }
+    }
+
+    fun startGlassPuzzleCubeGame(difficulty: GameDifficulty = _selectedDifficulty.value) {
+        SoundManager.onGameSwitched()
+        _selectedCategory.value = GameCategory.BRAIN
+        _selectedGameType.value = GameType.GLASS_PUZZLE_CUBE
+        _selectedDifficulty.value = difficulty
+        loadLeaderboard(GameCategory.BRAIN.key, GameType.GLASS_PUZZLE_CUBE.key, difficulty.key)
+        _currentScreen.value = ScreenState.GLASS_PUZZLE_CUBE_GAME
+    }
+
+    fun saveGlassPuzzleCubeScore(difficulty: GameDifficulty, timeMillis: Long) {
+        viewModelScope.launch {
+            val record = com.example.data.db.ScoreRecord(
+                playerName = _playerName.value,
+                categoryKey = GameCategory.BRAIN.key,
+                gameTypeKey = GameType.GLASS_PUZZLE_CUBE.key,
+                difficultyKey = difficulty.key,
+                timeMillis = timeMillis,
+                wrongCount = 0,
+                timestamp = System.currentTimeMillis()
+            )
+            repository.insertScore(record)
+            loadLeaderboard(GameCategory.BRAIN.key, GameType.GLASS_PUZZLE_CUBE.key, difficulty.key)
         }
     }
 
@@ -1386,8 +1418,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // --- Dialogs ---
-    fun openLeaderboardDialog() {
-        _leaderboardDifficulty.value = _selectedDifficulty.value
+    fun openLeaderboardDialog(difficulty: GameDifficulty? = null, gameType: GameType? = null) {
+        if (gameType != null) {
+            _selectedGameType.value = gameType
+        }
+        val targetDiff = difficulty ?: _selectedDifficulty.value
+        _selectedDifficulty.value = targetDiff
+        _leaderboardDifficulty.value = targetDiff
+        loadLeaderboard(_selectedCategory.value.key, _selectedGameType.value.key, targetDiff.key)
         _showLeaderboardDialog.value = true
     }
 
@@ -1530,8 +1568,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun watchAdForTurtleSoupInquiry(activity: Activity?) {
         closeTurtleSoupAdDialog()
         AdManager.showAdNow(activity) {
-            val puzzle = _turtleSoupCurrentPuzzle.value
-            val rewardCount = puzzle?.adRewardChances ?: 3
+            val rewardCount = 1 // 依指示：觀看廣告 1 次 = 加次數 1 次
             _turtleSoupRemainingChances.value = _turtleSoupRemainingChances.value + rewardCount
             _turtleSoupUsedAdReward.value = true
             SoundManager.playSuccess()
@@ -1654,22 +1691,31 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun watchAdForTurtleSoupChances() {
-        val puzzle = _turtleSoupCurrentPuzzle.value
-        val rewardCount = puzzle?.adRewardChances ?: 3
-        _turtleSoupRemainingChances.value = _turtleSoupRemainingChances.value + rewardCount
-        _turtleSoupUsedAdReward.value = true
-        SoundManager.playSuccess()
+    fun watchAdForTurtleSoupChances(activity: Activity?) {
+        AdManager.showAdNow(activity) {
+            val rewardCount = 1 // 依指示：觀看廣告 1 次 = 加次數 1 次
+            _turtleSoupRemainingChances.value = _turtleSoupRemainingChances.value + rewardCount
+            _turtleSoupUsedAdReward.value = true
+            SoundManager.playSuccess()
+        }
     }
 
-    fun giveUpTurtleSoupGame() {
+    fun giveUpTurtleSoupGame(activity: Activity? = null) {
+        val wasActive = (_turtleSoupPlayState.value == TurtleSoupPlayState.INVESTIGATING || _turtleSoupPlayState.value == TurtleSoupPlayState.SOLVING)
         turtleSoupTimerJob?.cancel()
         _turtleSoupPlayState.value = TurtleSoupPlayState.PUZZLE_SELECT
+        if (wasActive) {
+            AdManager.recordGameInterrupted(activity)
+        }
     }
 
-    fun restartTurtleSoupPuzzle() {
+    fun restartTurtleSoupPuzzle(activity: Activity? = null) {
+        val wasActive = (_turtleSoupPlayState.value == TurtleSoupPlayState.INVESTIGATING || _turtleSoupPlayState.value == TurtleSoupPlayState.SOLVING)
         turtleSoupTimerJob?.cancel()
         _turtleSoupPlayState.value = TurtleSoupPlayState.PUZZLE_SELECT
+        if (wasActive) {
+            AdManager.recordGameInterrupted(activity)
+        }
     }
 
     // ==========================================

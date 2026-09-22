@@ -187,8 +187,34 @@ object SoundManager {
         samples
     }
 
+    private val cachedSwitchSnapSamples: ShortArray by lazy {
+        val durationMs = 75
+        val numSamples = (SAMPLE_RATE * (durationMs / 1000.0)).toInt()
+        val samples = ShortArray(numSamples)
+        for (i in 0 until numSamples) {
+            val t = i.toDouble() / SAMPLE_RATE
+            // 1. 0ms 即刻瞬態高頻打擊點 (High-click transient)
+            val decayClick = Math.exp(-280.0 * t)
+            val clickWave = 0.55 * sin(2.0 * Math.PI * 2600.0 * t) + 0.45 * sin(2.0 * Math.PI * 3800.0 * t)
+
+            // 2. 主卡榫清脆響板 Snap (Switch Joy-Con 插入鎖定共振)
+            val decaySnap = Math.exp(-58.0 * t)
+            val freq = 860.0 + 920.0 * Math.exp(-75.0 * t)
+            val snapWave = 0.70 * sin(2.0 * Math.PI * freq * t) +
+                           0.20 * sin(2.0 * Math.PI * (freq * 1.8) * t) +
+                           0.10 * (Math.random() - 0.5)
+
+            val amp = (clickWave * decayClick * 0.75) + (snapWave * decaySnap * 0.95)
+            samples[i] = (amp.coerceIn(-1.0, 1.0) * Short.MAX_VALUE).toInt().toShort()
+        }
+        samples
+    }
+
     private var errorAudioTrack: AudioTrack? = null
     private var clickAudioTrack: AudioTrack? = null
+    private var switchSnapAudioTrack1: AudioTrack? = null
+    private var switchSnapAudioTrack2: AudioTrack? = null
+    private var switchSnapTrackToggle = false
     private var woodblockAudioTrack1: AudioTrack? = null
     private var woodblockAudioTrack2: AudioTrack? = null
     private var woodblockTrackToggle = false
@@ -199,6 +225,8 @@ object SoundManager {
         try {
             if (errorAudioTrack == null) errorAudioTrack = createStaticTrack(cachedErrorSamples)
             if (clickAudioTrack == null) clickAudioTrack = createStaticTrack(cachedClickSamples)
+            if (switchSnapAudioTrack1 == null) switchSnapAudioTrack1 = createStaticTrack(cachedSwitchSnapSamples)
+            if (switchSnapAudioTrack2 == null) switchSnapAudioTrack2 = createStaticTrack(cachedSwitchSnapSamples)
             if (woodblockAudioTrack1 == null) woodblockAudioTrack1 = createStaticTrack(cachedWoodblockChopSamples)
             if (woodblockAudioTrack2 == null) woodblockAudioTrack2 = createStaticTrack(cachedWoodblockChopSamples)
             if (metalAudioTrack == null) metalAudioTrack = createStaticTrack(cachedMetalClangSamples)
@@ -243,7 +271,8 @@ object SoundManager {
         if (track == null) return false
         return try {
             if (track.state == AudioTrack.STATE_INITIALIZED) {
-                track.stop()
+                track.pause()
+                track.flush()
                 track.reloadStaticData()
                 track.play()
                 true
@@ -260,6 +289,20 @@ object SoundManager {
         if (!playPreloadedTrack(clickAudioTrack)) {
             scope.launch {
                 playPcm(cachedClickSamples)
+            }
+        }
+    }
+
+    /**
+     * 播放類似 Nintendo Switch 卡榫的清脆 Snap/Click 崁入音效 - 0ms 極速無延遲
+     */
+    fun playSwitchSnap() {
+        if (!isSfxEnabled) return
+        switchSnapTrackToggle = !switchSnapTrackToggle
+        val track = if (switchSnapTrackToggle) switchSnapAudioTrack1 else switchSnapAudioTrack2
+        if (!playPreloadedTrack(track)) {
+            scope.launch {
+                playPcm(cachedSwitchSnapSamples)
             }
         }
     }

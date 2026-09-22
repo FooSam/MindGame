@@ -66,4 +66,22 @@ class AdManagerLogicTest {
         assertEquals(0, counter.currentCount)
         assertEquals(3, counter.gamesUntilNextAd)
     }
+
+    @Test
+    fun `test mixed finished and interrupted game rounds trigger at 3`() {
+        val counter = AdCounter(threshold = 3)
+
+        // 局數 1: 正常通關結束
+        assertFalse(counter.incrementAndCheck())
+        assertEquals(1, counter.currentCount)
+
+        // 局數 2: 中途中斷退出
+        assertFalse(counter.incrementAndCheck())
+        assertEquals(2, counter.currentCount)
+
+        // 局數 3: 再次中途重置 -> 達到第 3 局，觸發廣告展示並重置為 0
+        assertTrue(counter.incrementAndCheck())
+        assertEquals(0, counter.currentCount)
+        assertEquals(3, counter.gamesUntilNextAd)
+    }
 }

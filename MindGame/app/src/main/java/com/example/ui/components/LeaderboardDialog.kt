@@ -314,12 +314,39 @@ fun LeaderboardDialog(
                             )
                         }
                     } else {
+                        val sortedScores = remember(scores, selectedGameType) {
+                            when (selectedGameType) {
+                                GameType.SPEED_MATCH, GameType.TURTLE_SOUP, GameType.AVATAR_WHACK,
+                                GameType.STROOP_EFFECT, GameType.BLOCK_PUZZLE, GameType.FRUIT_MASTER -> {
+                                    scores.sortedWith(
+                                        compareByDescending<ScoreRecord> { it.score }
+                                            .thenBy { it.wrongCount }
+                                            .thenByDescending { it.id }
+                                    )
+                                }
+                                GameType.SUDOKU, GameType.CAT_SUDOKU -> {
+                                    scores.sortedWith(
+                                        compareBy<ScoreRecord> { it.wrongCount }
+                                            .thenBy { it.timeMillis }
+                                            .thenByDescending { it.id }
+                                    )
+                                }
+                                else -> {
+                                    scores.sortedWith(
+                                        compareBy<ScoreRecord> { it.timeMillis }
+                                            .thenBy { it.wrongCount }
+                                            .thenByDescending { it.id }
+                                    )
+                                }
+                            }
+                        }
+
                         LazyColumn(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(220.dp)
                         ) {
-                            itemsIndexed(scores) { index, record ->
+                            itemsIndexed(sortedScores) { index, record ->
                                 val rank = index + 1
                                 val rankColor = when (rank) {
                                     1 -> Color(0xFFFFD700) // Gold
@@ -428,12 +455,15 @@ fun LeaderboardDialog(
                             }
                         }
                     } else {
+                        val sortedGlobalScores = remember(globalScores) {
+                            globalScores.sortedBy { it.rank }
+                        }
                         LazyColumn(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(220.dp)
                         ) {
-                            itemsIndexed(globalScores) { index, record ->
+                            itemsIndexed(sortedGlobalScores) { index, record ->
                                 val rank = record.rank
                                 val rankColor = when (rank) {
                                     1 -> Color(0xFFFFD700) // Gold

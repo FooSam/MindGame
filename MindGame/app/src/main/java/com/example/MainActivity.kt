@@ -22,6 +22,8 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.model.GameDifficulty
+import com.example.data.model.GameType
 import com.example.ui.components.ChangeNameDialog
 import com.example.ui.components.LeaderboardDialog
 import com.example.ui.components.SettingsDialog
@@ -37,6 +39,7 @@ import com.example.ui.screens.StroopScreen
 import com.example.ui.screens.CasualCategoryScreen
 import com.example.ui.screens.BlockPuzzleScreen
 import com.example.ui.screens.FruitMasterScreen
+import com.example.ui.screens.GlassPuzzleCubeScreen
 import com.example.ui.screens.turtlesoup.TurtleSoupScreen
 import com.example.ui.screens.turtlesoup.TurtleSoupPlayState
 import com.example.game.sudoku.SudokuConfig
@@ -325,9 +328,19 @@ fun MainApp(viewModel: GameViewModel) {
                     wrongTapIndex = wrongTapIndex,
                     lastCompletedTimeMillis = lastCompletedTimeMillis,
                     language = language,
-                    onBackClick = { viewModel.navigateTo(ScreenState.CATEGORY_DETAIL) },
+                    onBackClick = {
+                        if (gameStatus == GameStatus.PLAYING) {
+                            AdManager.recordGameInterrupted(context as? Activity)
+                        }
+                        viewModel.navigateTo(ScreenState.CATEGORY_DETAIL)
+                    },
                     onStartClick = { viewModel.startGame() },
-                    onResetClick = { viewModel.resetGame() },
+                    onResetClick = {
+                        if (gameStatus == GameStatus.PLAYING) {
+                            AdManager.recordGameInterrupted(context as? Activity)
+                        }
+                        viewModel.resetGame()
+                    },
                     onCellClick = { index -> viewModel.onCellTapped(index) },
                     onLeaderboardClick = { viewModel.openLeaderboardDialog() }
                 )
@@ -346,9 +359,19 @@ fun MainApp(viewModel: GameViewModel) {
                     wrongCount = focusTrainWrongCount,
                     lastCompletedTimeMillis = focusTrainLastCompletedTimeMillis,
                     language = language,
-                    onBackClick = { viewModel.navigateTo(ScreenState.CATEGORY_DETAIL) },
+                    onBackClick = {
+                        if (focusTrainStatus == GameStatus.PLAYING) {
+                            AdManager.recordGameInterrupted(context as? Activity)
+                        }
+                        viewModel.navigateTo(ScreenState.CATEGORY_DETAIL)
+                    },
                     onStartClick = { viewModel.startFocusTrainGame() },
-                    onResetClick = { viewModel.resetFocusTrainGame() },
+                    onResetClick = {
+                        if (focusTrainStatus == GameStatus.PLAYING) {
+                            AdManager.recordGameInterrupted(context as? Activity)
+                        }
+                        viewModel.resetFocusTrainGame()
+                    },
                     onCellClick = { index -> viewModel.onFocusTrainCellTapped(index) },
                     onLeaderboardClick = { viewModel.openLeaderboardDialog() }
                 )
@@ -365,9 +388,19 @@ fun MainApp(viewModel: GameViewModel) {
                     remainingTimeMs = speedMatchRemainingMs,
                     isWrongFlash = isWrongFlash,
                     language = language,
-                    onBackClick = { viewModel.navigateTo(ScreenState.CATEGORY_DETAIL) },
+                    onBackClick = {
+                        if (speedMatchStatus == GameStatus.PLAYING) {
+                            AdManager.recordGameInterrupted(context as? Activity)
+                        }
+                        viewModel.navigateTo(ScreenState.CATEGORY_DETAIL)
+                    },
                     onStartClick = { viewModel.startSpeedMatchGame() },
-                    onResetClick = { viewModel.resetSpeedMatchGame() },
+                    onResetClick = {
+                        if (speedMatchStatus == GameStatus.PLAYING) {
+                            AdManager.recordGameInterrupted(context as? Activity)
+                        }
+                        viewModel.resetSpeedMatchGame()
+                    },
                     onCellClick = { index -> viewModel.onSpeedMatchCellTapped(index) },
                     onLeaderboardClick = { viewModel.openLeaderboardDialog() }
                 )
@@ -387,13 +420,23 @@ fun MainApp(viewModel: GameViewModel) {
                     config = sudokuConfig ?: SudokuGameConfig.getConfig(selectedDifficulty),
                     selectedCellIndex = selectedSudokuCellIndex,
                     isPencilMode = isPencilMode,
-                    onBackClick = { viewModel.navigateTo(ScreenState.CATEGORY_DETAIL) },
+                    onBackClick = {
+                        if (sudokuStatus == GameStatus.PLAYING) {
+                            AdManager.recordGameInterrupted(context as? Activity)
+                        }
+                        viewModel.navigateTo(ScreenState.CATEGORY_DETAIL)
+                    },
                     onCellClick = { index -> viewModel.selectSudokuCell(index) },
                     onSymbolInput = { symbol -> viewModel.inputSudokuSymbol(symbol) },
                     onEraseClick = { viewModel.eraseSudokuCell() },
                     onUndoClick = { viewModel.undoSudokuMove() },
                     onTogglePencilClick = { viewModel.togglePencilMode() },
-                    onResetClick = { viewModel.resetSudokuGame() },
+                    onResetClick = {
+                        if (sudokuStatus == GameStatus.PLAYING) {
+                            AdManager.recordGameInterrupted(context as? Activity)
+                        }
+                        viewModel.resetSudokuGame()
+                    },
                     onLeaderboardClick = { viewModel.openLeaderboardDialog() }
                 )
             }
@@ -407,11 +450,21 @@ fun MainApp(viewModel: GameViewModel) {
                     wrongCount = catSudokuWrongCount,
                     boardSize = catSudokuSize,
                     gridCells = catSudokuGrid,
-                    onBackClick = { viewModel.navigateTo(ScreenState.CATEGORY_DETAIL) },
+                    onBackClick = {
+                        if (catSudokuStatus == GameStatus.PLAYING) {
+                            AdManager.recordGameInterrupted(context as? Activity)
+                        }
+                        viewModel.navigateTo(ScreenState.CATEGORY_DETAIL)
+                    },
                     onCellClick = { index -> viewModel.onCatSudokuCellTapped(index) },
                     onUndoClick = { viewModel.undoCatSudokuMove() },
                     onResetBoardClick = { viewModel.clearCatSudokuBoard() },
-                    onNewGameClick = { viewModel.resetCatSudokuGame() },
+                    onNewGameClick = {
+                        if (catSudokuStatus == GameStatus.PLAYING) {
+                            AdManager.recordGameInterrupted(context as? Activity)
+                        }
+                        viewModel.resetCatSudokuGame()
+                    },
                     onLeaderboardClick = { viewModel.openLeaderboardDialog() }
                 )
             }
@@ -437,7 +490,12 @@ fun MainApp(viewModel: GameViewModel) {
                     usedAdReward = turtleSoupUsedAdReward,
                     saveData = turtleSoupSaveData,
                     language = language,
-                    onBackClick = { viewModel.navigateTo(ScreenState.CATEGORY_DETAIL) },
+                    onBackClick = {
+                        if (turtleSoupPlayState == TurtleSoupPlayState.INVESTIGATING || turtleSoupPlayState == TurtleSoupPlayState.SOLVING) {
+                            viewModel.giveUpTurtleSoupGame(context as? Activity)
+                        }
+                        viewModel.navigateTo(ScreenState.CATEGORY_DETAIL)
+                    },
                     onSelectPuzzle = { puzzle -> viewModel.selectTurtleSoupPuzzle(puzzle) },
                     onSelectDimensionOption = { dimId, opt -> viewModel.selectTurtleSoupDimensionOption(dimId, opt) },
                     onSubmitInquiry = { viewModel.submitTurtleSoupInquiry(context as? Activity) },
@@ -448,9 +506,9 @@ fun MainApp(viewModel: GameViewModel) {
                     onStartSolving = { viewModel.startTurtleSoupSolving() },
                     onBackToInvestigate = { viewModel.backToTurtleSoupInvestigate() },
                     onSubmitDeduction = { viewModel.submitTurtleSoupDeduction() },
-                    onWatchAdForChances = { viewModel.watchAdForTurtleSoupChances() },
-                    onGiveUpGame = { viewModel.giveUpTurtleSoupGame() },
-                    onRestartPuzzle = { viewModel.restartTurtleSoupPuzzle() },
+                    onWatchAdForChances = { viewModel.watchAdForTurtleSoupChances(context as? Activity) },
+                    onGiveUpGame = { viewModel.giveUpTurtleSoupGame(context as? Activity) },
+                    onRestartPuzzle = { viewModel.restartTurtleSoupPuzzle(context as? Activity) },
                     onLeaderboardClick = { viewModel.openLeaderboardDialog() }
                 )
             }
@@ -470,9 +528,19 @@ fun MainApp(viewModel: GameViewModel) {
                     remainingTimeMs = whackRemainingMs,
                     lastCompletedScore = whackLastCompletedScore,
                     language = language,
-                    onBackClick = { viewModel.navigateTo(ScreenState.CATEGORY_DETAIL) },
+                    onBackClick = {
+                        if (whackStatus == GameStatus.PLAYING) {
+                            AdManager.recordGameInterrupted(context as? Activity)
+                        }
+                        viewModel.navigateTo(ScreenState.CATEGORY_DETAIL)
+                    },
                     onStartClick = { viewModel.startAvatarWhackGame() },
-                    onResetClick = { viewModel.resetAvatarWhackGame() },
+                    onResetClick = {
+                        if (whackStatus == GameStatus.PLAYING) {
+                            AdManager.recordGameInterrupted(context as? Activity)
+                        }
+                        viewModel.resetAvatarWhackGame()
+                    },
                     onHoleClick = { index -> viewModel.onWhackHoleTapped(index) },
                     onLeaderboardClick = { viewModel.openLeaderboardDialog() }
                 )
@@ -492,9 +560,19 @@ fun MainApp(viewModel: GameViewModel) {
                     questionTimeProgress = stroopQuestionTimeProgress,
                     isWrongFlash = stroopIsWrongFlash,
                     language = language,
-                    onBackClick = { viewModel.navigateTo(ScreenState.CATEGORY_DETAIL) },
+                    onBackClick = {
+                        if (stroopStatus == GameStatus.PLAYING) {
+                            AdManager.recordGameInterrupted(context as? Activity)
+                        }
+                        viewModel.navigateTo(ScreenState.CATEGORY_DETAIL)
+                    },
                     onStartClick = { viewModel.startStroopGame() },
-                    onResetClick = { viewModel.resetStroopGame() },
+                    onResetClick = {
+                        if (stroopStatus == GameStatus.PLAYING) {
+                            AdManager.recordGameInterrupted(context as? Activity)
+                        }
+                        viewModel.resetStroopGame()
+                    },
                     onOptionSelected = { option -> viewModel.onStroopOptionSelected(option) },
                     onLeaderboardClick = { viewModel.openLeaderboardDialog() }
                 )
@@ -518,7 +596,9 @@ fun MainApp(viewModel: GameViewModel) {
                     appTheme = appTheme,
                     bestScore = blockPuzzleBestScore,
                     onBackClick = { viewModel.navigateTo(ScreenState.CASUAL_CATEGORY) },
-                    onSaveScore = { score -> viewModel.saveBlockPuzzleScore(score) }
+                    onSaveScore = { score -> viewModel.saveBlockPuzzleScore(score) },
+                    onGameOver = { AdManager.recordGameFinished(context as? Activity) },
+                    onGameInterrupted = { AdManager.recordGameInterrupted(context as? Activity) }
                 )
             }
 
@@ -534,7 +614,22 @@ fun MainApp(viewModel: GameViewModel) {
                     workshopBestScore = fruitWorkshopBestScore,
                     onBackClick = { viewModel.navigateTo(ScreenState.CASUAL_CATEGORY) },
                     onSaveScore = { mode, score -> viewModel.saveFruitMasterScore(mode, score) },
-                    onLeaderboardClick = { viewModel.openLeaderboardDialog() }
+                    onLeaderboardClick = { diff -> viewModel.openLeaderboardDialog(diff, GameType.FRUIT_MASTER) },
+                    onGameOver = { AdManager.recordGameFinished(context as? Activity) },
+                    onGameInterrupted = { AdManager.recordGameInterrupted(context as? Activity) }
+                )
+            }
+
+            ScreenState.GLASS_PUZZLE_CUBE_GAME -> {
+                GlassPuzzleCubeScreen(
+                    difficulty = selectedDifficulty,
+                    language = language,
+                    appTheme = appTheme,
+                    onBackClick = { viewModel.navigateTo(ScreenState.CATEGORY_DETAIL) },
+                    onSaveScore = { timeMillis -> viewModel.saveGlassPuzzleCubeScore(selectedDifficulty, timeMillis) },
+                    onLeaderboardClick = { viewModel.openLeaderboardDialog(selectedDifficulty, GameType.GLASS_PUZZLE_CUBE) },
+                    onGameCompleted = { AdManager.recordGameFinished(context as? Activity) },
+                    onGameInterrupted = { AdManager.recordGameInterrupted(context as? Activity) }
                 )
             }
         }

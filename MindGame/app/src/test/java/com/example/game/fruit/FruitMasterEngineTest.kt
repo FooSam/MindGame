@@ -286,4 +286,26 @@ class FruitMasterEngineTest {
         assertTrue("結果就緒", workshop.isJuiceReady)
         assertTrue("關卡完成", workshop.isStageCompleted)
     }
+
+    @Test
+    fun testPlayAgainResetAndSpawn() {
+        val engine = FruitSlicerEngine(mode = FruitGameMode.HEARTBEAT_SLICER)
+        engine.reset()
+
+        // 模擬 60 秒結束
+        engine.update(60.1f)
+        assertTrue("時間結束應判定 isGameOver", engine.isGameOver)
+        assertEquals(0f, engine.remainingSeconds, 0.01f)
+
+        // 點擊「再來一局」，呼叫 reset()
+        engine.reset()
+        assertFalse("再來一局後 isGameOver 應為 false", engine.isGameOver)
+        assertEquals(60f, engine.remainingSeconds, 0.01f)
+        assertEquals(0, engine.score)
+        assertTrue("水果池應被清空等待新一輪拋果", engine.fruits.isEmpty())
+
+        // 模擬新一局開局更新 0.6 秒 (超過 spawnTimer 0.5 秒)
+        engine.update(0.6f)
+        assertTrue("再來一局後應成功拋出第一批水果", engine.fruits.isNotEmpty())
+    }
 }

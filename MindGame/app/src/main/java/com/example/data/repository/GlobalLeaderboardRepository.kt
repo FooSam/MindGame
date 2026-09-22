@@ -100,7 +100,9 @@ class GlobalLeaderboardRepository(
                 GameType.SPEED_MATCH.key,
                 GameType.TURTLE_SOUP.key,
                 GameType.AVATAR_WHACK.key,
-                GameType.STROOP_EFFECT.key -> true
+                GameType.STROOP_EFFECT.key,
+                GameType.BLOCK_PUZZLE.key,
+                GameType.FRUIT_MASTER.key -> true
                 else -> false
             }
 
@@ -205,7 +207,9 @@ class GlobalLeaderboardRepository(
                     GameType.SPEED_MATCH.key,
                     GameType.TURTLE_SOUP.key,
                     GameType.AVATAR_WHACK.key,
-                    GameType.STROOP_EFFECT.key -> true
+                    GameType.STROOP_EFFECT.key,
+                    GameType.BLOCK_PUZZLE.key,
+                    GameType.FRUIT_MASTER.key -> true
                     else -> false
                 }
                 val isSudoku = entry.gameTypeKey == GameType.SUDOKU.key || entry.gameTypeKey == GameType.CAT_SUDOKU.key
@@ -267,7 +271,12 @@ class GlobalLeaderboardRepository(
 
         GameType.entries.forEach { gameType ->
             val isScoreDesc = when (gameType) {
-                GameType.SPEED_MATCH, GameType.TURTLE_SOUP, GameType.AVATAR_WHACK, GameType.STROOP_EFFECT -> true
+                GameType.SPEED_MATCH,
+                GameType.TURTLE_SOUP,
+                GameType.AVATAR_WHACK,
+                GameType.STROOP_EFFECT,
+                GameType.BLOCK_PUZZLE,
+                GameType.FRUIT_MASTER -> true
                 else -> false
             }
 

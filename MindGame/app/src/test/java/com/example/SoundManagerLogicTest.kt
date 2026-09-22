@@ -43,6 +43,7 @@ class SoundManagerLogicTest {
     fun testSoundManagerSfxSafety() {
         SoundManager.isSfxEnabled = true
         SoundManager.playClick()
+        SoundManager.playSwitchSnap()
         SoundManager.playSuccess()
         SoundManager.playWin()
         SoundManager.playError()
@@ -50,6 +51,7 @@ class SoundManagerLogicTest {
 
         SoundManager.isSfxEnabled = false
         SoundManager.playClick()
+        SoundManager.playSwitchSnap()
         SoundManager.playSuccess()
         SoundManager.playWin()
         SoundManager.playError()

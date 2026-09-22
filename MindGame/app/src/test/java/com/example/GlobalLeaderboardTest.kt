@@ -153,4 +153,33 @@ class GlobalLeaderboardTest {
         assertEquals("國家代碼應成功更新為最新國家", "JP", res2.myRankEntry?.countryCode)
         assertEquals("時間戳記應更新為最新", 2000L, res2.myRankEntry?.timestamp)
     }
+
+    @Test
+    fun testFruitMasterAndBlockPuzzleScoreRanking() = runBlocking {
+        val repo = GlobalLeaderboardRepository(customServerUrl = "")
+
+        // 驗證 FRUIT_MASTER 排行榜依照分數降序排序，最高分為第 1 名
+        val fruitRes = repo.fetchGlobalLeaderboard(
+            gameTypeKey = GameType.FRUIT_MASTER.key,
+            difficultyKey = GameDifficulty.BEGINNER.key,
+            playerId = "nobody"
+        ).getOrThrow()
+
+        assertTrue("Fruit master top scores should not be empty", fruitRes.topScores.isNotEmpty())
+        if (fruitRes.topScores.size >= 2) {
+            assertTrue("第一名分數應大於等於第二名分數", fruitRes.topScores[0].score >= fruitRes.topScores[1].score)
+        }
+
+        // 驗證 BLOCK_PUZZLE 排行榜依照分數降序排序，最高分為第 1 名
+        val blockRes = repo.fetchGlobalLeaderboard(
+            gameTypeKey = GameType.BLOCK_PUZZLE.key,
+            difficultyKey = GameDifficulty.BEGINNER.key,
+            playerId = "nobody"
+        ).getOrThrow()
+
+        assertTrue("Block puzzle top scores should not be empty", blockRes.topScores.isNotEmpty())
+        if (blockRes.topScores.size >= 2) {
+            assertTrue("第一名分數應大於等於第二名分數", blockRes.topScores[0].score >= blockRes.topScores[1].score)
+        }
+    }
 }

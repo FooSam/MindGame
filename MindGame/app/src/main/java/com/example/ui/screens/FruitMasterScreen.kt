@@ -59,6 +59,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -93,6 +94,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import com.example.audio.SoundManager
 import com.example.data.model.AppLanguage
+import com.example.data.model.GameDifficulty
 import com.example.data.model.Localization
 import com.example.game.fruit.FruitGameMode
 import com.example.game.fruit.FruitItem
@@ -124,13 +126,16 @@ fun FruitMasterScreen(
     workshopBestScore: Int,
     onBackClick: () -> Unit,
     onSaveScore: (mode: FruitGameMode, score: Int) -> Unit,
-    onLeaderboardClick: () -> Unit
+    onLeaderboardClick: (GameDifficulty?) -> Unit = {},
+    onGameOver: () -> Unit = {},
+    onGameInterrupted: () -> Unit = {}
 ) {
     // 當前正在遊玩的模式，null 表示處於「模式選單頁」
     var activePlayingMode by remember { mutableStateOf<FruitGameMode?>(null) }
 
     BackHandler {
         if (activePlayingMode != null) {
+            onGameInterrupted()
             activePlayingMode = null
         } else {
             onBackClick()
@@ -150,7 +155,7 @@ fun FruitMasterScreen(
                     SoundManager.playClick()
                     activePlayingMode = mode
                 },
-                onLeaderboardClick = onLeaderboardClick
+                onLeaderboardClick = { onLeaderboardClick(null) }
             )
         } else {
             // 全螢幕沉浸遊戲遊玩區（無多餘頁籤選單）
@@ -163,7 +168,11 @@ fun FruitMasterScreen(
                         bestScore = if (mode == FruitGameMode.HEARTBEAT_SLICER) heartbeatBestScore else bladeBombBestScore,
                         onBackToMenu = { activePlayingMode = null },
                         onSaveScore = { score -> onSaveScore(mode, score) },
-                        onOpenLeaderboard = onLeaderboardClick
+                        onOpenLeaderboard = {
+                            onLeaderboardClick(if (mode == FruitGameMode.HEARTBEAT_SLICER) GameDifficulty.BEGINNER else GameDifficulty.INTERMEDIATE)
+                        },
+                        onGameOver = onGameOver,
+                        onGameInterrupted = onGameInterrupted
                     )
                 }
                 FruitGameMode.WORKSHOP -> {
@@ -173,7 +182,9 @@ fun FruitMasterScreen(
                         bestScore = workshopBestScore,
                         onBackToMenu = { activePlayingMode = null },
                         onSaveScore = { score -> onSaveScore(FruitGameMode.WORKSHOP, score) },
-                        onOpenLeaderboard = onLeaderboardClick
+                        onOpenLeaderboard = { onLeaderboardClick(GameDifficulty.ADVANCED) },
+                        onGameOver = onGameOver,
+                        onGameInterrupted = onGameInterrupted
                     )
                 }
                 null -> Unit
@@ -438,10 +449,13 @@ private fun FruitSlicerPlayArea(
     bestScore: Int,
     onBackToMenu: () -> Unit,
     onSaveScore: (Int) -> Unit,
-    onOpenLeaderboard: () -> Unit
+    onOpenLeaderboard: () -> Unit,
+    onGameOver: () -> Unit = {},
+    onGameInterrupted: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var showResultDialog by remember { mutableStateOf(false) }
+    var gameSessionId by remember { mutableIntStateOf(0) }
     val engine = remember(mode) { FruitSlicerEngine(mode = mode) }
 
     // 每幀更新觸發器，徹底解決手沒動不跳水果、手放開定格的重大 BUG
@@ -499,7 +513,7 @@ private fun FruitSlicerPlayArea(
     }
 
     // 主遊戲循環（每幀持續更新物理與驅動 Canvas 重繪）
-    LaunchedEffect(engine) {
+    LaunchedEffect(engine, gameSessionId) {
         var lastTimeNanos = 0L
         while (isActive && !engine.isGameOver) {
             withFrameNanos { timeNanos ->
@@ -510,6 +524,7 @@ private fun FruitSlicerPlayArea(
                     if (engine.isGameOver) {
                         onSaveScore(engine.score)
                         showResultDialog = true
+                        onGameOver()
                     }
                 }
                 lastTimeNanos = timeNanos
@@ -585,12 +600,12 @@ private fun FruitSlicerPlayArea(
             // 讀取 frameTicker 確保每一幀 100% 重繪
             val _tick = frameTicker
 
-            // 背景心臟浮點立體跳動 (最後 15 秒)
+            // 背景心臟浮點立體跳動 (最後 15 秒，佔螢幕 60% 以上，柔和半透明羽化)
             if (engine.isCriticalHeartbeat) {
                 drawHeartbeatPulsingArt(
-                    center = Offset(size.width / 2f, size.height * 0.45f),
-                    scale = 1.0f + (ecgPhase * 0.18f),
-                    alpha = criticalRedAlpha * 1.5f
+                    center = Offset(size.width / 2f, size.height * 0.46f),
+                    scale = 1.0f + (ecgPhase * 0.12f),
+                    alpha = criticalRedAlpha * 0.45f
                 )
             }
 
@@ -668,7 +683,12 @@ private fun FruitSlicerPlayArea(
             bestScore = bestScore,
             ecgPhase = ecgPhase,
             language = language,
-            onBackToMenu = onBackToMenu,
+            onBackToMenu = {
+                if (!engine.isGameOver && (engine.score > 0 || engine.totalSliced > 0)) {
+                    onGameInterrupted()
+                }
+                onBackToMenu()
+            },
             onOpenLeaderboard = onOpenLeaderboard
         )
     }
@@ -684,6 +704,7 @@ private fun FruitSlicerPlayArea(
             onRestart = {
                 showResultDialog = false
                 engine.reset()
+                gameSessionId++
             },
             onLeaderboard = {
                 showResultDialog = false
@@ -852,9 +873,12 @@ private fun SlicingWorkshopPlayArea(
     bestScore: Int,
     onBackToMenu: () -> Unit,
     onSaveScore: (Int) -> Unit,
-    onOpenLeaderboard: () -> Unit
+    onOpenLeaderboard: () -> Unit,
+    onGameOver: () -> Unit = {},
+    onGameInterrupted: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    var gameSessionId by remember { mutableIntStateOf(0) }
     val engine = remember { SlicingWorkshopEngine() }
     var juiceResult by remember { mutableStateOf<JuiceResult?>(null) }
     var showJuiceDialog by remember { mutableStateOf(false) }
@@ -907,11 +931,12 @@ private fun SlicingWorkshopPlayArea(
             juiceResult = engine.evaluateJuiceResult()
             onSaveScore(engine.score)
             showJuiceDialog = true
+            onGameOver()
         }
     }
 
     // 主物理與渲染循環
-    LaunchedEffect(engine) {
+    LaunchedEffect(engine, gameSessionId) {
         var lastTimeNanos = 0L
         engine.reset()
         while (isActive) {
@@ -948,6 +973,9 @@ private fun SlicingWorkshopPlayArea(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = {
                             SoundManager.playClick()
+                            if (engine.state != WorkshopState.RESULT && !showJuiceDialog && engine.totalCuts > 0) {
+                                onGameInterrupted()
+                            }
                             onBackToMenu()
                         }) {
                             Icon(
@@ -1264,6 +1292,8 @@ private fun SlicingWorkshopPlayArea(
             onRestart = {
                 showJuiceDialog = false
                 engine.reset()
+                juiceResult = null
+                gameSessionId++
             },
             onLeaderboard = {
                 showJuiceDialog = false
@@ -2099,9 +2129,13 @@ private fun DrawScope.drawEcgWave(phase: Float, isCritical: Boolean) {
 
 /**
  * 繪製心跳立體浮點跳動心臟 (最後 15 秒)
+ * - 寬度動態自適應佔螢幕寬度 65% 以上 (大於 60% 規格需求)
+ * - 提高透明度 (降低 alpha 至 0.04f ~ 0.12f)，採用由中心向外柔和消融羽化的徑向漸層
+ * - 營造深沉迫切的心跳臨場氛圍，柔美朦朧且絕不遮蔽前景水果與手勢視線
  */
 private fun DrawScope.drawHeartbeatPulsingArt(center: Offset, scale: Float, alpha: Float) {
-    val r = 90f * scale
+    val heartWidth = size.width * 0.65f
+    val r = (heartWidth / 2.2f) * scale
     val path = Path().apply {
         moveTo(center.x, center.y - r * 0.25f)
         cubicTo(center.x - r * 0.6f, center.y - r * 0.8f, center.x - r * 1.1f, center.y - r * 0.2f, center.x - r * 1.1f, center.y + r * 0.25f)
@@ -2110,7 +2144,26 @@ private fun DrawScope.drawHeartbeatPulsingArt(center: Offset, scale: Float, alph
         cubicTo(center.x + r * 1.1f, center.y - r * 0.2f, center.x + r * 0.6f, center.y - r * 0.8f, center.x, center.y - r * 0.25f)
         close()
     }
-    drawPath(path = path, color = Color.Red.copy(alpha = alpha.coerceIn(0f, 0.45f)))
+    val heartAlpha = alpha.coerceIn(0.04f, 0.12f)
+    // 柔和羽化徑向漸層：核心柔光、邊緣漸層消融至全透明，營造半透明朦朧心跳氛圍
+    drawPath(
+        path = path,
+        brush = Brush.radialGradient(
+            colors = listOf(
+                Color(0xFFE53935).copy(alpha = heartAlpha),
+                Color(0xFFD32F2F).copy(alpha = heartAlpha * 0.5f),
+                Color(0xFFC62828).copy(alpha = 0f)
+            ),
+            center = center,
+            radius = r * 1.35f
+        )
+    )
+    // 外層極淡輪廓微光
+    drawPath(
+        path = path,
+        color = Color(0xFFFF5252).copy(alpha = heartAlpha * 0.6f),
+        style = Stroke(width = 2f)
+    )
 }
 
 /**

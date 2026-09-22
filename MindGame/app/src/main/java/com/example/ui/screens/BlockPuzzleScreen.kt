@@ -118,7 +118,9 @@ fun BlockPuzzleScreen(
     appTheme: AppThemeStyle,
     bestScore: Int,
     onBackClick: () -> Unit,
-    onSaveScore: (score: Int) -> Unit
+    onSaveScore: (score: Int) -> Unit,
+    onGameOver: () -> Unit = {},
+    onGameInterrupted: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -244,6 +246,7 @@ fun BlockPuzzleScreen(
                     delay(300)
                     showGameOverDialog = true
                     onSaveScore(score)
+                    onGameOver()
                 }
             }
         } else {
@@ -260,6 +263,7 @@ fun BlockPuzzleScreen(
                     delay(350)
                     showGameOverDialog = true
                     onSaveScore(score)
+                    onGameOver()
                 }
             }
         }
@@ -942,6 +946,10 @@ fun BlockPuzzleScreen(
                         onClick = {
                             SoundManager.playClick()
                             showQuitDialog = false
+                            val hasStarted = score > 0 || board.any { row -> row.any { it != 0 } }
+                            if (hasStarted && !showGameOverDialog) {
+                                onGameInterrupted()
+                            }
                             onBackClick() // 退出不計分
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),

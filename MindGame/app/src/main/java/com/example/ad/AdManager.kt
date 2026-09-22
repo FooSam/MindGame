@@ -112,12 +112,12 @@ object AdManager {
     }
 
     /**
-     * 玩家完成任意一局遊戲時調用。
+     * 玩家完成任意一局遊戲或中途中斷/重置退出時調用。
      * 每累計 3 局且廣告已就緒時展示廣告，並在關閉後執行回呼；若無廣告或未達 3 局則直接執行回呼。
      */
     fun recordGameFinished(activity: Activity?, onAdClosed: () -> Unit = {}) {
         val shouldShowAd = counter.incrementAndCheck()
-        Log.d(TAG, "Game completed. Total count in cycle: ${counter.currentCount}, Trigger ad: $shouldShowAd")
+        Log.d(TAG, "Game completed/interrupted. Total count in cycle: ${counter.currentCount}, Trigger ad: $shouldShowAd")
 
         if (shouldShowAd) {
             showAdNow(activity, onAdClosed)
@@ -127,6 +127,13 @@ object AdManager {
             }
             onAdClosed()
         }
+    }
+
+    /**
+     * 玩家在遊戲進行中中途中斷（如返回上一頁、主動重置、放棄）時調用。
+     */
+    fun recordGameInterrupted(activity: Activity?, onAdClosed: () -> Unit = {}) {
+        recordGameFinished(activity, onAdClosed)
     }
 
     /**
