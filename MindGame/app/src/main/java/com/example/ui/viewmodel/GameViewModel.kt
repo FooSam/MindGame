@@ -19,7 +19,11 @@ import com.example.data.model.QuestionAnswer
 import com.example.data.model.Country
 import com.example.data.model.GlobalLeaderboardResponse
 import com.example.data.model.GlobalScoreEntry
+import com.example.data.model.HotGameEntry
 import com.example.data.repository.GlobalLeaderboardRepository
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -131,11 +135,26 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedGameType = MutableStateFlow(GameType.FOCUS_TEST)
     val selectedGameType: StateFlow<GameType> = _selectedGameType.asStateFlow()
 
+    private val _expandedGameType = MutableStateFlow<GameType?>(null)
+    val expandedGameType: StateFlow<GameType?> = _expandedGameType.asStateFlow()
+
     private val _selectedDifficulty = MutableStateFlow(GameDifficulty.BEGINNER)
     val selectedDifficulty: StateFlow<GameDifficulty> = _selectedDifficulty.asStateFlow()
 
     private val _leaderboardDifficulty = MutableStateFlow(GameDifficulty.BEGINNER)
     val leaderboardDifficulty: StateFlow<GameDifficulty> = _leaderboardDifficulty.asStateFlow()
+
+    // 新遊戲探索與 NEW 角標狀態管理
+    val newGameTypes: Set<GameType> = setOf(
+        GameType.GLASS_PUZZLE_CUBE,
+        GameType.STROOP_EFFECT,
+        GameType.AVATAR_WHACK
+    )
+
+    private val _viewedGames = MutableStateFlow<Set<String>>(
+        prefs.getStringSet("pref_viewed_game_keys", emptySet())?.toSet() ?: emptySet()
+    )
+    val viewedGames: StateFlow<Set<String>> = _viewedGames.asStateFlow()
 
     // Focus Game State (Schulte Grid)
     private val _gameStatus = MutableStateFlow(GameStatus.IDLE)
@@ -409,6 +428,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val _showLeaderboardDialog = MutableStateFlow(false)
     val showLeaderboardDialog: StateFlow<Boolean> = _showLeaderboardDialog.asStateFlow()
 
+    private val _leaderboardInitialTab = MutableStateFlow(com.example.ui.components.LeaderboardMainTab.RECORDS)
+    val leaderboardInitialTab: StateFlow<com.example.ui.components.LeaderboardMainTab> = _leaderboardInitialTab.asStateFlow()
+
     private val _showNameDialog = MutableStateFlow(false)
     val showNameDialog: StateFlow<Boolean> = _showNameDialog.asStateFlow()
 
@@ -420,6 +442,40 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _isBgmEnabled = MutableStateFlow(prefs.getBoolean("pref_bgm", false))
     val isBgmEnabled: StateFlow<Boolean> = _isBgmEnabled.asStateFlow()
+
+    fun getCurrentMonth(): String {
+        return SimpleDateFormat("yyyy-MM", Locale.getDefault()).format(Date())
+    }
+
+    private val _userFavorites = MutableStateFlow<List<GameType>>(
+        prefs.getString("pref_user_favorite_games", "")?.split(",")?.filter { it.isNotBlank() }?.map { GameType.fromKey(it) } ?: emptyList()
+    )
+    val userFavorites: StateFlow<List<GameType>> = _userFavorites.asStateFlow()
+
+    private val _lastVotedMonth = MutableStateFlow<String?>(
+        prefs.getString("pref_last_voted_month", null)
+    )
+    val lastVotedMonth: StateFlow<String?> = _lastVotedMonth.asStateFlow()
+
+    private val _hasVotedThisMonth = MutableStateFlow(
+        prefs.getString("pref_last_voted_month", null) == getCurrentMonth() && _userFavorites.value.size == 3
+    )
+    val hasVotedThisMonth: StateFlow<Boolean> = _hasVotedThisMonth.asStateFlow()
+
+    private val _hotGamesList = MutableStateFlow<List<HotGameEntry>>(emptyList())
+    val hotGamesList: StateFlow<List<HotGameEntry>> = _hotGamesList.asStateFlow()
+
+    private val _totalVotersCount = MutableStateFlow(0)
+    val totalVotersCount: StateFlow<Int> = _totalVotersCount.asStateFlow()
+
+    private val _isFetchingHotGames = MutableStateFlow(false)
+    val isFetchingHotGames: StateFlow<Boolean> = _isFetchingHotGames.asStateFlow()
+
+    private val _isSubmittingVotes = MutableStateFlow(false)
+    val isSubmittingVotes: StateFlow<Boolean> = _isSubmittingVotes.asStateFlow()
+
+    private val _showFavoriteVoteDialog = MutableStateFlow(false)
+    val showFavoriteVoteDialog: StateFlow<Boolean> = _showFavoriteVoteDialog.asStateFlow()
 
     private var timerJob: Job? = null
     private var focusTrainTimerJob: Job? = null
@@ -444,6 +500,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         loadTurtleSoupPuzzles()
         loadTurtleSoupSaveData()
         loadLeaderboard(_selectedCategory.value.key, _selectedGameType.value.key, GameDifficulty.BEGINNER.key)
+        loadHotGames(getCurrentMonth())
     }
 
     fun setLanguage(lang: AppLanguage) {
@@ -495,6 +552,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectCategory(category: GameCategory) {
         _selectedCategory.value = category
+        _expandedGameType.value = null
         when (category) {
             GameCategory.DEDUCTION -> {
                 _selectedGameType.value = GameType.TURTLE_SOUP
@@ -611,8 +669,56 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun selectGameType(gameType: GameType) {
+    fun isGameNew(gameType: GameType): Boolean {
+        return newGameTypes.contains(gameType) && !_viewedGames.value.contains(gameType.key)
+    }
+
+    fun isCategoryHasNew(category: GameCategory): Boolean {
+        return when (category) {
+            GameCategory.BRAIN -> isGameNew(GameType.GLASS_PUZZLE_CUBE)
+            GameCategory.TEST -> isGameNew(GameType.STROOP_EFFECT) || isGameNew(GameType.AVATAR_WHACK)
+            else -> false
+        }
+    }
+
+    fun markGameAsViewed(gameType: GameType) {
+        if (newGameTypes.contains(gameType) && !_viewedGames.value.contains(gameType.key)) {
+            val updated = _viewedGames.value + gameType.key
+            _viewedGames.value = updated
+            prefs.edit().putStringSet("pref_viewed_game_keys", updated).apply()
+        }
+    }
+
+    fun openFeaturedGameDirectly(gameType: GameType = GameType.GLASS_PUZZLE_CUBE) {
+        markGameAsViewed(gameType)
+        SoundManager.onGameSwitched()
+        _expandedGameType.value = gameType
+        val cat = when (gameType) {
+            GameType.FOCUS_TEST, GameType.FOCUS_TRAIN, GameType.SPEED_MATCH,
+            GameType.AVATAR_WHACK, GameType.STROOP_EFFECT -> GameCategory.TEST
+            GameType.TURTLE_SOUP -> GameCategory.DEDUCTION
+            GameType.BLOCK_PUZZLE, GameType.FRUIT_MASTER -> GameCategory.CASUAL
+            else -> GameCategory.BRAIN
+        }
+        _selectedCategory.value = cat
         _selectedGameType.value = gameType
+        loadLeaderboard(cat.key, gameType.key, _selectedDifficulty.value.key)
+        _currentScreen.value = ScreenState.CATEGORY_DETAIL
+    }
+
+
+    fun toggleGameTypeExpanded(gameType: GameType) {
+        if (_expandedGameType.value == gameType) {
+            _expandedGameType.value = null
+        } else {
+            selectGameType(gameType)
+        }
+    }
+
+    fun selectGameType(gameType: GameType) {
+        markGameAsViewed(gameType)
+        _selectedGameType.value = gameType
+        _expandedGameType.value = gameType
         loadLeaderboard(_selectedCategory.value.key, gameType.key, _selectedDifficulty.value.key)
     }
 
@@ -1418,15 +1524,61 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // --- Dialogs ---
-    fun openLeaderboardDialog(difficulty: GameDifficulty? = null, gameType: GameType? = null) {
+    fun openLeaderboardDialog(
+        difficulty: GameDifficulty? = null,
+        gameType: GameType? = null,
+        initialMainTab: com.example.ui.components.LeaderboardMainTab = com.example.ui.components.LeaderboardMainTab.RECORDS
+    ) {
+        _leaderboardInitialTab.value = initialMainTab
         if (gameType != null) {
             _selectedGameType.value = gameType
+            val cat = when (gameType) {
+                GameType.FOCUS_TEST, GameType.FOCUS_TRAIN, GameType.SPEED_MATCH,
+                GameType.AVATAR_WHACK, GameType.STROOP_EFFECT -> GameCategory.TEST
+                GameType.TURTLE_SOUP -> GameCategory.DEDUCTION
+                GameType.BLOCK_PUZZLE, GameType.FRUIT_MASTER -> GameCategory.CASUAL
+                else -> GameCategory.BRAIN
+            }
+            _selectedCategory.value = cat
         }
         val targetDiff = difficulty ?: _selectedDifficulty.value
-        _selectedDifficulty.value = targetDiff
-        _leaderboardDifficulty.value = targetDiff
-        loadLeaderboard(_selectedCategory.value.key, _selectedGameType.value.key, targetDiff.key)
+        val isFruitMaster = _selectedGameType.value == GameType.FRUIT_MASTER
+        val validDiff = if (isFruitMaster && targetDiff !in listOf(GameDifficulty.BEGINNER, GameDifficulty.INTERMEDIATE, GameDifficulty.ADVANCED)) {
+            GameDifficulty.BEGINNER
+        } else {
+            targetDiff
+        }
+        _selectedDifficulty.value = validDiff
+        _leaderboardDifficulty.value = validDiff
+        loadLeaderboard(_selectedCategory.value.key, _selectedGameType.value.key, validDiff.key)
+        loadGlobalLeaderboard()
+        if (initialMainTab == com.example.ui.components.LeaderboardMainTab.HOT_GAMES) {
+            loadHotGames()
+        }
         _showLeaderboardDialog.value = true
+    }
+
+    fun setLeaderboardGame(gameType: GameType) {
+        _selectedGameType.value = gameType
+        val cat = when (gameType) {
+            GameType.FOCUS_TEST, GameType.FOCUS_TRAIN, GameType.SPEED_MATCH,
+            GameType.AVATAR_WHACK, GameType.STROOP_EFFECT -> GameCategory.TEST
+            GameType.TURTLE_SOUP -> GameCategory.DEDUCTION
+            GameType.BLOCK_PUZZLE, GameType.FRUIT_MASTER -> GameCategory.CASUAL
+            else -> GameCategory.BRAIN
+        }
+        _selectedCategory.value = cat
+        val targetDiff = _leaderboardDifficulty.value
+        val isFruitMaster = gameType == GameType.FRUIT_MASTER
+        val validDiff = if (isFruitMaster && targetDiff !in listOf(GameDifficulty.BEGINNER, GameDifficulty.INTERMEDIATE, GameDifficulty.ADVANCED)) {
+            GameDifficulty.BEGINNER
+        } else {
+            targetDiff
+        }
+        _leaderboardDifficulty.value = validDiff
+        _selectedDifficulty.value = validDiff
+        loadLeaderboard(cat.key, gameType.key, validDiff.key)
+        loadGlobalLeaderboard()
     }
 
     fun closeLeaderboardDialog() {
@@ -1439,6 +1591,55 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun closeNameDialog() {
         _showNameDialog.value = false
+    }
+
+    fun openFavoriteVoteDialog() {
+        _showFavoriteVoteDialog.value = true
+    }
+
+    fun closeFavoriteVoteDialog() {
+        _showFavoriteVoteDialog.value = false
+    }
+
+    fun loadHotGames(month: String = getCurrentMonth()) {
+        viewModelScope.launch {
+            _isFetchingHotGames.value = true
+            val result = globalRepository.fetchHotGames(month)
+            result.onSuccess { resp ->
+                _hotGamesList.value = resp.hotGames
+                _totalVotersCount.value = resp.totalVoters
+            }
+            _isFetchingHotGames.value = false
+        }
+    }
+
+    fun submitFavoriteVotes(favorites: List<GameType>) {
+        if (favorites.size != 3) return
+        val currentMonth = getCurrentMonth()
+        _isSubmittingVotes.value = true
+        viewModelScope.launch {
+            globalRepository.voteFavorites(
+                playerId = _playerId.value,
+                playerName = _playerName.value,
+                countryCode = _selectedCountry.value.code,
+                favorites = favorites,
+                month = currentMonth
+            )
+
+            val joined = favorites.joinToString(",") { it.key }
+            prefs.edit()
+                .putString("pref_user_favorite_games", joined)
+                .putString("pref_last_voted_month", currentMonth)
+                .apply()
+
+            _userFavorites.value = favorites
+            _lastVotedMonth.value = currentMonth
+            _hasVotedThisMonth.value = true
+            _isSubmittingVotes.value = false
+            _showFavoriteVoteDialog.value = false
+
+            loadHotGames(currentMonth)
+        }
     }
 
     fun clearScoresForCurrentLevel() {

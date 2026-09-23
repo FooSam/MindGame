@@ -69,3 +69,19 @@ data class GlobalLeaderboardResponse(
     val myRankEntry: GlobalScoreEntry? = null,
     val totalCount: Int = 0
 )
+
+data class HotGameEntry(
+    val rank: Int = 0,
+    val gameTypeKey: String,
+    val votes: Int = 0
+) {
+    val gameType: GameType
+        get() = GameType.fromKey(gameTypeKey)
+}
+
+data class HotGamesLeaderboardResponse(
+    val month: String,
+    val totalVoters: Int,
+    val hotGames: List<HotGameEntry>
+)
+

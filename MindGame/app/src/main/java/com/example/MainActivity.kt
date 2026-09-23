@@ -25,6 +25,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.GameDifficulty
 import com.example.data.model.GameType
 import com.example.ui.components.ChangeNameDialog
+import com.example.ui.components.FavoriteGameVoteDialog
 import com.example.ui.components.LeaderboardDialog
 import com.example.ui.components.SettingsDialog
 import com.example.ui.screens.CatSudokuScreen
@@ -106,6 +107,7 @@ fun MainApp(viewModel: GameViewModel) {
     val playerName by viewModel.playerName.collectAsStateWithLifecycle()
     val selectedCategory by viewModel.selectedCategory.collectAsStateWithLifecycle()
     val selectedGameType by viewModel.selectedGameType.collectAsStateWithLifecycle()
+    val expandedGameType by viewModel.expandedGameType.collectAsStateWithLifecycle()
     val selectedDifficulty by viewModel.selectedDifficulty.collectAsStateWithLifecycle()
     val leaderboardDifficulty by viewModel.leaderboardDifficulty.collectAsStateWithLifecycle()
 
@@ -210,11 +212,20 @@ fun MainApp(viewModel: GameViewModel) {
     val globalUploadMessage by viewModel.globalUploadMessage.collectAsStateWithLifecycle()
     val selectedCountry by viewModel.selectedCountry.collectAsStateWithLifecycle()
     val showLeaderboardDialog by viewModel.showLeaderboardDialog.collectAsStateWithLifecycle()
+    val leaderboardInitialTab by viewModel.leaderboardInitialTab.collectAsStateWithLifecycle()
     val showNameDialog by viewModel.showNameDialog.collectAsStateWithLifecycle()
     val showSettingsDialog by viewModel.showSettingsDialog.collectAsStateWithLifecycle()
     val isFullScreenEnabled by viewModel.isFullScreenEnabled.collectAsStateWithLifecycle()
     val isSfxEnabled by viewModel.isSfxEnabled.collectAsStateWithLifecycle()
     val isBgmEnabled by viewModel.isBgmEnabled.collectAsStateWithLifecycle()
+    val viewedGames by viewModel.viewedGames.collectAsStateWithLifecycle()
+    val userFavorites by viewModel.userFavorites.collectAsStateWithLifecycle()
+    val hasVotedThisMonth by viewModel.hasVotedThisMonth.collectAsStateWithLifecycle()
+    val hotGamesList by viewModel.hotGamesList.collectAsStateWithLifecycle()
+    val totalVotersCount by viewModel.totalVotersCount.collectAsStateWithLifecycle()
+    val isFetchingHotGames by viewModel.isFetchingHotGames.collectAsStateWithLifecycle()
+    val isSubmittingVotes by viewModel.isSubmittingVotes.collectAsStateWithLifecycle()
+    val showFavoriteVoteDialog by viewModel.showFavoriteVoteDialog.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     LaunchedEffect(globalUploadMessage) {
@@ -297,23 +308,42 @@ fun MainApp(viewModel: GameViewModel) {
                     playerName = playerName,
                     language = language,
                     appTheme = appTheme,
+                    isCategoryHasNew = { viewModel.isCategoryHasNew(it) },
+                    userFavorites = userFavorites,
+                    hasVotedThisMonth = hasVotedThisMonth,
+                    currentMonth = viewModel.getCurrentMonth(),
                     onSettingsClick = { viewModel.openSettingsDialog() },
+                    onLeaderboardClick = { viewModel.openLeaderboardDialog(initialMainTab = com.example.ui.components.LeaderboardMainTab.HOT_GAMES) },
+                    onVoteClick = { viewModel.openFavoriteVoteDialog() },
                     onChangeNameClick = { viewModel.openNameDialog() },
-                    onCategoryClick = { viewModel.selectCategory(it) }
+                    onCategoryClick = { viewModel.selectCategory(it) },
+                    onFeaturedBannerClick = {
+                        viewModel.openFeaturedGameDirectly(com.example.data.model.GameType.GLASS_PUZZLE_CUBE)
+                    }
                 )
             }
 
             ScreenState.CATEGORY_DETAIL -> {
                 CategoryScreen(
                     category = selectedCategory,
-                    selectedGameType = selectedGameType,
+                    expandedGameType = expandedGameType,
                     language = language,
+                    isGameNew = { viewModel.isGameNew(it) },
                     onBackClick = { viewModel.navigateTo(ScreenState.HOME) },
-                    onGameTypeSelect = { gameType -> viewModel.selectGameType(gameType) },
-                    onDifficultySelect = { diff ->
+                    onGameTypeSelect = { gameType -> viewModel.toggleGameTypeExpanded(gameType) },
+                    onDifficultySelect = { gameType, diff ->
+                        viewModel.selectGameType(gameType)
                         viewModel.selectDifficultyAndStart(diff)
                     },
-                    onLeaderboardClick = { viewModel.openLeaderboardDialog() }
+                    onLeaderboardClick = {
+                        val targetGame = expandedGameType ?: when (selectedCategory) {
+                            com.example.data.model.GameCategory.DEDUCTION -> com.example.data.model.GameType.TURTLE_SOUP
+                            com.example.data.model.GameCategory.BRAIN -> com.example.data.model.GameType.GLASS_PUZZLE_CUBE
+                            com.example.data.model.GameCategory.TEST -> com.example.data.model.GameType.STROOP_EFFECT
+                            com.example.data.model.GameCategory.CASUAL -> com.example.data.model.GameType.FRUIT_MASTER
+                        }
+                        viewModel.openLeaderboardDialog(gameType = targetGame, initialMainTab = com.example.ui.components.LeaderboardMainTab.RECORDS)
+                    }
                 )
             }
 
@@ -685,11 +715,19 @@ fun MainApp(viewModel: GameViewModel) {
                 scores = leaderboardList,
                 globalScores = globalLeaderboardList,
                 myGlobalRankEntry = myGlobalRankEntry,
+                hotGames = hotGamesList,
+                totalVotersCount = totalVotersCount,
+                currentMonth = viewModel.getCurrentMonth(),
                 isFetchingGlobal = isFetchingGlobalLeaderboard,
                 isUploadingGlobal = isUploadingGlobalScore,
+                isFetchingHotGames = isFetchingHotGames,
+                initialMainTab = leaderboardInitialTab,
                 language = language,
                 onDifficultySelected = { diff ->
                     viewModel.setLeaderboardDifficultyFilter(diff)
+                },
+                onGameSelected = { game ->
+                    viewModel.setLeaderboardGame(game)
                 },
                 onClearScores = {
                     viewModel.clearScoresForCurrentLevel()
@@ -700,8 +738,28 @@ fun MainApp(viewModel: GameViewModel) {
                 onRefreshGlobal = {
                     viewModel.loadGlobalLeaderboard()
                 },
+                onRefreshHotGames = {
+                    viewModel.loadHotGames()
+                },
+                onPlayGame = { gameType ->
+                    viewModel.openFeaturedGameDirectly(gameType)
+                },
                 onDismiss = { viewModel.closeLeaderboardDialog() }
+            )
+        }
+
+        if (showFavoriteVoteDialog) {
+            FavoriteGameVoteDialog(
+                currentMonth = viewModel.getCurrentMonth(),
+                initialFavorites = userFavorites,
+                language = language,
+                isSubmitting = isSubmittingVotes,
+                onSubmit = { chosen ->
+                    viewModel.submitFavoriteVotes(chosen)
+                },
+                onDismiss = { viewModel.closeFavoriteVoteDialog() }
             )
         }
     }
 }
+

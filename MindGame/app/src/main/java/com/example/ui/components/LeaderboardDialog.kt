@@ -1,6 +1,7 @@
 package com.example.ui.components
 
 import android.text.format.DateFormat
+import com.example.audio.SoundManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -39,6 +40,20 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.res.painterResource
+import com.example.R
+import com.example.data.model.HotGameEntry
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -76,6 +91,11 @@ enum class LeaderboardTab {
     GLOBAL
 }
 
+enum class LeaderboardMainTab {
+    RECORDS,
+    HOT_GAMES
+}
+
 @Composable
 fun LeaderboardDialog(
     selectedDifficulty: GameDifficulty,
@@ -83,15 +103,24 @@ fun LeaderboardDialog(
     scores: List<ScoreRecord>,
     globalScores: List<GlobalScoreEntry> = emptyList(),
     myGlobalRankEntry: GlobalScoreEntry? = null,
+    hotGames: List<HotGameEntry> = emptyList(),
+    totalVotersCount: Int = 0,
+    currentMonth: String = "",
     isFetchingGlobal: Boolean = false,
     isUploadingGlobal: Boolean = false,
+    isFetchingHotGames: Boolean = false,
+    initialMainTab: LeaderboardMainTab = LeaderboardMainTab.RECORDS,
     language: AppLanguage,
     onDifficultySelected: (GameDifficulty) -> Unit,
+    onGameSelected: (GameType) -> Unit = {},
     onClearScores: () -> Unit,
     onUploadToGlobal: () -> Unit = {},
     onRefreshGlobal: () -> Unit = {},
+    onRefreshHotGames: () -> Unit = {},
+    onPlayGame: (GameType) -> Unit = {},
     onDismiss: () -> Unit
 ) {
+    var mainTab by remember(initialMainTab) { mutableStateOf(initialMainTab) }
     var activeTab by remember { mutableStateOf(LeaderboardTab.LOCAL) }
 
     Dialog(
@@ -109,12 +138,104 @@ fun LeaderboardDialog(
                 modifier = Modifier.padding(18.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Header Title & Scope Tabs (Local vs Global)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                // Top Main Tabs: [🎮 單項紀錄] vs [❤️ 熱門風雲榜]
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(40.dp)
                 ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (mainTab == LeaderboardMainTab.RECORDS) MaterialTheme.colorScheme.primary else Color.Transparent,
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(14.dp))
+                                .clickable { mainTab = LeaderboardMainTab.RECORDS }
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.EmojiEvents,
+                                    contentDescription = null,
+                                    tint = if (mainTab == LeaderboardMainTab.RECORDS) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = Localization.getString("leaderboard_main_tab_records", language),
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (mainTab == LeaderboardMainTab.RECORDS) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                )
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (mainTab == LeaderboardMainTab.HOT_GAMES) MaterialTheme.colorScheme.primary else Color.Transparent,
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(14.dp))
+                                .clickable { mainTab = LeaderboardMainTab.HOT_GAMES }
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Favorite,
+                                    contentDescription = null,
+                                    tint = if (mainTab == LeaderboardMainTab.HOT_GAMES) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = Localization.getString("leaderboard_main_tab_hot", language),
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (mainTab == LeaderboardMainTab.HOT_GAMES) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                if (mainTab == LeaderboardMainTab.HOT_GAMES) {
+                    HotGamesLeaderboardContent(
+                        hotGames = hotGames,
+                        totalVotersCount = totalVotersCount,
+                        currentMonth = currentMonth,
+                        isFetching = isFetchingHotGames,
+                        language = language,
+                        onRefresh = onRefreshHotGames,
+                        onPlayGame = onPlayGame,
+                        onDismiss = onDismiss
+                    )
+                } else {
+                    // Header Title & Scope Tabs (Local vs Global)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                     Text(
                         text = if (activeTab == LeaderboardTab.LOCAL) {
                             Localization.getString("leaderboard_title", language)
@@ -200,6 +321,105 @@ fun LeaderboardDialog(
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
+
+                // Game Selector Row & Dropdown
+                var showGameDropdown by remember { mutableStateOf(false) }
+
+                Surface(
+                    onClick = {
+                        SoundManager.playClick()
+                        showGameDropdown = true
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 7.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SportsEsports,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = Localization.getString("current_game_label", language) + "：" + Localization.getString(selectedGameType.titleKey, language),
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = Localization.getString("switch_game", language),
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                            Spacer(modifier = Modifier.width(2.dp))
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = "Switch Game",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    DropdownMenu(
+                        expanded = showGameDropdown,
+                        onDismissRequest = { showGameDropdown = false },
+                        modifier = Modifier.heightIn(max = 380.dp)
+                    ) {
+                        GameType.entries.forEach { game ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = Localization.getString(game.titleKey, language),
+                                        fontWeight = if (game == selectedGameType) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (game == selectedGameType) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    )
+                                },
+                                onClick = {
+                                    showGameDropdown = false
+                                    SoundManager.playClick()
+                                    onGameSelected(game)
+                                },
+                                leadingIcon = {
+                                    if (game == selectedGameType) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    } else {
+                                        Spacer(modifier = Modifier.size(18.dp))
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
 
                 // Difficulty Selector Tabs
                 val isFruitMaster = selectedGameType == GameType.FRUIT_MASTER
@@ -662,7 +882,255 @@ fun LeaderboardDialog(
                         }
                     }
                 }
+                } // End of if (mainTab == LeaderboardMainTab.RECORDS)
             }
         }
     }
 }
+
+@Composable
+fun HotGamesLeaderboardContent(
+    hotGames: List<HotGameEntry>,
+    totalVotersCount: Int,
+    currentMonth: String,
+    isFetching: Boolean,
+    language: AppLanguage,
+    onRefresh: () -> Unit,
+    onPlayGame: (GameType) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val maxVotes = (hotGames.maxOfOrNull { it.votes } ?: 1).coerceAtLeast(1)
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = Localization.getString("hot_games_title", language),
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                )
+                Text(
+                    text = Localization.getString("hot_games_voters_count", language, totalVotersCount) +
+                            if (currentMonth.isNotBlank()) " ($currentMonth)" else "",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                )
+            }
+
+            IconButton(onClick = {
+                SoundManager.playClick()
+                onRefresh()
+            }) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = "Refresh",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        if (isFetching) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(340.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+            }
+        } else if (hotGames.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(340.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = Localization.getString("no_records", language),
+                    style = MaterialTheme.typography.bodyMedium.copy(color = Color.Gray)
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(360.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                itemsIndexed(hotGames) { index, entry ->
+                    val gameType = entry.gameType
+                    val isTop3 = index < 3
+                    val rankColor = when (index) {
+                        0 -> Color(0xFFFFB800) // Gold
+                        1 -> Color(0xFF9E9E9E) // Silver
+                        2 -> Color(0xFFCD7F32) // Bronze
+                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                    val progress = (entry.votes.toFloat() / maxVotes).coerceIn(0f, 1f)
+
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = when (index) {
+                            0 -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                            1 -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                            2 -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+                            else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f)
+                        },
+                        border = if (index == 0) {
+                            androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFFFFB800).copy(alpha = 0.6f))
+                        } else null,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Rank Badge
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (isTop3) rankColor.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = when (index) {
+                                        0 -> "👑1"
+                                        1 -> "🥈2"
+                                        2 -> "🥉3"
+                                        else -> "#${index + 1}"
+                                    },
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = rankColor
+                                    )
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(10.dp))
+
+                            // Game Icon
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (gameType == GameType.GLASS_PUZZLE_CUBE) {
+                                    Image(
+                                        painter = painterResource(id = R.drawable.ic_isometric_cube),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = getGameTypeIcon(gameType),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            // Title & Progress Bar
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = Localization.getString(gameType.titleKey, language),
+                                        style = MaterialTheme.typography.titleSmall.copy(
+                                            fontWeight = FontWeight.Bold
+                                        ),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = Localization.getString("hot_games_votes_format", language, entry.votes),
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                LinearProgressIndicator(
+                                    progress = { progress },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(6.dp)
+                                        .clip(RoundedCornerShape(3.dp)),
+                                    color = if (index == 0) Color(0xFFFFB800) else MaterialTheme.colorScheme.primary,
+                                    trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(10.dp))
+
+                            // Play Now Button
+                            Button(
+                                onClick = {
+                                    SoundManager.playClick()
+                                    onPlayGame(gameType)
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                modifier = Modifier.height(34.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Text(
+                                    text = Localization.getString("play_now_button", language),
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Button(
+                onClick = {
+                    SoundManager.playClick()
+                    onDismiss()
+                },
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(text = Localization.getString("confirm", language))
+            }
+        }
+    }
+}
+

@@ -5,12 +5,26 @@ import com.example.data.model.Country
 import com.example.data.model.GameType
 import com.example.data.model.GlobalLeaderboardResponse
 import com.example.data.model.GlobalScoreEntry
+import com.example.data.model.HotGameEntry
+import com.example.data.model.HotGamesLeaderboardResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+data class LocalVoteRecord(
+    val month: String,
+    val playerId: String,
+    val playerName: String,
+    val countryCode: String,
+    val favorites: List<String>,
+    val timestamp: Long
+)
 
 class GlobalLeaderboardRepository(
     private var customServerUrl: String = DEFAULT_SERVER_URL
@@ -37,6 +51,7 @@ class GlobalLeaderboardRepository(
 
     // 本地記憶體模擬與快取池 (確保離線或通訊異常時，UI與互動能完整無礙運行與自我驗證)
     private val localGlobalCache = mutableListOf<GlobalScoreEntry>()
+    private val localVoteCache = mutableListOf<LocalVoteRecord>()
 
     init {
         seedInitialMockData()
@@ -245,6 +260,150 @@ class GlobalLeaderboardRepository(
         }
     }
 
+    suspend fun fetchHotGames(month: String): Result<HotGamesLeaderboardResponse> = withContext(Dispatchers.IO) {
+        try {
+            if (customServerUrl.isNotBlank()) {
+                try {
+                    val queryUrl = "$customServerUrl?action=getHotGames&month=$month"
+                    val connection = (URL(queryUrl).openConnection() as HttpURLConnection).apply {
+                        requestMethod = "GET"
+                        connectTimeout = 8000
+                        readTimeout = 8000
+                        instanceFollowRedirects = true
+                        setRequestProperty("Accept", "application/json")
+                    }
+
+                    if (connection.responseCode in 200..299) {
+                        val responseText = connection.inputStream.bufferedReader().use { it.readText() }
+                        val json = JSONObject(responseText)
+                        val hotList = mutableListOf<HotGameEntry>()
+                        val array = json.optJSONArray("hotGames") ?: JSONArray()
+                        for (i in 0 until array.length()) {
+                            val obj = array.getJSONObject(i)
+                            hotList.add(
+                                HotGameEntry(
+                                    rank = obj.optInt("rank", i + 1),
+                                    gameTypeKey = obj.optString("gameTypeKey", ""),
+                                    votes = obj.optInt("votes", 0)
+                                )
+                            )
+                        }
+                        return@withContext Result.success(
+                            HotGamesLeaderboardResponse(
+                                month = json.optString("month", month),
+                                totalVoters = json.optInt("totalVoters", hotList.sumOf { it.votes } / 3),
+                                hotGames = hotList
+                            )
+                        )
+                    }
+                } catch (netEx: Exception) {
+                    // Fallback to local cache
+                }
+            }
+
+            // 本地快取與離線運算
+            val monthVotes = localVoteCache.filter { it.month == month }
+            val counts = mutableMapOf<String, Int>()
+            GameType.entries.forEach { counts[it.key] = 0 }
+            monthVotes.forEach { vote ->
+                vote.favorites.forEach { key ->
+                    counts[key] = (counts[key] ?: 0) + 1
+                }
+            }
+
+            val sorted = counts.entries
+                .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
+                .mapIndexed { index, entry ->
+                    HotGameEntry(
+                        rank = index + 1,
+                        gameTypeKey = entry.key,
+                        votes = entry.value
+                    )
+                }
+
+            Result.success(
+                HotGamesLeaderboardResponse(
+                    month = month,
+                    totalVoters = monthVotes.size,
+                    hotGames = sorted
+                )
+            )
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun voteFavorites(
+        playerId: String,
+        playerName: String,
+        countryCode: String,
+        favorites: List<GameType>,
+        month: String
+    ): Result<Boolean> = withContext(Dispatchers.IO) {
+        try {
+            var networkSuccess = false
+            if (customServerUrl.isNotBlank()) {
+                try {
+                    val connection = (URL(customServerUrl).openConnection() as HttpURLConnection).apply {
+                        requestMethod = "POST"
+                        connectTimeout = 8000
+                        readTimeout = 8000
+                        doOutput = true
+                        instanceFollowRedirects = false
+                        setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                    }
+
+                    val payload = JSONObject().apply {
+                        put("action", "voteFavorites")
+                        put("playerId", playerId)
+                        put("playerName", playerName)
+                        put("countryCode", countryCode)
+                        put("month", month)
+                        val favArray = JSONArray()
+                        favorites.forEach { favArray.put(it.key) }
+                        put("favorites", favArray)
+                        put("timestamp", System.currentTimeMillis())
+                    }
+
+                    connection.outputStream.use { os ->
+                        os.write(payload.toString().toByteArray(Charsets.UTF_8))
+                    }
+
+                    val code = connection.responseCode
+                    if (code in 200..299 || code == HttpURLConnection.HTTP_MOVED_TEMP || code == 307 || code == 308) {
+                        networkSuccess = true
+                    }
+                } catch (netEx: Exception) {
+                    // Fallback to local
+                }
+            }
+
+            // 本地快取池更新 (單一玩家單月覆寫更新)
+            val existingIndex = localVoteCache.indexOfFirst { it.month == month && it.playerId == playerId }
+            val record = LocalVoteRecord(
+                month = month,
+                playerId = playerId,
+                playerName = playerName,
+                countryCode = countryCode,
+                favorites = favorites.map { it.key },
+                timestamp = System.currentTimeMillis()
+            )
+            if (existingIndex >= 0) {
+                localVoteCache[existingIndex] = record
+            } else {
+                localVoteCache.add(record)
+            }
+
+            if (customServerUrl.isNotBlank() && !networkSuccess) {
+                Result.failure(Exception("network_error"))
+            } else {
+                Result.success(true)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     private fun parseEntry(obj: JSONObject, rank: Int): GlobalScoreEntry {
         return GlobalScoreEntry(
             rank = rank,
@@ -301,5 +460,31 @@ class GlobalLeaderboardRepository(
                 }
             }
         }
+
+        // 初始化當月模擬玩家投票
+        val currentMonth = SimpleDateFormat("yyyy-MM", Locale.getDefault()).format(Date(now))
+        val popularCombos = listOf(
+            listOf(GameType.GLASS_PUZZLE_CUBE, GameType.FRUIT_MASTER, GameType.CAT_SUDOKU),
+            listOf(GameType.GLASS_PUZZLE_CUBE, GameType.FOCUS_TRAIN, GameType.TURTLE_SOUP),
+            listOf(GameType.FRUIT_MASTER, GameType.SUDOKU, GameType.AVATAR_WHACK),
+            listOf(GameType.GLASS_PUZZLE_CUBE, GameType.FRUIT_MASTER, GameType.SPEED_MATCH),
+            listOf(GameType.CAT_SUDOKU, GameType.BLOCK_PUZZLE, GameType.FOCUS_TEST),
+            listOf(GameType.GLASS_PUZZLE_CUBE, GameType.CAT_SUDOKU, GameType.STROOP_EFFECT),
+            listOf(GameType.FRUIT_MASTER, GameType.FOCUS_TRAIN, GameType.TURTLE_SOUP)
+        )
+        sampleNames.forEachIndexed { idx, (name, country) ->
+            val combo = popularCombos[idx % popularCombos.size]
+            localVoteCache.add(
+                LocalVoteRecord(
+                    month = currentMonth,
+                    playerId = "bot_voter_$idx",
+                    playerName = name,
+                    countryCode = country,
+                    favorites = combo.map { it.key },
+                    timestamp = now - idx * 1800_000L
+                )
+            )
+        }
     }
 }
+
