@@ -22,6 +22,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
@@ -95,7 +97,7 @@ fun FeaturedSpotlightBanner(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // 左側特色立體水晶圖示 (附微呼吸縮放動畫)
+            // 左側特色立體鋼珠圖示 (附微呼吸縮放動畫)
             Box(
                 modifier = Modifier
                     .size(40.dp)
@@ -111,10 +113,11 @@ fun FeaturedSpotlightBanner(
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.ic_isometric_cube),
+                Icon(
+                    imageVector = Icons.Default.TouchApp,
                     contentDescription = "New Game Icon",
-                    modifier = Modifier.size(26.dp)
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
                 )
             }
 
@@ -126,7 +129,7 @@ fun FeaturedSpotlightBanner(
                     .weight(1f)
                     .padding(end = 8.dp)
             ) {
-                val bannerMainText = Localization.getString("spotlight_banner_cube", language)
+                val bannerMainText = Localization.getString("spotlight_banner_pinball", language)
                 val fullMarqueeText = if (!marqueeExtraText.isNullOrBlank()) {
                     "$bannerMainText   ★   $marqueeExtraText"
                 } else {

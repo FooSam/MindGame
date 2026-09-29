@@ -30,7 +30,9 @@ import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.SportsScore
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -77,6 +79,8 @@ fun getGameTypeIcon(gameType: GameType): ImageVector {
         GameType.STROOP_EFFECT -> Icons.Default.Psychology
         GameType.BLOCK_PUZZLE -> Icons.Default.Extension
         GameType.FRUIT_MASTER -> Icons.Default.Bolt
+        GameType.PINBALL_FLIPPER -> Icons.Default.TouchApp
+        GameType.NIGHT_MARKET_PINBALL -> Icons.Default.SportsScore
         else -> Icons.Default.Timer
     }
 }

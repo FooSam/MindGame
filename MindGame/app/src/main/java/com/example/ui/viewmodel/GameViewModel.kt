@@ -73,7 +73,9 @@ enum class ScreenState {
     CASUAL_CATEGORY,
     BLOCK_PUZZLE_GAME,
     FRUIT_MASTER_GAME,
-    GLASS_PUZZLE_CUBE_GAME
+    GLASS_PUZZLE_CUBE_GAME,
+    PINBALL_FLIPPER_GAME,
+    NIGHT_MARKET_PINBALL_GAME
 }
 
 enum class GameStatus {
@@ -546,11 +548,77 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun stopAllActiveGames() {
+        // 1. 舒爾特專注方格
+        timerJob?.cancel()
+        timerJob = null
+        if (_gameStatus.value == GameStatus.PLAYING) {
+            _gameStatus.value = GameStatus.IDLE
+        }
+        // 2. 專注力訓練
+        focusTrainTimerJob?.cancel()
+        focusTrainTimerJob = null
+        if (_focusTrainStatus.value == GameStatus.PLAYING) {
+            _focusTrainStatus.value = GameStatus.IDLE
+        }
+        // 3. 極速配對
+        speedMatchTimerJob?.cancel()
+        speedMatchTimerJob = null
+        if (_speedMatchStatus.value == GameStatus.PLAYING) {
+            _speedMatchStatus.value = GameStatus.IDLE
+        }
+        // 4. 數獨
+        sudokuTimerJob?.cancel()
+        sudokuTimerJob = null
+        if (_sudokuStatus.value == GameStatus.PLAYING) {
+            _sudokuStatus.value = GameStatus.IDLE
+        }
+        // 5. 貓咪數獨
+        catSudokuTimerJob?.cancel()
+        catSudokuTimerJob = null
+        if (_catSudokuStatus.value == GameStatus.PLAYING) {
+            _catSudokuStatus.value = GameStatus.IDLE
+        }
+        // 6. 海龜湯
+        turtleSoupTimerJob?.cancel()
+        turtleSoupTimerJob = null
+        // 7. 萌寵打地鼠
+        whackTimerJob?.cancel()
+        whackTimerJob = null
+        whackLoopJob?.cancel()
+        whackLoopJob = null
+        if (_whackStatus.value == GameStatus.PLAYING) {
+            _whackStatus.value = GameStatus.IDLE
+        }
+        // 8. 斯特魯普效應
+        stroopGameTimerJob?.cancel()
+        stroopGameTimerJob = null
+        stroopQuestionTimerJob?.cancel()
+        stroopQuestionTimerJob = null
+        if (_stroopStatus.value == GameStatus.PLAYING) {
+            _stroopStatus.value = GameStatus.IDLE
+        }
+    }
+
+    fun startNightMarketPinballGame() {
+        markGameAsViewed(GameType.NIGHT_MARKET_PINBALL)
+        SoundManager.onGameSwitched()
+        _selectedCategory.value = GameCategory.CASUAL
+        _selectedGameType.value = GameType.NIGHT_MARKET_PINBALL
+        _selectedDifficulty.value = GameDifficulty.BEGINNER
+        loadLeaderboard(GameCategory.CASUAL.key, GameType.NIGHT_MARKET_PINBALL.key, GameDifficulty.BEGINNER.key)
+        _currentScreen.value = ScreenState.NIGHT_MARKET_PINBALL_GAME
+    }
+
     fun navigateTo(screen: ScreenState) {
+        if (screen in listOf(ScreenState.HOME, ScreenState.CATEGORY_DETAIL, ScreenState.CASUAL_CATEGORY)) {
+            stopAllActiveGames()
+        }
         _currentScreen.value = screen
     }
 
     fun selectCategory(category: GameCategory) {
+        stopAllActiveGames()
         _selectedCategory.value = category
         _expandedGameType.value = null
         when (category) {
@@ -569,14 +637,15 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     _selectedGameType.value != GameType.FOCUS_TRAIN && 
                     _selectedGameType.value != GameType.SPEED_MATCH &&
                     _selectedGameType.value != GameType.AVATAR_WHACK &&
-                    _selectedGameType.value != GameType.STROOP_EFFECT) {
+                    _selectedGameType.value != GameType.STROOP_EFFECT &&
+                    _selectedGameType.value != GameType.PINBALL_FLIPPER) {
                     _selectedGameType.value = GameType.FOCUS_TEST
                 }
             }
             GameCategory.CASUAL -> {
-                _selectedGameType.value = GameType.BLOCK_PUZZLE
+                _selectedGameType.value = GameType.NIGHT_MARKET_PINBALL
                 _selectedDifficulty.value = GameDifficulty.BEGINNER
-                loadLeaderboard(category.key, GameType.BLOCK_PUZZLE.key, GameDifficulty.BEGINNER.key)
+                loadLeaderboard(category.key, GameType.NIGHT_MARKET_PINBALL.key, GameDifficulty.BEGINNER.key)
                 _currentScreen.value = ScreenState.CASUAL_CATEGORY
                 return
             }
@@ -695,9 +764,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _expandedGameType.value = gameType
         val cat = when (gameType) {
             GameType.FOCUS_TEST, GameType.FOCUS_TRAIN, GameType.SPEED_MATCH,
-            GameType.AVATAR_WHACK, GameType.STROOP_EFFECT -> GameCategory.TEST
+            GameType.AVATAR_WHACK, GameType.STROOP_EFFECT, GameType.PINBALL_FLIPPER -> GameCategory.TEST
             GameType.TURTLE_SOUP -> GameCategory.DEDUCTION
-            GameType.BLOCK_PUZZLE, GameType.FRUIT_MASTER -> GameCategory.CASUAL
+            GameType.BLOCK_PUZZLE, GameType.FRUIT_MASTER, GameType.NIGHT_MARKET_PINBALL -> GameCategory.CASUAL
             else -> GameCategory.BRAIN
         }
         _selectedCategory.value = cat
@@ -750,6 +819,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             _currentScreen.value = ScreenState.STROOP_EFFECT_GAME
         } else if (_selectedGameType.value == GameType.GLASS_PUZZLE_CUBE) {
             startGlassPuzzleCubeGame(difficulty)
+        } else if (_selectedGameType.value == GameType.PINBALL_FLIPPER) {
+            _currentScreen.value = ScreenState.PINBALL_FLIPPER_GAME
+        } else if (_selectedGameType.value == GameType.NIGHT_MARKET_PINBALL) {
+            _currentScreen.value = ScreenState.NIGHT_MARKET_PINBALL_GAME
         } else {
             setupInitialGrid(difficulty)
             _currentScreen.value = ScreenState.FOCUS_GAME
@@ -778,6 +851,28 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             )
             repository.insertScore(record)
             loadLeaderboard(GameCategory.BRAIN.key, GameType.GLASS_PUZZLE_CUBE.key, difficulty.key)
+        }
+    }
+
+    fun recordPinballScore(gameType: GameType, scoreVal: Int, timeMs: Long) {
+        val cat = when (gameType) {
+            GameType.PINBALL_FLIPPER -> GameCategory.TEST
+            GameType.NIGHT_MARKET_PINBALL -> GameCategory.CASUAL
+            else -> _selectedCategory.value
+        }
+        val record = com.example.data.db.ScoreRecord(
+            playerName = _playerName.value,
+            categoryKey = cat.key,
+            gameTypeKey = gameType.key,
+            difficultyKey = _selectedDifficulty.value.key,
+            timeMillis = timeMs,
+            score = scoreVal,
+            wrongCount = 0,
+            timestamp = System.currentTimeMillis()
+        )
+        viewModelScope.launch {
+            repository.insertScore(record)
+            loadLeaderboard(cat.key, gameType.key, _selectedDifficulty.value.key)
         }
     }
 
@@ -1534,9 +1629,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             _selectedGameType.value = gameType
             val cat = when (gameType) {
                 GameType.FOCUS_TEST, GameType.FOCUS_TRAIN, GameType.SPEED_MATCH,
-                GameType.AVATAR_WHACK, GameType.STROOP_EFFECT -> GameCategory.TEST
+                GameType.AVATAR_WHACK, GameType.STROOP_EFFECT, GameType.PINBALL_FLIPPER -> GameCategory.TEST
                 GameType.TURTLE_SOUP -> GameCategory.DEDUCTION
-                GameType.BLOCK_PUZZLE, GameType.FRUIT_MASTER -> GameCategory.CASUAL
+                GameType.BLOCK_PUZZLE, GameType.FRUIT_MASTER, GameType.NIGHT_MARKET_PINBALL -> GameCategory.CASUAL
                 else -> GameCategory.BRAIN
             }
             _selectedCategory.value = cat
@@ -1562,9 +1657,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _selectedGameType.value = gameType
         val cat = when (gameType) {
             GameType.FOCUS_TEST, GameType.FOCUS_TRAIN, GameType.SPEED_MATCH,
-            GameType.AVATAR_WHACK, GameType.STROOP_EFFECT -> GameCategory.TEST
+            GameType.AVATAR_WHACK, GameType.STROOP_EFFECT, GameType.PINBALL_FLIPPER -> GameCategory.TEST
             GameType.TURTLE_SOUP -> GameCategory.DEDUCTION
-            GameType.BLOCK_PUZZLE, GameType.FRUIT_MASTER -> GameCategory.CASUAL
+            GameType.BLOCK_PUZZLE, GameType.FRUIT_MASTER, GameType.NIGHT_MARKET_PINBALL -> GameCategory.CASUAL
             else -> GameCategory.BRAIN
         }
         _selectedCategory.value = cat

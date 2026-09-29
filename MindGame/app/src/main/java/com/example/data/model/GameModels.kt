@@ -18,7 +18,9 @@ enum class GameType(val key: String, val titleKey: String, val descKey: String) 
     STROOP_EFFECT("STROOP_EFFECT", "game_stroop_effect", "game_stroop_effect_desc"),
     BLOCK_PUZZLE("BLOCK_PUZZLE", "game_block_puzzle", "game_block_puzzle_desc"),
     FRUIT_MASTER("FRUIT_MASTER", "game_fruit_master", "game_fruit_master_desc"),
-    GLASS_PUZZLE_CUBE("GLASS_PUZZLE_CUBE", "game_glass_puzzle_cube", "game_glass_puzzle_cube_desc");
+    GLASS_PUZZLE_CUBE("GLASS_PUZZLE_CUBE", "game_glass_puzzle_cube", "game_glass_puzzle_cube_desc"),
+    PINBALL_FLIPPER("PINBALL_FLIPPER", "game_pinball_flipper", "game_pinball_flipper_desc"),
+    NIGHT_MARKET_PINBALL("NIGHT_MARKET_PINBALL", "game_night_market_pinball", "game_night_market_pinball_desc");
 
     companion object {
         fun fromKey(key: String): GameType {

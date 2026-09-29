@@ -632,6 +632,91 @@ object SoundManager {
         }
     }
 
+    fun playPinballBounce() {
+        if (!isSfxEnabled) return
+        scope.launch {
+            val durationMs = 70
+            val numSamples = (SAMPLE_RATE * (durationMs / 1000.0)).toInt().coerceAtLeast(1)
+            val samples = ShortArray(numSamples)
+            for (i in 0 until numSamples) {
+                val t = i.toDouble() / SAMPLE_RATE
+                val frac = i.toDouble() / numSamples
+                val wave1 = Math.sin(2.0 * Math.PI * 980.0 * t)
+                val wave2 = Math.sin(2.0 * Math.PI * 1960.0 * t) * 0.4
+                val wave = (wave1 + wave2) / 1.4
+                val env = Math.exp(-frac * 7.0) * 0.35
+                samples[i] = (wave * env * Short.MAX_VALUE).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+            }
+            playPcm(samples)
+        }
+    }
+
+    fun playFlipperSnap() {
+        if (!isSfxEnabled) return
+        scope.launch {
+            val durationMs = 60
+            val numSamples = (SAMPLE_RATE * (durationMs / 1000.0)).toInt().coerceAtLeast(1)
+            val samples = ShortArray(numSamples)
+            for (i in 0 until numSamples) {
+                val t = i.toDouble() / SAMPLE_RATE
+                val frac = i.toDouble() / numSamples
+                val freq = 280.0 - 160.0 * frac
+                val wave = Math.sin(2.0 * Math.PI * freq * t) + (Math.random() * 2.0 - 1.0) * 0.2
+                val env = Math.exp(-frac * 6.0) * 0.45
+                samples[i] = (wave * env * Short.MAX_VALUE).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+            }
+            playPcm(samples)
+        }
+    }
+
+    fun playSpringLaunch() {
+        if (!isSfxEnabled) return
+        scope.launch {
+            val durationMs = 180
+            val numSamples = (SAMPLE_RATE * (durationMs / 1000.0)).toInt().coerceAtLeast(1)
+            val samples = ShortArray(numSamples)
+            for (i in 0 until numSamples) {
+                val t = i.toDouble() / SAMPLE_RATE
+                val frac = i.toDouble() / numSamples
+                val freq = 180.0 + 850.0 * (frac * frac)
+                val wave = Math.sin(2.0 * Math.PI * freq * t)
+                val env = Math.sin(Math.PI * frac) * 0.4
+                samples[i] = (wave * env * Short.MAX_VALUE).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+            }
+            playPcm(samples)
+        }
+    }
+
+    fun playPinDrop() {
+        if (!isSfxEnabled) return
+        scope.launch {
+            val durationMs = 45
+            val numSamples = (SAMPLE_RATE * (durationMs / 1000.0)).toInt().coerceAtLeast(1)
+            val samples = ShortArray(numSamples)
+            val pitch = 2200.0 + (Math.random() * 400.0 - 200.0)
+            for (i in 0 until numSamples) {
+                val t = i.toDouble() / SAMPLE_RATE
+                val frac = i.toDouble() / numSamples
+                val wave = Math.sin(2.0 * Math.PI * pitch * t)
+                val env = Math.exp(-frac * 9.0) * 0.28
+                samples[i] = (wave * env * Short.MAX_VALUE).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+            }
+            playPcm(samples)
+        }
+    }
+
+    fun playCoinOrSausage() {
+        if (!isSfxEnabled) return
+        scope.launch {
+            playTone(1046.50, 70, 0.28f)
+            delay(55)
+            playTone(1318.51, 80, 0.32f)
+            delay(65)
+            playTone(1567.98, 140, 0.35f)
+        }
+    }
+
+
     private fun generateToneSamples(freq: Double, durationMs: Int, volume: Float, isSawtooth: Boolean = false): ShortArray {
         val numSamples = (SAMPLE_RATE * (durationMs / 1000.0)).toInt().coerceAtLeast(1)
         val samples = ShortArray(numSamples)

@@ -117,7 +117,9 @@ class GlobalLeaderboardRepository(
                 GameType.AVATAR_WHACK.key,
                 GameType.STROOP_EFFECT.key,
                 GameType.BLOCK_PUZZLE.key,
-                GameType.FRUIT_MASTER.key -> true
+                GameType.FRUIT_MASTER.key,
+                GameType.PINBALL_FLIPPER.key,
+                GameType.NIGHT_MARKET_PINBALL.key -> true
                 else -> false
             }
 
@@ -224,7 +226,9 @@ class GlobalLeaderboardRepository(
                     GameType.AVATAR_WHACK.key,
                     GameType.STROOP_EFFECT.key,
                     GameType.BLOCK_PUZZLE.key,
-                    GameType.FRUIT_MASTER.key -> true
+                    GameType.FRUIT_MASTER.key,
+                    GameType.PINBALL_FLIPPER.key,
+                    GameType.NIGHT_MARKET_PINBALL.key -> true
                     else -> false
                 }
                 val isSudoku = entry.gameTypeKey == GameType.SUDOKU.key || entry.gameTypeKey == GameType.CAT_SUDOKU.key
@@ -435,7 +439,9 @@ class GlobalLeaderboardRepository(
                 GameType.AVATAR_WHACK,
                 GameType.STROOP_EFFECT,
                 GameType.BLOCK_PUZZLE,
-                GameType.FRUIT_MASTER -> true
+                GameType.FRUIT_MASTER,
+                GameType.PINBALL_FLIPPER,
+                GameType.NIGHT_MARKET_PINBALL -> true
                 else -> false
             }
 

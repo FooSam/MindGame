@@ -55,6 +55,7 @@ fun CasualCategoryScreen(
     language: AppLanguage,
     appTheme: AppThemeStyle,
     onBackClick: () -> Unit,
+    onPlayNightMarketPinball: () -> Unit,
     onPlayBlockPuzzle: () -> Unit,
     onPlayFruitMaster: () -> Unit,
     onLeaderboardClick: () -> Unit
@@ -133,6 +134,122 @@ fun CasualCategoryScreen(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // 第 1 款遊戲：《夜市珠霸王》（全新懷舊大作）
+                item {
+                    ElevatedCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(22.dp))
+                            .clickable {
+                                SoundManager.playClick()
+                                onPlayNightMarketPinball()
+                            },
+                        shape = RoundedCornerShape(22.dp),
+                        colors = CardDefaults.elevatedCardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp)
+                    ) {
+                        Column {
+                            // 遊戲封面大圖 (16:9 夜市實景復古木質彈珠台大圖)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(16f / 9f)
+                            ) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.cover_night_market_pinball),
+                                    contentDescription = "Night Market Pinball Cover",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+
+                                // 封面右上方特色標籤
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = Color(0xFFD84315).copy(alpha = 0.92f), // 台灣夜市烤香腸火烤赭紅
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(12.dp)
+                                ) {
+                                    Text(
+                                        text = "夜市懷舊必玩",
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                                    )
+                                }
+                            }
+
+                            // 下方說明與一鍵開玩按鈕
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = Localization.getString("game_night_market_pinball", language),
+                                    style = MaterialTheme.typography.titleLarge.copy(
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                )
+
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                Text(
+                                    text = Localization.getString("game_night_market_pinball_desc", language),
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        lineHeight = 20.sp
+                                    )
+                                )
+
+                                Spacer(modifier = Modifier.height(14.dp))
+
+                                // 特色標籤群
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    FeatureTag(text = "懷舊木台")
+                                    FeatureTag(text = "黃銅釘陣")
+                                    FeatureTag(text = "倍率香腸賞")
+                                    FeatureTag(text = "彈簧蓄力")
+                                }
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                // 立即開玩按鈕
+                                Button(
+                                    onClick = {
+                                        SoundManager.playClick()
+                                        onPlayNightMarketPinball()
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(48.dp),
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFFD84315)
+                                    )
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.PlayArrow,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = Localization.getString("night_market_play_now", language),
+                                            style = MaterialTheme.typography.titleMedium.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.White
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
                 // 第 1 款遊戲：《水果切切樂》（全新熱門大作）
                 item {
                     ElevatedCard(

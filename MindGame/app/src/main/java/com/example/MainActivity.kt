@@ -41,6 +41,8 @@ import com.example.ui.screens.CasualCategoryScreen
 import com.example.ui.screens.BlockPuzzleScreen
 import com.example.ui.screens.FruitMasterScreen
 import com.example.ui.screens.GlassPuzzleCubeScreen
+import com.example.ui.screens.FlipperPinballScreen
+import com.example.ui.screens.NightMarketPinballScreen
 import com.example.ui.screens.turtlesoup.TurtleSoupScreen
 import com.example.ui.screens.turtlesoup.TurtleSoupPlayState
 import com.example.game.sudoku.SudokuConfig
@@ -318,7 +320,7 @@ fun MainApp(viewModel: GameViewModel) {
                     onChangeNameClick = { viewModel.openNameDialog() },
                     onCategoryClick = { viewModel.selectCategory(it) },
                     onFeaturedBannerClick = {
-                        viewModel.openFeaturedGameDirectly(com.example.data.model.GameType.GLASS_PUZZLE_CUBE)
+                        viewModel.openFeaturedGameDirectly(com.example.data.model.GameType.PINBALL_FLIPPER)
                     }
                 )
             }
@@ -613,6 +615,7 @@ fun MainApp(viewModel: GameViewModel) {
                     language = language,
                     appTheme = appTheme,
                     onBackClick = { viewModel.navigateTo(ScreenState.HOME) },
+                    onPlayNightMarketPinball = { viewModel.startNightMarketPinballGame() },
                     onPlayBlockPuzzle = { viewModel.startBlockPuzzleGame() },
                     onPlayFruitMaster = { viewModel.startFruitMasterGame() },
                     onLeaderboardClick = { viewModel.openLeaderboardDialog() }
@@ -660,6 +663,34 @@ fun MainApp(viewModel: GameViewModel) {
                     onLeaderboardClick = { viewModel.openLeaderboardDialog(selectedDifficulty, GameType.GLASS_PUZZLE_CUBE) },
                     onGameCompleted = { AdManager.recordGameFinished(context as? Activity) },
                     onGameInterrupted = { AdManager.recordGameInterrupted(context as? Activity) }
+                )
+            }
+
+            ScreenState.PINBALL_FLIPPER_GAME -> {
+                FlipperPinballScreen(
+                    difficulty = selectedDifficulty,
+                    language = language,
+                    appTheme = appTheme,
+                    onBackClick = { viewModel.navigateTo(ScreenState.CATEGORY_DETAIL) },
+                    onLeaderboardClick = { viewModel.openLeaderboardDialog(selectedDifficulty, com.example.data.model.GameType.PINBALL_FLIPPER) },
+                    onGameComplete = { score, timeMs ->
+                        viewModel.recordPinballScore(com.example.data.model.GameType.PINBALL_FLIPPER, score, timeMs)
+                        AdManager.recordGameFinished(context as? Activity)
+                    }
+                )
+            }
+
+            ScreenState.NIGHT_MARKET_PINBALL_GAME -> {
+                NightMarketPinballScreen(
+                    difficulty = selectedDifficulty,
+                    language = language,
+                    appTheme = appTheme,
+                    onBackClick = { viewModel.navigateTo(ScreenState.CASUAL_CATEGORY) },
+                    onLeaderboardClick = { viewModel.openLeaderboardDialog(selectedDifficulty, com.example.data.model.GameType.NIGHT_MARKET_PINBALL) },
+                    onGameComplete = { score, timeMs ->
+                        viewModel.recordPinballScore(com.example.data.model.GameType.NIGHT_MARKET_PINBALL, score, timeMs)
+                        AdManager.recordGameFinished(context as? Activity)
+                    }
                 )
             }
         }

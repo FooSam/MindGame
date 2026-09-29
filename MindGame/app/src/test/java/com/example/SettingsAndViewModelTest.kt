@@ -157,4 +157,35 @@ class SettingsAndViewModelTest {
             )
         )
     }
+
+    @Test
+    fun testStopAllActiveGamesOnNavigation() {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        val viewModel = GameViewModel(app)
+
+        // 啟動斯特魯普遊戲
+        viewModel.startStroopGame()
+        assertEquals(com.example.ui.viewmodel.GameStatus.PLAYING, viewModel.stroopStatus.value)
+
+        // 切換回次選單，應自動調用 stopAllActiveGames
+        viewModel.navigateTo(com.example.ui.viewmodel.ScreenState.CATEGORY_DETAIL)
+        assertEquals("返回次選單後斯特魯普狀態應被立即重設為 IDLE", com.example.ui.viewmodel.GameStatus.IDLE, viewModel.stroopStatus.value)
+
+        // 啟動極速配對
+        viewModel.startSpeedMatchGame()
+        assertEquals(com.example.ui.viewmodel.GameStatus.PLAYING, viewModel.speedMatchStatus.value)
+        viewModel.navigateTo(com.example.ui.viewmodel.ScreenState.HOME)
+        assertEquals("返回首頁後極速配對狀態應被立即重設為 IDLE", com.example.ui.viewmodel.GameStatus.IDLE, viewModel.speedMatchStatus.value)
+    }
+
+    @Test
+    fun testStartNightMarketPinballGame() {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        val viewModel = GameViewModel(app)
+
+        viewModel.startNightMarketPinballGame()
+        assertEquals(com.example.ui.viewmodel.ScreenState.NIGHT_MARKET_PINBALL_GAME, viewModel.currentScreen.value)
+        assertEquals(com.example.data.model.GameCategory.CASUAL, viewModel.selectedCategory.value)
+        assertEquals(com.example.data.model.GameType.NIGHT_MARKET_PINBALL, viewModel.selectedGameType.value)
+    }
 }

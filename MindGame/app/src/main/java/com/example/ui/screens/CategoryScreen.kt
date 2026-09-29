@@ -34,7 +34,9 @@ import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.SportsScore
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -94,6 +96,7 @@ fun CategoryScreen(
             GameType.CAT_SUDOKU
         )
         GameCategory.TEST -> listOf(
+            GameType.PINBALL_FLIPPER,
             GameType.STROOP_EFFECT,
             GameType.AVATAR_WHACK,
             GameType.SPEED_MATCH,
@@ -101,6 +104,7 @@ fun CategoryScreen(
             GameType.FOCUS_TEST
         )
         GameCategory.CASUAL -> listOf(
+            GameType.NIGHT_MARKET_PINBALL,
             GameType.BLOCK_PUZZLE,
             GameType.FRUIT_MASTER
         )
@@ -559,6 +563,8 @@ private fun getGameIcon(gameType: GameType): ImageVector {
         GameType.TURTLE_SOUP -> Icons.Default.Lightbulb
         GameType.AVATAR_WHACK -> Icons.Default.SportsEsports
         GameType.STROOP_EFFECT -> Icons.Default.Psychology
+        GameType.PINBALL_FLIPPER -> Icons.Default.TouchApp
+        GameType.NIGHT_MARKET_PINBALL -> Icons.Default.SportsScore
         else -> Icons.Default.Timer
     }
 }
@@ -627,6 +633,22 @@ private fun getGridLabel(gameType: GameType, difficulty: GameDifficulty): String
             GameDifficulty.HELL -> "動態"
             GameDifficulty.EPIC -> "複合"
         }
+        GameType.PINBALL_FLIPPER -> when (difficulty) {
+            GameDifficulty.BEGINNER -> "5球"
+            GameDifficulty.INTERMEDIATE -> "4球"
+            GameDifficulty.ADVANCED -> "3球"
+            GameDifficulty.HARD -> "3球"
+            GameDifficulty.HELL -> "3球"
+            GameDifficulty.EPIC -> "3球"
+        }
+        GameType.NIGHT_MARKET_PINBALL -> when (difficulty) {
+            GameDifficulty.BEGINNER -> "6球"
+            GameDifficulty.INTERMEDIATE -> "8球"
+            GameDifficulty.ADVANCED -> "10球"
+            GameDifficulty.HARD -> "13球"
+            GameDifficulty.HELL -> "13球"
+            GameDifficulty.EPIC -> "13球"
+        }
         else -> "${difficulty.gridDim}x${difficulty.gridDim}"
     }
 }
@@ -678,6 +700,22 @@ private fun getCellDesc(gameType: GameType, difficulty: GameDifficulty): String 
             GameDifficulty.HARD -> "干擾按鈕 (色彩衝突)"
             GameDifficulty.HELL -> "動態閃爍 (1.5s 旋轉)"
             GameDifficulty.EPIC -> "複合邏輯 (否定句 1.2s)"
+        }
+        GameType.PINBALL_FLIPPER -> when (difficulty) {
+            GameDifficulty.BEGINNER -> "5顆球 • 加長安全擋板 • 3彈力柱"
+            GameDifficulty.INTERMEDIATE -> "4顆球 • 旋轉能量漩渦 • 雙倍連擊"
+            GameDifficulty.ADVANCED -> "3顆球 • 橫向巡邏浮板 • 加速"
+            GameDifficulty.HARD -> "3顆球 • 窄擋板 • 重力磁吸"
+            GameDifficulty.HELL -> "3顆球 • 雙球齊發 • 極速"
+            GameDifficulty.EPIC -> "3顆球 • 左右雙工極限考驗"
+        }
+        GameType.NIGHT_MARKET_PINBALL -> when (difficulty) {
+            GameDifficulty.BEGINNER -> "6槽6球 • 標準大鋼珠 • 轉轉風車"
+            GameDifficulty.INTERMEDIATE -> "8槽8球 • 中型鋼珠 • 三角分流柱"
+            GameDifficulty.ADVANCED -> "10槽10球 • 密釘大木台 • 擺動擋片"
+            GameDifficulty.HARD -> "13槽13球 • 巨型夜市台 • 14排密釘陣"
+            GameDifficulty.HELL -> "13槽13球 • 巨型夜市台 • 極速雙向擋片"
+            GameDifficulty.EPIC -> "13槽13球 • 傳奇大台 • 大滿貫挑戰"
         }
         else -> "${difficulty.totalCells} 格 (1~${difficulty.totalCells})"
     }

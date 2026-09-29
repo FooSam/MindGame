@@ -68,8 +68,10 @@ android {
         "D:/Work/Sam/Project/AppKeys/upload-key.jks"
       )
       val defaultKeystore = keystoreCandidates.firstOrNull { file(it).exists() }
+      val propStore = keystoreProps.getProperty("storeFile")
+      val validPropStore = if (propStore != null && file(propStore).exists()) propStore else null
       val keystorePath = System.getenv("KEYSTORE_PATH")
-        ?: keystoreProps.getProperty("storeFile")
+        ?: validPropStore
         ?: defaultKeystore
       val storePass = System.getenv("STORE_PASSWORD")
         ?: keystoreProps.getProperty("storePassword")
