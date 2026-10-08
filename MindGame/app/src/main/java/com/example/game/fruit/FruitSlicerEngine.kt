@@ -69,6 +69,8 @@ class FruitSlicerEngine(
 
     // 手勢切割快照與 Combo
     private var currentStrokeSlicedCount: Int = 0
+    val currentCombo: Int
+        get() = currentStrokeSlicedCount
     private var strokeActive: Boolean = false
     private var currentStrokeTimestamp: Long = 0L
 
