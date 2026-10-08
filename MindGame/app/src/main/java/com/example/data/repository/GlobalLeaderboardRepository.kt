@@ -7,6 +7,8 @@ import com.example.data.model.GlobalLeaderboardResponse
 import com.example.data.model.GlobalScoreEntry
 import com.example.data.model.HotGameEntry
 import com.example.data.model.HotGamesLeaderboardResponse
+import com.example.data.model.getGlobalScoreComparator
+import com.example.data.model.isBetterGlobalScore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -111,44 +113,8 @@ class GlobalLeaderboardRepository(
                 it.gameTypeKey == gameTypeKey && it.difficultyKey == difficultyKey
             }
 
-            val isScoreDesc = when (gameTypeKey) {
-                GameType.SPEED_MATCH.key,
-                GameType.TURTLE_SOUP.key,
-                GameType.AVATAR_WHACK.key,
-                GameType.STROOP_EFFECT.key,
-                GameType.BLOCK_PUZZLE.key,
-                GameType.FRUIT_MASTER.key,
-                GameType.PINBALL_FLIPPER.key,
-                GameType.NIGHT_MARKET_PINBALL.key -> true
-                else -> false
-            }
-
-            val isSudoku = gameTypeKey == GameType.SUDOKU.key || gameTypeKey == GameType.CAT_SUDOKU.key
-
-            val sorted = filtered.sortedWith { a, b ->
-                when {
-                    isScoreDesc -> {
-                        val scoreComp = b.score.compareTo(a.score)
-                        if (scoreComp != 0) scoreComp
-                        else {
-                            val wrongComp = a.wrongCount.compareTo(b.wrongCount)
-                            if (wrongComp != 0) wrongComp else a.timeMillis.compareTo(b.timeMillis)
-                        }
-                    }
-                    isSudoku -> {
-                        val wrongComp = a.wrongCount.compareTo(b.wrongCount)
-                        if (wrongComp != 0) wrongComp
-                        else {
-                            val timeComp = a.timeMillis.compareTo(b.timeMillis)
-                            if (timeComp != 0) timeComp else b.score.compareTo(a.score)
-                        }
-                    }
-                    else -> {
-                        val timeComp = a.timeMillis.compareTo(b.timeMillis)
-                        if (timeComp != 0) timeComp else a.wrongCount.compareTo(b.wrongCount)
-                    }
-                }
-            }
+            val gameType = GameType.fromKey(gameTypeKey)
+            val sorted = filtered.sortedWith(gameType.getGlobalScoreComparator())
 
             val rankedList = sorted.mapIndexed { index, entry ->
                 entry.copy(rank = index + 1)
@@ -220,24 +186,8 @@ class GlobalLeaderboardRepository(
 
             if (existingIndex >= 0) {
                 val existing = localGlobalCache[existingIndex]
-                val isScoreDesc = when (entry.gameTypeKey) {
-                    GameType.SPEED_MATCH.key,
-                    GameType.TURTLE_SOUP.key,
-                    GameType.AVATAR_WHACK.key,
-                    GameType.STROOP_EFFECT.key,
-                    GameType.BLOCK_PUZZLE.key,
-                    GameType.FRUIT_MASTER.key,
-                    GameType.PINBALL_FLIPPER.key,
-                    GameType.NIGHT_MARKET_PINBALL.key -> true
-                    else -> false
-                }
-                val isSudoku = entry.gameTypeKey == GameType.SUDOKU.key || entry.gameTypeKey == GameType.CAT_SUDOKU.key
-
-                val isBetter = when {
-                    isScoreDesc -> entry.score > existing.score
-                    isSudoku -> entry.wrongCount < existing.wrongCount || (entry.wrongCount == existing.wrongCount && entry.timeMillis < existing.timeMillis)
-                    else -> entry.timeMillis < existing.timeMillis
-                }
+                val gameType = GameType.fromKey(entry.gameTypeKey)
+                val isBetter = gameType.isBetterGlobalScore(entry, existing)
 
                 if (isBetter) {
                     localGlobalCache[existingIndex] = entry
@@ -441,7 +391,8 @@ class GlobalLeaderboardRepository(
                 GameType.BLOCK_PUZZLE,
                 GameType.FRUIT_MASTER,
                 GameType.PINBALL_FLIPPER,
-                GameType.NIGHT_MARKET_PINBALL -> true
+                GameType.NIGHT_MARKET_PINBALL,
+                GameType.BRAIN_IN_TROUBLE -> true
                 else -> false
             }
 

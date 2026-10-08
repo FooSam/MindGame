@@ -26,7 +26,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Clear
@@ -36,6 +38,7 @@ import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -108,10 +111,15 @@ fun CatSudokuScreen(
     wrongCount: Int,
     boardSize: Int,
     gridCells: List<CatCell>,
+    freeHintsRemaining: Int = 1,
+    showAdHintDialog: Boolean = false,
     onBackClick: () -> Unit,
     onCellClick: (Int) -> Unit,
     onUndoClick: () -> Unit,
     onResetBoardClick: () -> Unit,
+    onHintClick: () -> Unit = {},
+    onWatchAdForHint: () -> Unit = {},
+    onCloseAdHintDialog: () -> Unit = {},
     onNewGameClick: () -> Unit,
     onLeaderboardClick: () -> Unit
 ) {
@@ -333,7 +341,7 @@ fun CatSudokuScreen(
         // Bottom Action Controls
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Undo
@@ -343,21 +351,20 @@ fun CatSudokuScreen(
                 modifier = Modifier
                     .weight(1f)
                     .height(44.dp)
-                    .testTag("cat_sudoku_undo_button")
+                    .testTag("cat_sudoku_undo_button"),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp)
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Undo,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(16.dp)
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(3.dp))
                 Text(
                     text = Localization.getString("undo", language),
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
                 )
             }
-
-            Spacer(modifier = Modifier.width(10.dp))
 
             // Clear Board
             OutlinedButton(
@@ -366,21 +373,62 @@ fun CatSudokuScreen(
                 modifier = Modifier
                     .weight(1f)
                     .height(44.dp)
-                    .testTag("cat_sudoku_clear_button")
+                    .testTag("cat_sudoku_clear_button"),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Clear,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(16.dp)
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(3.dp))
                 Text(
                     text = Localization.getString("clear_board", language),
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
                 )
             }
 
-            Spacer(modifier = Modifier.width(10.dp))
+            // Hint
+            Box(modifier = Modifier.weight(1f)) {
+                OutlinedButton(
+                    onClick = onHintClick,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp)
+                        .testTag("cat_sudoku_hint_button"),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = if (freeHintsRemaining > 0) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f) else Color.Transparent
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Lightbulb,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = if (freeHintsRemaining > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text(
+                        text = Localization.getString("hint", language),
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = if (freeHintsRemaining > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = 4.dp, y = (-5).dp)
+                ) {
+                    Text(
+                        text = if (freeHintsRemaining > 0) Localization.getString("hint_free_badge", language) else Localization.getString("hint_ad_badge", language),
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp, fontWeight = FontWeight.Bold),
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp)
+                    )
+                }
+            }
 
             // New Game
             Button(
@@ -390,17 +438,18 @@ fun CatSudokuScreen(
                 modifier = Modifier
                     .weight(1f)
                     .height(44.dp)
-                    .testTag("cat_sudoku_new_game_button")
+                    .testTag("cat_sudoku_new_game_button"),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Refresh,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(16.dp)
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(3.dp))
                 Text(
                     text = Localization.getString("restart_game", language),
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
                 )
             }
         }
@@ -485,6 +534,31 @@ fun CatSudokuScreen(
             onPlayAgain = onNewGameClick,
             onLeaderboard = onLeaderboardClick,
             onBackToMenu = onBackClick
+        )
+    }
+
+    if (showAdHintDialog) {
+        AlertDialog(
+            onDismissRequest = onCloseAdHintDialog,
+            title = {
+                Text(
+                    text = Localization.getString("hint_ad_confirm_title", language),
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(text = Localization.getString("hint_ad_confirm_desc", language))
+            },
+            confirmButton = {
+                Button(onClick = onWatchAdForHint) {
+                    Text(text = Localization.getString("watch_ad_button", language))
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = onCloseAdHintDialog) {
+                    Text(text = Localization.getString("cancel", language))
+                }
+            }
         )
     }
 }

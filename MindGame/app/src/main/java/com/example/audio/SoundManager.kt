@@ -716,6 +716,62 @@ object SoundManager {
         }
     }
 
+    fun playImpactHit(combo: Int = 1) {
+        if (!isSfxEnabled) return
+        scope.launch {
+            val baseFreq = 587.33 // D5
+            val pitch = (baseFreq + (combo.coerceAtMost(15) * 35.0))
+            playTone(pitch, 65, 0.32f, isSawtooth = false)
+        }
+    }
+
+    fun playDamageMiss() {
+        if (!isSfxEnabled) return
+        scope.launch {
+            playTone(130.81, 140, 0.40f, isSawtooth = true)
+        }
+    }
+
+    /** 雷射迷宮：鏡片旋轉機械卡榫聲 */
+    fun playMirrorRotateSnap() {
+        if (!isSfxEnabled) return
+        scope.launch {
+            playTone(1760.0, 35, 0.22f, isSawtooth = false)
+        }
+    }
+
+    /** 雷射迷宮：光路連接聚焦微鳴聲 */
+    fun playLaserConnect() {
+        if (!isSfxEnabled) return
+        scope.launch {
+            playTone(880.0, 50, 0.25f, isSawtooth = false)
+            delay(35)
+            playTone(1318.5, 60, 0.28f, isSawtooth = false)
+        }
+    }
+
+    /** 雷射迷宮：水晶激活充能音 */
+    fun playCrystalActivate() {
+        if (!isSfxEnabled) return
+        scope.launch {
+            playTone(1046.5, 60, 0.30f)
+            delay(40)
+            playTone(1567.98, 90, 0.35f)
+        }
+    }
+
+    /** 雷射迷宮：全盤超載通關琶音 */
+    fun playLaserMazeClear() {
+        if (!isSfxEnabled) return
+        scope.launch {
+            val notes = listOf(523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98)
+            for (freq in notes) {
+                playTone(freq, 75, 0.32f)
+                delay(55)
+            }
+        }
+    }
+
 
     private fun generateToneSamples(freq: Double, durationMs: Int, volume: Float, isSawtooth: Boolean = false): ShortArray {
         val numSamples = (SAMPLE_RATE * (durationMs / 1000.0)).toInt().coerceAtLeast(1)

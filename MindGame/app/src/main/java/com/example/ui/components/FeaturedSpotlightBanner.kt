@@ -23,7 +23,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
@@ -97,7 +97,7 @@ fun FeaturedSpotlightBanner(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // 左側特色立體鋼珠圖示 (附微呼吸縮放動畫)
+            // 左側特色光學稜鏡圖示 (附微呼吸縮放動畫)
             Box(
                 modifier = Modifier
                     .size(40.dp)
@@ -106,15 +106,15 @@ fun FeaturedSpotlightBanner(
                     .background(
                         brush = Brush.radialGradient(
                             colors = listOf(
-                                Color(0xFFFF9800),
-                                Color(0xFFFF5722)
+                                Color(0xFF00E5FF),
+                                Color(0xFF0284C7)
                             )
                         )
                     ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.TouchApp,
+                    imageVector = Icons.Default.Lightbulb,
                     contentDescription = "New Game Icon",
                     tint = Color.White,
                     modifier = Modifier.size(24.dp)
@@ -129,7 +129,7 @@ fun FeaturedSpotlightBanner(
                     .weight(1f)
                     .padding(end = 8.dp)
             ) {
-                val bannerMainText = Localization.getString("spotlight_banner_pinball", language)
+                val bannerMainText = Localization.getString("spotlight_banner_laser_maze", language)
                 val fullMarqueeText = if (!marqueeExtraText.isNullOrBlank()) {
                     "$bannerMainText   ★   $marqueeExtraText"
                 } else {

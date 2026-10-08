@@ -76,6 +76,8 @@ import com.example.data.model.GameDifficulty
 import com.example.data.model.GameType
 import com.example.data.model.GlobalScoreEntry
 import com.example.data.model.Localization
+import com.example.data.model.RankingType
+import com.example.data.model.getScoreRecordComparator
 import java.util.Date
 
 fun formatTimeMillis(timeMs: Long): String {
@@ -495,10 +497,10 @@ fun LeaderboardDialog(
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     )
-                    val scoreHeaderLabel = when (selectedGameType) {
-                        GameType.SPEED_MATCH -> Localization.getString("speed_match_score_label", language)
-                        GameType.TURTLE_SOUP, GameType.AVATAR_WHACK, GameType.STROOP_EFFECT, GameType.BLOCK_PUZZLE, GameType.FRUIT_MASTER, GameType.PINBALL_FLIPPER, GameType.NIGHT_MARKET_PINBALL -> Localization.getString("score_label", language)
-                        GameType.SUDOKU, GameType.CAT_SUDOKU -> "${Localization.getString("time", language)} (${Localization.getString("mistakes_label", language)})"
+                    val scoreHeaderLabel = when {
+                        selectedGameType == GameType.SPEED_MATCH -> Localization.getString("speed_match_score_label", language)
+                        selectedGameType.rankingType == RankingType.SCORE_DESC -> Localization.getString("score_label", language)
+                        selectedGameType.isSudoku -> "${Localization.getString("time", language)} (${Localization.getString("mistakes_label", language)})"
                         else -> Localization.getString("time", language)
                     }
 
@@ -535,30 +537,7 @@ fun LeaderboardDialog(
                         }
                     } else {
                         val sortedScores = remember(scores, selectedGameType) {
-                            when (selectedGameType) {
-                                GameType.SPEED_MATCH, GameType.TURTLE_SOUP, GameType.AVATAR_WHACK,
-                                GameType.STROOP_EFFECT, GameType.BLOCK_PUZZLE, GameType.FRUIT_MASTER -> {
-                                    scores.sortedWith(
-                                        compareByDescending<ScoreRecord> { it.score }
-                                            .thenBy { it.wrongCount }
-                                            .thenByDescending { it.id }
-                                    )
-                                }
-                                GameType.SUDOKU, GameType.CAT_SUDOKU -> {
-                                    scores.sortedWith(
-                                        compareBy<ScoreRecord> { it.wrongCount }
-                                            .thenBy { it.timeMillis }
-                                            .thenByDescending { it.id }
-                                    )
-                                }
-                                else -> {
-                                    scores.sortedWith(
-                                        compareBy<ScoreRecord> { it.timeMillis }
-                                            .thenBy { it.wrongCount }
-                                            .thenByDescending { it.id }
-                                    )
-                                }
-                            }
+                            scores.sortedWith(selectedGameType.getScoreRecordComparator())
                         }
 
                         LazyColumn(
@@ -575,10 +554,10 @@ fun LeaderboardDialog(
                                     else -> MaterialTheme.colorScheme.onSurfaceVariant
                                 }
 
-                                val scoreValueText = when (selectedGameType) {
-                                    GameType.SPEED_MATCH -> "${record.score} 次"
-                                    GameType.TURTLE_SOUP, GameType.AVATAR_WHACK, GameType.STROOP_EFFECT, GameType.BLOCK_PUZZLE, GameType.FRUIT_MASTER, GameType.PINBALL_FLIPPER, GameType.NIGHT_MARKET_PINBALL -> "${record.score} 分"
-                                    GameType.SUDOKU, GameType.CAT_SUDOKU -> "${formatTimeMillis(record.timeMillis)} (${record.wrongCount}錯)"
+                                val scoreValueText = when {
+                                    selectedGameType == GameType.SPEED_MATCH -> "${record.score} 次"
+                                    selectedGameType.rankingType == RankingType.SCORE_DESC -> "${record.score} ${selectedGameType.scoreUnitZh}"
+                                    selectedGameType.isSudoku -> "${formatTimeMillis(record.timeMillis)} (${record.wrongCount}錯)"
                                     else -> formatTimeMillis(record.timeMillis)
                                 }
 
@@ -692,10 +671,10 @@ fun LeaderboardDialog(
                                     else -> MaterialTheme.colorScheme.onSurfaceVariant
                                 }
 
-                                val scoreValueText = when (selectedGameType) {
-                                    GameType.SPEED_MATCH -> "${record.score} 次"
-                                    GameType.TURTLE_SOUP, GameType.AVATAR_WHACK, GameType.STROOP_EFFECT, GameType.BLOCK_PUZZLE, GameType.FRUIT_MASTER, GameType.PINBALL_FLIPPER, GameType.NIGHT_MARKET_PINBALL -> "${record.score} 分"
-                                    GameType.SUDOKU, GameType.CAT_SUDOKU -> "${formatTimeMillis(record.timeMillis)} (${record.wrongCount}錯)"
+                                val scoreValueText = when {
+                                    selectedGameType == GameType.SPEED_MATCH -> "${record.score} 次"
+                                    selectedGameType.rankingType == RankingType.SCORE_DESC -> "${record.score} ${selectedGameType.scoreUnitZh}"
+                                    selectedGameType.isSudoku -> "${formatTimeMillis(record.timeMillis)} (${record.wrongCount}錯)"
                                     else -> formatTimeMillis(record.timeMillis)
                                 }
 
@@ -790,10 +769,10 @@ fun LeaderboardDialog(
                             }
 
                             if (myGlobalRankEntry != null) {
-                                val myScoreText = when (selectedGameType) {
-                                    GameType.SPEED_MATCH -> "${myGlobalRankEntry.score} 次"
-                                    GameType.TURTLE_SOUP, GameType.AVATAR_WHACK, GameType.STROOP_EFFECT, GameType.BLOCK_PUZZLE, GameType.FRUIT_MASTER, GameType.PINBALL_FLIPPER, GameType.NIGHT_MARKET_PINBALL -> "${myGlobalRankEntry.score} 分"
-                                    GameType.SUDOKU, GameType.CAT_SUDOKU -> "${formatTimeMillis(myGlobalRankEntry.timeMillis)} (${myGlobalRankEntry.wrongCount}錯)"
+                                val myScoreText = when {
+                                    selectedGameType == GameType.SPEED_MATCH -> "${myGlobalRankEntry.score} 次"
+                                    selectedGameType.rankingType == RankingType.SCORE_DESC -> "${myGlobalRankEntry.score} ${selectedGameType.scoreUnitZh}"
+                                    selectedGameType.isSudoku -> "${formatTimeMillis(myGlobalRankEntry.timeMillis)} (${myGlobalRankEntry.wrongCount}錯)"
                                     else -> formatTimeMillis(myGlobalRankEntry.timeMillis)
                                 }
                                 Row(verticalAlignment = Alignment.CenterVertically) {

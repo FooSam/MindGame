@@ -83,7 +83,8 @@ fun FlipperPinballScreen(
     appTheme: AppThemeStyle,
     onBackClick: () -> Unit,
     onLeaderboardClick: () -> Unit,
-    onGameComplete: (score: Int, timeMs: Long) -> Unit
+    onGameComplete: (score: Int, timeMs: Long) -> Unit,
+    onGameInterrupted: () -> Unit = {}
 ) {
     // 依難度設定球數
     val totalBallsCount = when (difficulty) {
@@ -251,6 +252,10 @@ fun FlipperPinballScreen(
             ) {
                 IconButton(onClick = {
                     SoundManager.playClick()
+                    val hasStarted = !isGameOver && (score > 0 || ballsLeft < totalBallsCount || !engine.pinball.inAlley)
+                    if (hasStarted) {
+                        onGameInterrupted()
+                    }
                     onBackClick()
                 }) {
                     Icon(

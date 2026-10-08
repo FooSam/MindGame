@@ -94,6 +94,12 @@ class SettingsAndViewModelTest {
         assertEquals(com.example.data.model.GameType.GLASS_PUZZLE_CUBE, viewModel.selectedGameType.value)
         assertEquals("跑馬燈直達時應原地展開該焦點遊戲", com.example.data.model.GameType.GLASS_PUZZLE_CUBE, viewModel.expandedGameType.value)
         assertFalse("直達後六面合體應被自動標記為已讀", viewModel.isGameNew(com.example.data.model.GameType.GLASS_PUZZLE_CUBE))
+
+        // 點擊跑馬燈直達雷射迷宮，驗證分類必須為 DEDUCTION
+        viewModel.openFeaturedGameDirectly(com.example.data.model.GameType.LASER_MAZE)
+        assertEquals(com.example.data.model.GameCategory.DEDUCTION, viewModel.selectedCategory.value)
+        assertEquals(com.example.data.model.GameType.LASER_MAZE, viewModel.selectedGameType.value)
+        assertEquals(com.example.data.model.GameType.LASER_MAZE, viewModel.expandedGameType.value)
     }
 
     @Test

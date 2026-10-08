@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.GridOn
@@ -89,13 +90,14 @@ fun CategoryScreen(
 ) {
     // 依類別設定所屬遊戲清單（最新熱門大作排在最前列）
     val gamesInCategory = when (category) {
-        GameCategory.DEDUCTION -> listOf(GameType.TURTLE_SOUP)
+        GameCategory.DEDUCTION -> listOf(GameType.LASER_MAZE, GameType.TURTLE_SOUP)
         GameCategory.BRAIN -> listOf(
             GameType.GLASS_PUZZLE_CUBE,
             GameType.SUDOKU,
             GameType.CAT_SUDOKU
         )
         GameCategory.TEST -> listOf(
+            GameType.BRAIN_IN_TROUBLE,
             GameType.PINBALL_FLIPPER,
             GameType.STROOP_EFFECT,
             GameType.AVATAR_WHACK,
@@ -565,6 +567,8 @@ private fun getGameIcon(gameType: GameType): ImageVector {
         GameType.STROOP_EFFECT -> Icons.Default.Psychology
         GameType.PINBALL_FLIPPER -> Icons.Default.TouchApp
         GameType.NIGHT_MARKET_PINBALL -> Icons.Default.SportsScore
+        GameType.BRAIN_IN_TROUBLE -> Icons.AutoMirrored.Filled.CompareArrows
+        GameType.LASER_MAZE -> Icons.Default.Lightbulb
         else -> Icons.Default.Timer
     }
 }
@@ -649,6 +653,22 @@ private fun getGridLabel(gameType: GameType, difficulty: GameDifficulty): String
             GameDifficulty.HELL -> "13球"
             GameDifficulty.EPIC -> "13球"
         }
+        GameType.BRAIN_IN_TROUBLE -> when (difficulty) {
+            GameDifficulty.BEGINNER -> "2階"
+            GameDifficulty.INTERMEDIATE -> "3階"
+            GameDifficulty.ADVANCED -> "4階"
+            GameDifficulty.HARD -> "5階"
+            GameDifficulty.HELL -> "5階"
+            GameDifficulty.EPIC -> "6階"
+        }
+        GameType.LASER_MAZE -> when (difficulty) {
+            GameDifficulty.BEGINNER -> "4x4"
+            GameDifficulty.INTERMEDIATE -> "5x5"
+            GameDifficulty.ADVANCED -> "6x6"
+            GameDifficulty.HARD -> "6x6"
+            GameDifficulty.HELL -> "7x7"
+            GameDifficulty.EPIC -> "8x8"
+        }
         else -> "${difficulty.gridDim}x${difficulty.gridDim}"
     }
 }
@@ -716,6 +736,22 @@ private fun getCellDesc(gameType: GameType, difficulty: GameDifficulty): String 
             GameDifficulty.HARD -> "13槽13球 • 巨型夜市台 • 14排密釘陣"
             GameDifficulty.HELL -> "13槽13球 • 巨型夜市台 • 極速雙向擋片"
             GameDifficulty.EPIC -> "13槽13球 • 傳奇大台 • 大滿貫挑戰"
+        }
+        GameType.BRAIN_IN_TROUBLE -> when (difficulty) {
+            GameDifficulty.BEGINNER -> "2形狀/2顏色 • 基礎分流入門"
+            GameDifficulty.INTERMEDIATE -> "3形狀/3顏色 • 雙手協調節奏"
+            GameDifficulty.ADVANCED -> "雙排4鍵 • 4形狀/4色 • 空間記憶"
+            GameDifficulty.HARD -> "雙排5鍵 • 顏色文字 • 語意識別"
+            GameDifficulty.HELL -> "雙排5鍵 • 斯特魯普衝突 • 依字色消除"
+            GameDifficulty.EPIC -> "雙排6鍵 • 極限速度 • 雙腦神經裂變"
+        }
+        GameType.LASER_MAZE -> when (difficulty) {
+            GameDifficulty.BEGINNER -> "4x4 • 1水晶 • 10關"
+            GameDifficulty.INTERMEDIATE -> "5x5 • 雙面鏡 • 10關"
+            GameDifficulty.ADVANCED -> "6x6 • 分光稜鏡 • 10關"
+            GameDifficulty.HARD -> "6x6 • 立體隧道 • 10關"
+            GameDifficulty.HELL -> "7x7 • 平移地圖 • 10關"
+            GameDifficulty.EPIC -> "8x8 • 極限拓撲 • 10關"
         }
         else -> "${difficulty.totalCells} 格 (1~${difficulty.totalCells})"
     }

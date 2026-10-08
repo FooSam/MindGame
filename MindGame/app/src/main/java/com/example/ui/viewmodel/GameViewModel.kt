@@ -75,7 +75,9 @@ enum class ScreenState {
     FRUIT_MASTER_GAME,
     GLASS_PUZZLE_CUBE_GAME,
     PINBALL_FLIPPER_GAME,
-    NIGHT_MARKET_PINBALL_GAME
+    NIGHT_MARKET_PINBALL_GAME,
+    BRAIN_IN_TROUBLE_GAME,
+    LASER_MAZE_GAME
 }
 
 enum class GameStatus {
@@ -255,6 +257,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val _isPencilMode = MutableStateFlow(false)
     val isPencilMode: StateFlow<Boolean> = _isPencilMode.asStateFlow()
 
+    private val _sudokuFreeHintsRemaining = MutableStateFlow(1)
+    val sudokuFreeHintsRemaining: StateFlow<Int> = _sudokuFreeHintsRemaining.asStateFlow()
+
+    private val _sudokuShowAdHintDialog = MutableStateFlow(false)
+    val sudokuShowAdHintDialog: StateFlow<Boolean> = _sudokuShowAdHintDialog.asStateFlow()
+
     private val _sudokuWrongCount = MutableStateFlow(0)
     val sudokuWrongCount: StateFlow<Int> = _sudokuWrongCount.asStateFlow()
 
@@ -280,6 +288,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     val catSudokuWrongCount: StateFlow<Int> = _catSudokuWrongCount.asStateFlow()
 
     private val _catSudokuHistory = MutableStateFlow<List<List<CatCell>>>(emptyList())
+    private val _catSudokuCurrentPuzzle = MutableStateFlow<CatSudokuPuzzle?>(null)
+
+    private val _catSudokuFreeHintsRemaining = MutableStateFlow(1)
+    val catSudokuFreeHintsRemaining: StateFlow<Int> = _catSudokuFreeHintsRemaining.asStateFlow()
+
+    private val _catSudokuShowAdHintDialog = MutableStateFlow(false)
+    val catSudokuShowAdHintDialog: StateFlow<Boolean> = _catSudokuShowAdHintDialog.asStateFlow()
 
     // Turtle Soup Game State
     private val _turtleSoupPuzzles = MutableStateFlow<List<TurtleSoupPuzzle>>(emptyList())
@@ -638,7 +653,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     _selectedGameType.value != GameType.SPEED_MATCH &&
                     _selectedGameType.value != GameType.AVATAR_WHACK &&
                     _selectedGameType.value != GameType.STROOP_EFFECT &&
-                    _selectedGameType.value != GameType.PINBALL_FLIPPER) {
+                    _selectedGameType.value != GameType.PINBALL_FLIPPER &&
+                    _selectedGameType.value != GameType.BRAIN_IN_TROUBLE) {
                     _selectedGameType.value = GameType.FOCUS_TEST
                 }
             }
@@ -762,13 +778,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         markGameAsViewed(gameType)
         SoundManager.onGameSwitched()
         _expandedGameType.value = gameType
-        val cat = when (gameType) {
-            GameType.FOCUS_TEST, GameType.FOCUS_TRAIN, GameType.SPEED_MATCH,
-            GameType.AVATAR_WHACK, GameType.STROOP_EFFECT, GameType.PINBALL_FLIPPER -> GameCategory.TEST
-            GameType.TURTLE_SOUP -> GameCategory.DEDUCTION
-            GameType.BLOCK_PUZZLE, GameType.FRUIT_MASTER, GameType.NIGHT_MARKET_PINBALL -> GameCategory.CASUAL
-            else -> GameCategory.BRAIN
-        }
+        val cat = gameType.category
         _selectedCategory.value = cat
         _selectedGameType.value = gameType
         loadLeaderboard(cat.key, gameType.key, _selectedDifficulty.value.key)
@@ -823,9 +833,29 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             _currentScreen.value = ScreenState.PINBALL_FLIPPER_GAME
         } else if (_selectedGameType.value == GameType.NIGHT_MARKET_PINBALL) {
             _currentScreen.value = ScreenState.NIGHT_MARKET_PINBALL_GAME
+        } else if (_selectedGameType.value == GameType.BRAIN_IN_TROUBLE) {
+            _currentScreen.value = ScreenState.BRAIN_IN_TROUBLE_GAME
+        } else if (_selectedGameType.value == GameType.LASER_MAZE) {
+            _currentScreen.value = ScreenState.LASER_MAZE_GAME
         } else {
             setupInitialGrid(difficulty)
             _currentScreen.value = ScreenState.FOCUS_GAME
+        }
+    }
+
+    fun saveLaserMazeScore(timeMillis: Long) {
+        viewModelScope.launch {
+            val record = ScoreRecord(
+                playerName = _playerName.value,
+                categoryKey = GameCategory.DEDUCTION.key,
+                gameTypeKey = GameType.LASER_MAZE.key,
+                difficultyKey = _selectedDifficulty.value.key,
+                timeMillis = timeMillis,
+                score = 0,
+                wrongCount = 0
+            )
+            repository.insertScore(record)
+            loadLeaderboard(GameCategory.DEDUCTION.key, GameType.LASER_MAZE.key, _selectedDifficulty.value.key)
         }
     }
 
@@ -855,11 +885,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun recordPinballScore(gameType: GameType, scoreVal: Int, timeMs: Long) {
-        val cat = when (gameType) {
-            GameType.PINBALL_FLIPPER -> GameCategory.TEST
-            GameType.NIGHT_MARKET_PINBALL -> GameCategory.CASUAL
-            else -> _selectedCategory.value
-        }
+        val cat = gameType.category
         val record = com.example.data.db.ScoreRecord(
             playerName = _playerName.value,
             categoryKey = cat.key,
@@ -873,6 +899,23 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.insertScore(record)
             loadLeaderboard(cat.key, gameType.key, _selectedDifficulty.value.key)
+        }
+    }
+
+    fun recordBrainInTroubleScore(scoreVal: Int, timeMs: Long) {
+        val record = com.example.data.db.ScoreRecord(
+            playerName = _playerName.value,
+            categoryKey = GameCategory.TEST.key,
+            gameTypeKey = GameType.BRAIN_IN_TROUBLE.key,
+            difficultyKey = _selectedDifficulty.value.key,
+            timeMillis = timeMs,
+            score = scoreVal,
+            wrongCount = 0,
+            timestamp = System.currentTimeMillis()
+        )
+        viewModelScope.launch {
+            repository.insertScore(record)
+            loadLeaderboard(GameCategory.TEST.key, GameType.BRAIN_IN_TROUBLE.key, _selectedDifficulty.value.key)
         }
     }
 
@@ -1269,6 +1312,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _sudokuWrongCount.value = 0
         _selectedSudokuCellIndex.value = null
         _isPencilMode.value = false
+        _sudokuFreeHintsRemaining.value = 1
+        _sudokuShowAdHintDialog.value = false
         _sudokuMoveHistory.value = emptyList()
         _sudokuNotesBoard.value = emptyMap()
 
@@ -1424,6 +1469,85 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _sudokuNotesBoard.value = newNotesMap
     }
 
+    fun requestSudokuHint(activity: Activity? = null) {
+        if (_sudokuStatus.value != GameStatus.PLAYING) return
+        if (_sudokuFreeHintsRemaining.value > 0) {
+            _sudokuFreeHintsRemaining.value = 0
+            applySudokuHint()
+        } else {
+            _sudokuShowAdHintDialog.value = true
+        }
+    }
+
+    fun closeSudokuHintDialog() {
+        _sudokuShowAdHintDialog.value = false
+    }
+
+    fun watchAdForSudokuHint(activity: Activity? = null) {
+        closeSudokuHintDialog()
+        AdManager.showAdNow(activity) {
+            applySudokuHint()
+        }
+    }
+
+    fun applySudokuHint(): Boolean {
+        if (_sudokuStatus.value != GameStatus.PLAYING) return false
+        val initialBoard = _sudokuInitialBoard.value
+        val playerBoard = _sudokuPlayerBoard.value.toMutableList()
+        val solutionBoard = _sudokuSolutionBoard.value
+        if (playerBoard.size != solutionBoard.size || solutionBoard.isEmpty()) return false
+
+        // 優先找目前選中、且不是題目固定格、且尚未填對的格子
+        val selectedIdx = _selectedSudokuCellIndex.value
+        val targetIdx = if (selectedIdx != null && selectedIdx in playerBoard.indices &&
+            initialBoard.getOrNull(selectedIdx).isNullOrEmpty() &&
+            playerBoard[selectedIdx] != solutionBoard[selectedIdx]
+        ) {
+            selectedIdx
+        } else {
+            // 自動搜尋尚未填對的格子（優先挑空白格，其次挑填錯格）
+            val emptyIndices = playerBoard.indices.filter { idx ->
+                initialBoard.getOrNull(idx).isNullOrEmpty() && playerBoard[idx].isEmpty()
+            }
+            if (emptyIndices.isNotEmpty()) {
+                emptyIndices.first()
+            } else {
+                playerBoard.indices.firstOrNull { idx ->
+                    initialBoard.getOrNull(idx).isNullOrEmpty() && playerBoard[idx] != solutionBoard[idx]
+                }
+            }
+        }
+
+        if (targetIdx != null) {
+            val correctVal = solutionBoard[targetIdx]
+            val prevVal = playerBoard[targetIdx]
+            val currentNotes = _sudokuNotesBoard.value[targetIdx] ?: emptySet()
+
+            playerBoard[targetIdx] = correctVal
+            _sudokuPlayerBoard.value = playerBoard
+            _selectedSudokuCellIndex.value = targetIdx
+
+            // 清除該格筆記
+            val newNotesMap = _sudokuNotesBoard.value.toMutableMap()
+            newNotesMap.remove(targetIdx)
+            _sudokuNotesBoard.value = newNotesMap
+
+            // 記錄至操作歷程
+            _sudokuMoveHistory.value = _sudokuMoveHistory.value + SudokuMove(
+                index = targetIdx,
+                previousValue = prevVal,
+                newValue = correctVal,
+                previousNotes = currentNotes,
+                newNotes = emptySet()
+            )
+
+            SoundManager.playSuccess()
+            checkSudokuCompletion()
+            return true
+        }
+        return false
+    }
+
     private fun checkSudokuCompletion() {
         val playerBoard = _sudokuPlayerBoard.value
         val solutionBoard = _sudokuSolutionBoard.value
@@ -1457,6 +1581,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _catSudokuHistory.value = emptyList()
 
         val puzzle = CatSudokuGenerator.generatePuzzle(difficulty)
+        _catSudokuCurrentPuzzle.value = puzzle
+        _catSudokuFreeHintsRemaining.value = 1
+        _catSudokuShowAdHintDialog.value = false
         _catSudokuSize.value = puzzle.size
         _catSudokuGrid.value = puzzle.grid
 
@@ -1618,6 +1745,77 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun requestCatSudokuHint(activity: Activity? = null) {
+        if (_catSudokuStatus.value != GameStatus.PLAYING) return
+        if (_catSudokuFreeHintsRemaining.value > 0) {
+            _catSudokuFreeHintsRemaining.value = 0
+            applyCatSudokuHint()
+        } else {
+            _catSudokuShowAdHintDialog.value = true
+        }
+    }
+
+    fun closeCatSudokuHintDialog() {
+        _catSudokuShowAdHintDialog.value = false
+    }
+
+    fun watchAdForCatSudokuHint(activity: Activity? = null) {
+        closeCatSudokuHintDialog()
+        AdManager.showAdNow(activity) {
+            applyCatSudokuHint()
+        }
+    }
+
+    fun applyCatSudokuHint(): Boolean {
+        if (_catSudokuStatus.value != GameStatus.PLAYING) return false
+        val puzzle = _catSudokuCurrentPuzzle.value ?: return false
+        val currentGrid = _catSudokuGrid.value.toMutableList()
+        val size = _catSudokuSize.value
+        val solutionQueens = puzzle.solutionQueens
+
+        // 找出尚未放置正確貓咪的正解格
+        val missingQueens = solutionQueens.filter { (r, c) ->
+            val idx = r * size + c
+            idx in currentGrid.indices && currentGrid[idx].state != CatCellState.CAT
+        }
+
+        val targetQueen = missingQueens.firstOrNull() ?: solutionQueens.firstOrNull { (r, c) ->
+            val idx = r * size + c
+            idx in currentGrid.indices && currentGrid[idx].isConflict
+        }
+
+        if (targetQueen != null) {
+            val (targetRow, targetCol) = targetQueen
+            val targetIdx = targetRow * size + targetCol
+
+            _catSudokuHistory.value = _catSudokuHistory.value + listOf(_catSudokuGrid.value)
+
+            // 先清除同行、同列、同區域中放錯的貓咪（非正解皇后），避免直接衝突
+            val targetRegion = currentGrid[targetIdx].regionId
+            for (i in currentGrid.indices) {
+                val cell = currentGrid[i]
+                if (cell.state == CatCellState.CAT && i != targetIdx) {
+                    if (cell.row == targetRow || cell.col == targetCol || cell.regionId == targetRegion) {
+                        if (Pair(cell.row, cell.col) !in solutionQueens) {
+                            currentGrid[i] = cell.copy(state = CatCellState.EMPTY)
+                        }
+                    }
+                }
+            }
+
+            // 在目標位置放置貓咪
+            currentGrid[targetIdx] = currentGrid[targetIdx].copy(state = CatCellState.CAT)
+
+            val evaluatedGrid = evaluateConflicts(currentGrid, size)
+            _catSudokuGrid.value = evaluatedGrid
+
+            SoundManager.playCatMeow()
+            checkCatSudokuCompletion(evaluatedGrid)
+            return true
+        }
+        return false
+    }
+
     // --- Dialogs ---
     fun openLeaderboardDialog(
         difficulty: GameDifficulty? = null,
@@ -1627,13 +1825,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _leaderboardInitialTab.value = initialMainTab
         if (gameType != null) {
             _selectedGameType.value = gameType
-            val cat = when (gameType) {
-                GameType.FOCUS_TEST, GameType.FOCUS_TRAIN, GameType.SPEED_MATCH,
-                GameType.AVATAR_WHACK, GameType.STROOP_EFFECT, GameType.PINBALL_FLIPPER -> GameCategory.TEST
-                GameType.TURTLE_SOUP -> GameCategory.DEDUCTION
-                GameType.BLOCK_PUZZLE, GameType.FRUIT_MASTER, GameType.NIGHT_MARKET_PINBALL -> GameCategory.CASUAL
-                else -> GameCategory.BRAIN
-            }
+            val cat = gameType.category
             _selectedCategory.value = cat
         }
         val targetDiff = difficulty ?: _selectedDifficulty.value
@@ -1655,13 +1847,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setLeaderboardGame(gameType: GameType) {
         _selectedGameType.value = gameType
-        val cat = when (gameType) {
-            GameType.FOCUS_TEST, GameType.FOCUS_TRAIN, GameType.SPEED_MATCH,
-            GameType.AVATAR_WHACK, GameType.STROOP_EFFECT, GameType.PINBALL_FLIPPER -> GameCategory.TEST
-            GameType.TURTLE_SOUP -> GameCategory.DEDUCTION
-            GameType.BLOCK_PUZZLE, GameType.FRUIT_MASTER, GameType.NIGHT_MARKET_PINBALL -> GameCategory.CASUAL
-            else -> GameCategory.BRAIN
-        }
+        val cat = gameType.category
         _selectedCategory.value = cat
         val targetDiff = _leaderboardDifficulty.value
         val isFruitMaster = gameType == GameType.FRUIT_MASTER

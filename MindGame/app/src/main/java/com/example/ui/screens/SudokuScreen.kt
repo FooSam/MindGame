@@ -20,7 +20,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
@@ -75,12 +77,17 @@ fun SudokuScreen(
     config: SudokuConfig,
     selectedCellIndex: Int?,
     isPencilMode: Boolean,
+    freeHintsRemaining: Int = 1,
+    showAdHintDialog: Boolean = false,
     onBackClick: () -> Unit,
     onCellClick: (Int) -> Unit,
     onSymbolInput: (String) -> Unit,
     onEraseClick: () -> Unit,
     onUndoClick: () -> Unit,
     onTogglePencilClick: () -> Unit,
+    onHintClick: () -> Unit = {},
+    onWatchAdForHint: () -> Unit = {},
+    onCloseAdHintDialog: () -> Unit = {},
     onResetClick: () -> Unit,
     onLeaderboardClick: () -> Unit
 ) {
@@ -308,6 +315,47 @@ fun SudokuScreen(
                     )
                 )
             }
+
+            // Hint
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.clickable { onHintClick() }
+            ) {
+                Box {
+                    Surface(
+                        shape = CircleShape,
+                        color = if (freeHintsRemaining > 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Lightbulb,
+                                contentDescription = "Hint",
+                                tint = if (freeHintsRemaining > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = if (freeHintsRemaining > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .offset(x = 6.dp, y = (-4).dp)
+                    ) {
+                        Text(
+                            text = if (freeHintsRemaining > 0) Localization.getString("hint_free_badge", language) else Localization.getString("hint_ad_badge", language),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold),
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = Localization.getString("hint", language),
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -438,6 +486,31 @@ fun SudokuScreen(
             },
             confirmButton = { },
             dismissButton = { }
+        )
+    }
+
+    if (showAdHintDialog) {
+        AlertDialog(
+            onDismissRequest = onCloseAdHintDialog,
+            title = {
+                Text(
+                    text = Localization.getString("hint_ad_confirm_title", language),
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(text = Localization.getString("hint_ad_confirm_desc", language))
+            },
+            confirmButton = {
+                Button(onClick = onWatchAdForHint) {
+                    Text(text = Localization.getString("watch_ad_button", language))
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = onCloseAdHintDialog) {
+                    Text(text = Localization.getString("cancel", language))
+                }
+            }
         )
     }
 }

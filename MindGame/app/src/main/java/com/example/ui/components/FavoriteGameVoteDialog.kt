@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Extension
@@ -81,6 +82,7 @@ fun getGameTypeIcon(gameType: GameType): ImageVector {
         GameType.FRUIT_MASTER -> Icons.Default.Bolt
         GameType.PINBALL_FLIPPER -> Icons.Default.TouchApp
         GameType.NIGHT_MARKET_PINBALL -> Icons.Default.SportsScore
+        GameType.BRAIN_IN_TROUBLE -> Icons.AutoMirrored.Filled.CompareArrows
         else -> Icons.Default.Timer
     }
 }

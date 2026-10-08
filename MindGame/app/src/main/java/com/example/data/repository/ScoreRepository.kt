@@ -5,10 +5,16 @@ import kotlinx.coroutines.flow.Flow
 
 class ScoreRepository(private val scoreDao: ScoreDao) {
     fun getTopScores(categoryKey: String, gameTypeKey: String, difficultyKey: String, limit: Int = 10): Flow<List<ScoreRecord>> {
-        return when (gameTypeKey) {
-            GameType.SPEED_MATCH.key, GameType.TURTLE_SOUP.key, GameType.AVATAR_WHACK.key, GameType.STROOP_EFFECT.key, GameType.BLOCK_PUZZLE.key, GameType.FRUIT_MASTER.key, GameType.PINBALL_FLIPPER.key, GameType.NIGHT_MARKET_PINBALL.key -> scoreDao.getTopScoresByScore(categoryKey, gameTypeKey, difficultyKey, limit)
-            GameType.SUDOKU.key, GameType.CAT_SUDOKU.key -> scoreDao.getTopScoresBySudoku(categoryKey, gameTypeKey, difficultyKey, limit)
-            else -> scoreDao.getTopScoresByTime(categoryKey, gameTypeKey, difficultyKey, limit)
+        val gameType = GameType.fromKey(gameTypeKey)
+        return when (gameType.rankingType) {
+            com.example.data.model.RankingType.SCORE_DESC -> scoreDao.getTopScoresByScore(categoryKey, gameTypeKey, difficultyKey, limit)
+            com.example.data.model.RankingType.TIME_ASC -> {
+                if (gameType.isSudoku) {
+                    scoreDao.getTopScoresBySudoku(categoryKey, gameTypeKey, difficultyKey, limit)
+                } else {
+                    scoreDao.getTopScoresByTime(categoryKey, gameTypeKey, difficultyKey, limit)
+                }
+            }
         }
     }
 

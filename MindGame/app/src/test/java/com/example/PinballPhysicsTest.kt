@@ -225,8 +225,8 @@ class PinballPhysicsTest {
         var enteredPins = false
         var settled = false
 
-        // 模擬 600 幀物理更新 (約 9.6 秒，充分觀察完整連續滾動至落槽)
-        for (frame in 0 until 600) {
+        // 模擬 900 幀物理更新 (約 14.4 秒，充分觀察完整連續滾動至落槽)
+        for (frame in 0 until 900) {
             engine.update(0.016f)
 
             if (engine.ball.state == NightMarketBallState.IN_PINS) {

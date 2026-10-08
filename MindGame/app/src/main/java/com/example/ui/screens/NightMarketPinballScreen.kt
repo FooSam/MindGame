@@ -92,7 +92,8 @@ fun NightMarketPinballScreen(
     appTheme: AppThemeStyle,
     onBackClick: () -> Unit,
     onLeaderboardClick: () -> Unit,
-    onGameComplete: (score: Int, timeMs: Long) -> Unit
+    onGameComplete: (score: Int, timeMs: Long) -> Unit,
+    onGameInterrupted: () -> Unit = {}
 ) {
     val initialBallsCount = when (difficulty) {
         GameDifficulty.BEGINNER -> 6
@@ -274,6 +275,10 @@ fun NightMarketPinballScreen(
             ) {
                 IconButton(onClick = {
                     SoundManager.playClick()
+                    val hasStarted = !isGameOver && (score > 0 || ballsRemaining < initialBallsCount)
+                    if (hasStarted) {
+                        onGameInterrupted()
+                    }
                     onBackClick()
                 }) {
                     Icon(

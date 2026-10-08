@@ -43,6 +43,8 @@ import com.example.ui.screens.FruitMasterScreen
 import com.example.ui.screens.GlassPuzzleCubeScreen
 import com.example.ui.screens.FlipperPinballScreen
 import com.example.ui.screens.NightMarketPinballScreen
+import com.example.ui.screens.BrainInTroubleScreen
+import com.example.ui.screens.LaserMazeScreen
 import com.example.ui.screens.turtlesoup.TurtleSoupScreen
 import com.example.ui.screens.turtlesoup.TurtleSoupPlayState
 import com.example.game.sudoku.SudokuConfig
@@ -153,6 +155,8 @@ fun MainApp(viewModel: GameViewModel) {
     val sudokuConfig by viewModel.sudokuConfig.collectAsStateWithLifecycle()
     val selectedSudokuCellIndex by viewModel.selectedSudokuCellIndex.collectAsStateWithLifecycle()
     val isPencilMode by viewModel.isPencilMode.collectAsStateWithLifecycle()
+    val sudokuFreeHintsRemaining by viewModel.sudokuFreeHintsRemaining.collectAsStateWithLifecycle()
+    val sudokuShowAdHintDialog by viewModel.sudokuShowAdHintDialog.collectAsStateWithLifecycle()
 
     // Cat Sudoku state
     val catSudokuStatus by viewModel.catSudokuStatus.collectAsStateWithLifecycle()
@@ -160,6 +164,8 @@ fun MainApp(viewModel: GameViewModel) {
     val catSudokuGrid by viewModel.catSudokuGrid.collectAsStateWithLifecycle()
     val catSudokuElapsedTimeMillis by viewModel.catSudokuElapsedTimeMillis.collectAsStateWithLifecycle()
     val catSudokuWrongCount by viewModel.catSudokuWrongCount.collectAsStateWithLifecycle()
+    val catSudokuFreeHintsRemaining by viewModel.catSudokuFreeHintsRemaining.collectAsStateWithLifecycle()
+    val catSudokuShowAdHintDialog by viewModel.catSudokuShowAdHintDialog.collectAsStateWithLifecycle()
 
     // Turtle Soup state
     val turtleSoupPuzzles by viewModel.turtleSoupPuzzles.collectAsStateWithLifecycle()
@@ -320,7 +326,7 @@ fun MainApp(viewModel: GameViewModel) {
                     onChangeNameClick = { viewModel.openNameDialog() },
                     onCategoryClick = { viewModel.selectCategory(it) },
                     onFeaturedBannerClick = {
-                        viewModel.openFeaturedGameDirectly(com.example.data.model.GameType.PINBALL_FLIPPER)
+                        viewModel.openFeaturedGameDirectly(com.example.data.model.GameType.LASER_MAZE)
                     }
                 )
             }
@@ -452,6 +458,8 @@ fun MainApp(viewModel: GameViewModel) {
                     config = sudokuConfig ?: SudokuGameConfig.getConfig(selectedDifficulty),
                     selectedCellIndex = selectedSudokuCellIndex,
                     isPencilMode = isPencilMode,
+                    freeHintsRemaining = sudokuFreeHintsRemaining,
+                    showAdHintDialog = sudokuShowAdHintDialog,
                     onBackClick = {
                         if (sudokuStatus == GameStatus.PLAYING) {
                             AdManager.recordGameInterrupted(context as? Activity)
@@ -463,6 +471,9 @@ fun MainApp(viewModel: GameViewModel) {
                     onEraseClick = { viewModel.eraseSudokuCell() },
                     onUndoClick = { viewModel.undoSudokuMove() },
                     onTogglePencilClick = { viewModel.togglePencilMode() },
+                    onHintClick = { viewModel.requestSudokuHint(context as? Activity) },
+                    onWatchAdForHint = { viewModel.watchAdForSudokuHint(context as? Activity) },
+                    onCloseAdHintDialog = { viewModel.closeSudokuHintDialog() },
                     onResetClick = {
                         if (sudokuStatus == GameStatus.PLAYING) {
                             AdManager.recordGameInterrupted(context as? Activity)
@@ -482,6 +493,8 @@ fun MainApp(viewModel: GameViewModel) {
                     wrongCount = catSudokuWrongCount,
                     boardSize = catSudokuSize,
                     gridCells = catSudokuGrid,
+                    freeHintsRemaining = catSudokuFreeHintsRemaining,
+                    showAdHintDialog = catSudokuShowAdHintDialog,
                     onBackClick = {
                         if (catSudokuStatus == GameStatus.PLAYING) {
                             AdManager.recordGameInterrupted(context as? Activity)
@@ -491,6 +504,9 @@ fun MainApp(viewModel: GameViewModel) {
                     onCellClick = { index -> viewModel.onCatSudokuCellTapped(index) },
                     onUndoClick = { viewModel.undoCatSudokuMove() },
                     onResetBoardClick = { viewModel.clearCatSudokuBoard() },
+                    onHintClick = { viewModel.requestCatSudokuHint(context as? Activity) },
+                    onWatchAdForHint = { viewModel.watchAdForCatSudokuHint(context as? Activity) },
+                    onCloseAdHintDialog = { viewModel.closeCatSudokuHintDialog() },
                     onNewGameClick = {
                         if (catSudokuStatus == GameStatus.PLAYING) {
                             AdManager.recordGameInterrupted(context as? Activity)
@@ -676,7 +692,8 @@ fun MainApp(viewModel: GameViewModel) {
                     onGameComplete = { score, timeMs ->
                         viewModel.recordPinballScore(com.example.data.model.GameType.PINBALL_FLIPPER, score, timeMs)
                         AdManager.recordGameFinished(context as? Activity)
-                    }
+                    },
+                    onGameInterrupted = { AdManager.recordGameInterrupted(context as? Activity) }
                 )
             }
 
@@ -690,7 +707,38 @@ fun MainApp(viewModel: GameViewModel) {
                     onGameComplete = { score, timeMs ->
                         viewModel.recordPinballScore(com.example.data.model.GameType.NIGHT_MARKET_PINBALL, score, timeMs)
                         AdManager.recordGameFinished(context as? Activity)
-                    }
+                    },
+                    onGameInterrupted = { AdManager.recordGameInterrupted(context as? Activity) }
+                )
+            }
+
+            ScreenState.BRAIN_IN_TROUBLE_GAME -> {
+                BrainInTroubleScreen(
+                    difficulty = selectedDifficulty,
+                    language = language,
+                    appTheme = appTheme,
+                    onBackClick = { viewModel.navigateTo(ScreenState.CATEGORY_DETAIL) },
+                    onLeaderboardClick = { viewModel.openLeaderboardDialog(selectedDifficulty, com.example.data.model.GameType.BRAIN_IN_TROUBLE) },
+                    onGameComplete = { score, timeMs ->
+                        viewModel.recordBrainInTroubleScore(score, timeMs)
+                        AdManager.recordGameFinished(context as? Activity)
+                    },
+                    onGameInterrupted = { AdManager.recordGameInterrupted(context as? Activity) }
+                )
+            }
+
+            ScreenState.LASER_MAZE_GAME -> {
+                LaserMazeScreen(
+                    difficulty = selectedDifficulty,
+                    language = language,
+                    appTheme = appTheme,
+                    onBackClick = { viewModel.navigateTo(ScreenState.CATEGORY_DETAIL) },
+                    onLeaderboardClick = { viewModel.openLeaderboardDialog(selectedDifficulty, com.example.data.model.GameType.LASER_MAZE) },
+                    onGameComplete = { timeMs ->
+                        viewModel.saveLaserMazeScore(timeMs)
+                        AdManager.recordGameFinished(context as? Activity)
+                    },
+                    onGameInterrupted = { AdManager.recordGameInterrupted(context as? Activity) }
                 )
             }
         }
