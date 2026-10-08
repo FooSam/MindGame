@@ -14,6 +14,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -41,6 +42,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -157,6 +159,28 @@ fun LaserMazeScreen(
     // 大地圖平移視角偏移 (Pan Offset)
     var panOffsetX by remember { mutableFloatStateOf(0f) }
     var panOffsetY by remember { mutableFloatStateOf(0f) }
+
+    // 3D 微傾透視角度 (限制變化不超過 30 度)
+    var tiltPitch by remember { mutableFloatStateOf(18f) } // X軸俯仰角: 0f (正俯視) ~ 30f (微傾極限)，預設 18f
+    var tiltYaw by remember { mutableFloatStateOf(-5f) }   // Y軸偏航角: -20f ~ 20f，預設 -5f
+    var isAngleAdjustMode by remember { mutableStateOf(false) } // 大棋盤時是否處於單指旋轉視角模式
+
+    // 一鍵回正視角
+    fun resetViewAngle() {
+        tiltPitch = 18f
+        tiltYaw = -5f
+    }
+
+    // 切換微傾與正俯視
+    fun toggleTiltView() {
+        if (tiltPitch > 4f) {
+            tiltPitch = 0f
+            tiltYaw = 0f
+        } else {
+            tiltPitch = 18f
+            tiltYaw = -5f
+        }
+    }
 
     // 重設或載入新關卡
     fun loadLevel(level: Int, showBriefing: Boolean = true) {
@@ -362,6 +386,18 @@ fun LaserMazeScreen(
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        // 3D 視角切換按鈕 (微傾 18° <-> 正俯視 0°)
+                        IconButton(onClick = {
+                            SoundManager.playClick()
+                            toggleTiltView()
+                        }) {
+                            Text(
+                                text = if (tiltPitch > 4f) "📐" else "平",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
                         // 任務簡報與指引按鈕
                         IconButton(onClick = {
                             SoundManager.playClick()
@@ -476,7 +512,7 @@ fun LaserMazeScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = if (litCount == totalCount && totalCount > 0) "💎 " else "💠 ",
+                                text = "🎯 ",
                                 fontSize = 12.sp
                             )
                             Text(
@@ -492,7 +528,7 @@ fun LaserMazeScreen(
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                // 主光學棋盤視圖 (Box + Canvas)
+                // 主光學棋盤視圖 (Box + 3D graphicsLayer + Canvas)
                 BoxWithConstraints(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -505,15 +541,19 @@ fun LaserMazeScreen(
                     val availableHeight = constraints.maxHeight.toFloat()
                     val gridSize = boardState.gridSize
 
+                    // 留出 3D 視角景深邊距 (預留 7% 透視擴展空間避免微傾時觸及容器圓角)
+                    val contentWidth = availableWidth * 0.93f
+                    val contentHeight = availableHeight * 0.93f
+
                     // 判定是否為大棋盤 (8x8, 9x9, 10x10, 12x12)
-                    val baseCellSize = min(availableWidth, availableHeight) / gridSize
+                    val baseCellSize = min(contentWidth, contentHeight) / gridSize
                     val isLargeMap = gridSize >= 8
                     val cellSize = if (isLargeMap) max(baseCellSize, 52f * LocalDensity.current.density) else baseCellSize
                     val totalBoardWidth = cellSize * gridSize
                     val totalBoardHeight = cellSize * gridSize
 
-                    val maxPanX = max(0f, (totalBoardWidth - availableWidth) / 2f)
-                    val maxPanY = max(0f, (totalBoardHeight - availableHeight) / 2f)
+                    val maxPanX = max(0f, (totalBoardWidth - contentWidth) / 2f)
+                    val maxPanY = max(0f, (totalBoardHeight - contentHeight) / 2f)
 
                     val boardOriginX = (availableWidth - totalBoardWidth) / 2f + panOffsetX.coerceIn(-maxPanX, maxPanX)
                     val boardOriginY = (availableHeight - totalBoardHeight) / 2f + panOffsetY.coerceIn(-maxPanY, maxPanY)
@@ -526,146 +566,164 @@ fun LaserMazeScreen(
                     val currentGridSize by rememberUpdatedState(gridSize)
                     val currentBoardState by rememberUpdatedState(boardState)
                     val currentIsCleared by rememberUpdatedState(isCleared)
+                    val currentIsAngleAdjustMode by rememberUpdatedState(isAngleAdjustMode)
 
-                    Canvas(
+                    // 3D 微傾透視渲染層 (Box + graphicsLayer)
+                    Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .pointerInput(isLargeMap) {
-                                if (isLargeMap) {
+                            .graphicsLayer {
+                                rotationX = tiltPitch.coerceIn(0f, 30f)
+                                rotationY = tiltYaw.coerceIn(-25f, 25f)
+                                cameraDistance = 16f * density
+                            }
+                    ) {
+                        Canvas(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .pointerInput(isLargeMap, currentIsAngleAdjustMode) {
                                     detectDragGestures { change, dragAmount ->
                                         change.consume()
-                                        panOffsetX = (panOffsetX + dragAmount.x).coerceIn(-currentMaxPanX, currentMaxPanX)
-                                        panOffsetY = (panOffsetY + dragAmount.y).coerceIn(-currentMaxPanY, currentMaxPanY)
-                                    }
-                                }
-                            }
-                            .pointerInput(Unit) {
-                                detectTapGestures { tapOffset ->
-                                    val localX = tapOffset.x - currentBoardOriginX
-                                    val localY = tapOffset.y - currentBoardOriginY
-                                    val col = (localX / currentCellSize).toInt()
-                                    val row = (localY / currentCellSize).toInt()
-                                    if (row in 0 until currentGridSize && col in 0 until currentGridSize) {
-                                        val piece = currentBoardState.grid[row][col]
-                                        if (piece != null && !currentIsCleared) {
-                                            onCellTap(row, col, piece)
+                                        if (isLargeMap && !currentIsAngleAdjustMode) {
+                                            panOffsetX = (panOffsetX + dragAmount.x).coerceIn(-currentMaxPanX, currentMaxPanX)
+                                            panOffsetY = (panOffsetY + dragAmount.y).coerceIn(-currentMaxPanY, currentMaxPanY)
+                                        } else {
+                                            // 自由微調 3D 視角 (限制不超過 30 度)
+                                            tiltYaw = (tiltYaw + dragAmount.x * 0.16f).coerceIn(-25f, 25f)
+                                            tiltPitch = (tiltPitch - dragAmount.y * 0.16f).coerceIn(0f, 30f)
                                         }
                                     }
                                 }
-                            }
-                    ) {
-                        // 1. 繪製基座格子與風格自適應凹槽
-                        for (r in 0 until gridSize) {
-                            for (c in 0 until gridSize) {
-                                val cx = boardOriginX + c * cellSize
-                                val cy = boardOriginY + r * cellSize
-                                val pad = 2.5f
+                                .pointerInput(Unit) {
+                                    detectTapGestures { tapOffset ->
+                                        val localX = tapOffset.x - currentBoardOriginX
+                                        val localY = tapOffset.y - currentBoardOriginY
+                                        val col = (localX / currentCellSize).toInt()
+                                        val row = (localY / currentCellSize).toInt()
+                                        if (row in 0 until currentGridSize && col in 0 until currentGridSize) {
+                                            val piece = currentBoardState.grid[row][col]
+                                            if (piece != null && !currentIsCleared) {
+                                                onCellTap(row, col, piece)
+                                            }
+                                        }
+                                    }
+                                }
+                        ) {
+                            // 1. 繪製基座格子與風格自適應凹槽
+                            for (r in 0 until gridSize) {
+                                for (c in 0 until gridSize) {
+                                    val cx = boardOriginX + c * cellSize
+                                    val cy = boardOriginY + r * cellSize
+                                    val pad = 2.5f
 
-                                drawRoundRect(
-                                    color = palette.slotBackground,
-                                    topLeft = Offset(cx + pad, cy + pad),
-                                    size = Size(cellSize - pad * 2, cellSize - pad * 2),
-                                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(8f, 8f)
+                                    drawRoundRect(
+                                        color = palette.slotBackground,
+                                        topLeft = Offset(cx + pad, cy + pad),
+                                        size = Size(cellSize - pad * 2, cellSize - pad * 2),
+                                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(8f, 8f)
+                                    )
+                                    drawRoundRect(
+                                        color = palette.slotBorder,
+                                        topLeft = Offset(cx + pad, cy + pad),
+                                        size = Size(cellSize - pad * 2, cellSize - pad * 2),
+                                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(8f, 8f),
+                                        style = Stroke(width = 1f)
+                                    )
+                                    // 中心微縮導軌十字微點
+                                    drawCircle(
+                                        color = palette.slotGuideDot,
+                                        radius = 1.5f,
+                                        center = Offset(cx + cellSize / 2f, cy + cellSize / 2f)
+                                    )
+                                }
+                            }
+
+                            // 2. 繪製各格子物件 (3A 工藝手繪)
+                            for (r in 0 until gridSize) {
+                                for (c in 0 until gridSize) {
+                                    val piece = boardState.grid[r][c] ?: continue
+                                    val cellCenterX = boardOriginX + (c + 0.5f) * cellSize
+                                    val cellCenterY = boardOriginY + (r + 0.5f) * cellSize
+
+                                    val key = "${r}_$c"
+                                    val anim = rotationAnimatables[key]
+                                    val currentAngle = anim?.value ?: (piece.rotation * 90f)
+
+                                    drawOpticalPiece(
+                                        piece = piece,
+                                        centerX = cellCenterX,
+                                        centerY = cellCenterY,
+                                        size = cellSize * 0.82f,
+                                        rotationDegrees = currentAngle,
+                                        isLit = (Pair(r, c) in boardState.receivers && boardState.receivers.indexOf(Pair(r, c)) in boardState.litReceiverIndices),
+                                        palette = palette
+                                    )
+                                }
+                            }
+
+                            // 3. 繪製雷射光束 (雙層高能發光 Bloom + 鏡面端點星芒)
+                            for (seg in boardState.segments) {
+                                val startX = boardOriginX + (seg.startCol + 0.5f) * cellSize
+                                val startY = boardOriginY + (seg.startRow + 0.5f) * cellSize
+                                val endX = boardOriginX + (seg.endCol + 0.5f) * cellSize
+                                val endY = boardOriginY + (seg.endRow + 0.5f) * cellSize
+
+                                val beamColor = Color(seg.colorHex)
+
+                                // 外層廣域霓虹光暈 (Bloom Glow)
+                                drawLine(
+                                    color = beamColor.copy(alpha = 0.38f),
+                                    start = Offset(startX, startY),
+                                    end = Offset(endX, endY),
+                                    strokeWidth = 14f,
+                                    cap = StrokeCap.Round
                                 )
-                                drawRoundRect(
-                                    color = palette.slotBorder,
-                                    topLeft = Offset(cx + pad, cy + pad),
-                                    size = Size(cellSize - pad * 2, cellSize - pad * 2),
-                                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(8f, 8f),
-                                    style = Stroke(width = 1f)
+                                // 中層高飽和光束
+                                drawLine(
+                                    color = beamColor.copy(alpha = 0.75f),
+                                    start = Offset(startX, startY),
+                                    end = Offset(endX, endY),
+                                    strokeWidth = 8f,
+                                    cap = StrokeCap.Round
                                 )
-                                // 中心微縮導軌十字微點
+                                // 內層純白高亮核心
+                                drawLine(
+                                    color = Color.White,
+                                    start = Offset(startX, startY),
+                                    end = Offset(endX, endY),
+                                    strokeWidth = 3f,
+                                    cap = StrokeCap.Round
+                                )
+
+                                // 端點折射星芒高光 (Focal Sparkle)
                                 drawCircle(
-                                    color = palette.slotGuideDot,
-                                    radius = 1.5f,
-                                    center = Offset(cx + cellSize / 2f, cy + cellSize / 2f)
+                                    color = beamColor.copy(alpha = 0.85f),
+                                    radius = 6.5f,
+                                    center = Offset(endX, endY)
+                                )
+                                drawCircle(
+                                    color = Color.White,
+                                    radius = 2.8f,
+                                    center = Offset(endX, endY)
+                                )
+                            }
+
+                            // 4. 繪製通關星塵超載粒子
+                            val boardCenterX = boardOriginX + totalBoardWidth / 2f
+                            val boardCenterY = boardOriginY + totalBoardHeight / 2f
+                            for (p in particles) {
+                                drawCircle(
+                                    color = p.color.copy(alpha = p.alpha),
+                                    radius = p.radius,
+                                    center = Offset(boardCenterX + p.x, boardCenterY + p.y)
                                 )
                             }
                         }
+                    }
 
-                        // 2. 繪製各格子物件 (3A 工藝手繪)
-                        for (r in 0 until gridSize) {
-                            for (c in 0 until gridSize) {
-                                val piece = boardState.grid[r][c] ?: continue
-                                val cellCenterX = boardOriginX + (c + 0.5f) * cellSize
-                                val cellCenterY = boardOriginY + (r + 0.5f) * cellSize
-
-                                val key = "${r}_$c"
-                                val anim = rotationAnimatables[key]
-                                val currentAngle = anim?.value ?: (piece.rotation * 90f)
-
-                                drawOpticalPiece(
-                                    piece = piece,
-                                    centerX = cellCenterX,
-                                    centerY = cellCenterY,
-                                    size = cellSize * 0.82f,
-                                    rotationDegrees = currentAngle,
-                                    isLit = (Pair(r, c) in boardState.receivers && boardState.receivers.indexOf(Pair(r, c)) in boardState.litReceiverIndices),
-                                    palette = palette
-                                )
-                            }
-                        }
-
-                        // 3. 繪製雷射光束 (雙層高能發光 Bloom + 鏡面端點星芒)
-                        for (seg in boardState.segments) {
-                            val startX = boardOriginX + (seg.startCol + 0.5f) * cellSize
-                            val startY = boardOriginY + (seg.startRow + 0.5f) * cellSize
-                            val endX = boardOriginX + (seg.endCol + 0.5f) * cellSize
-                            val endY = boardOriginY + (seg.endRow + 0.5f) * cellSize
-
-                            val beamColor = Color(seg.colorHex)
-
-                            // 外層廣域霓虹光暈 (Bloom Glow)
-                            drawLine(
-                                color = beamColor.copy(alpha = 0.38f),
-                                start = Offset(startX, startY),
-                                end = Offset(endX, endY),
-                                strokeWidth = 14f,
-                                cap = StrokeCap.Round
-                            )
-                            // 中層高飽和光束
-                            drawLine(
-                                color = beamColor.copy(alpha = 0.75f),
-                                start = Offset(startX, startY),
-                                end = Offset(endX, endY),
-                                strokeWidth = 8f,
-                                cap = StrokeCap.Round
-                            )
-                            // 內層純白高亮核心
-                            drawLine(
-                                color = Color.White,
-                                start = Offset(startX, startY),
-                                end = Offset(endX, endY),
-                                strokeWidth = 3f,
-                                cap = StrokeCap.Round
-                            )
-
-                            // 端點折射星芒高光 (Focal Sparkle)
-                            drawCircle(
-                                color = beamColor.copy(alpha = 0.85f),
-                                radius = 6.5f,
-                                center = Offset(endX, endY)
-                            )
-                            drawCircle(
-                                color = Color.White,
-                                radius = 2.8f,
-                                center = Offset(endX, endY)
-                            )
-                        }
-
-                        // 4. 繪製通關星塵超載粒子
-                        val boardCenterX = boardOriginX + totalBoardWidth / 2f
-                        val boardCenterY = boardOriginY + totalBoardHeight / 2f
-                        for (p in particles) {
-                            drawCircle(
-                                color = p.color.copy(alpha = p.alpha),
-                                radius = p.radius,
-                                center = Offset(boardCenterX + p.x, boardCenterY + p.y)
-                            )
-                        }
-
-                        // 5. 【微型導航雷達小地圖 (Mini-map)】全面進化 (96x96dp、高對比風格底色、清晰點位與鏡頭取景角標)
-                        if (isLargeMap) {
+                    // 5. 【微型導航雷達小地圖 (Mini-map)】(置於 3D 透視層之外，維持清晰平面 HUD)
+                    if (isLargeMap) {
+                        Canvas(modifier = Modifier.fillMaxSize()) {
                             val miniW = 96f * density
                             val miniH = 96f * density
                             val miniX = availableWidth - miniW - 14f
@@ -710,17 +768,35 @@ fun LaserMazeScreen(
                             val emY = miniY + boardState.emitterRow * miniCellH + miniCellH / 2f
                             drawCircle(color = Color(0xFFFF9800), radius = 3.5f, center = Offset(emX, emY))
 
-                            // 繪製微縮水晶點與傳送門點
+                            // 繪製微縮終點靶心點與傳送門點
                             for (recv in boardState.receivers) {
                                 val rx = miniX + recv.second * miniCellW + miniCellW / 2f
                                 val ry = miniY + recv.first * miniCellH + miniCellH / 2f
                                 val isLit = boardState.receivers.indexOf(recv) in boardState.litReceiverIndices
-                                val reqColor = Color(boardState.receiverColors[recv] ?: 0xFF00E5FF)
+                                val reqColor = if (boardState.receiverColors[recv] != null && boardState.receiverColors[recv] != 0xFF00E5FFL) {
+                                    Color(boardState.receiverColors[recv]!!)
+                                } else {
+                                    Color(0xFFFFB300) // 亮金終點標誌色
+                                }
+                                // 外圈醒目目標光環
                                 drawCircle(
-                                    color = if (isLit) reqColor else Color.Gray,
-                                    radius = 3.2f,
+                                    color = if (isLit) Color.White else reqColor,
+                                    radius = 4.2f,
                                     center = Offset(rx, ry)
                                 )
+                                // 內層高對比受光靶心
+                                drawCircle(
+                                    color = if (isLit) reqColor else Color(0xFF0F172A),
+                                    radius = 2.4f,
+                                    center = Offset(rx, ry)
+                                )
+                                if (!isLit) {
+                                    drawCircle(
+                                        color = Color.White,
+                                        radius = 1.0f,
+                                        center = Offset(rx, ry)
+                                    )
+                                }
                             }
 
                             // 繪製高科技取景框 (帶相機角標 [ ])
@@ -749,6 +825,71 @@ fun LaserMazeScreen(
                             // 右下
                             drawLine(color = palette.miniMapViewport, start = Offset(viewX + viewW, viewY + viewH), end = Offset(viewX + viewW - bracketLen, viewY + viewH), strokeWidth = 2.2f)
                             drawLine(color = palette.miniMapViewport, start = Offset(viewX + viewW, viewY + viewH), end = Offset(viewX + viewW, viewY + viewH - bracketLen), strokeWidth = 2.2f)
+                        }
+                    }
+
+                    // 6. 【3D 微傾視角調節懸浮膠囊 (HUD Pill)】(置於 3D 透視層之外，方便玩家隨時調節與回正)
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
+                        border = BorderStroke(1.dp, palette.boardBorderColor.copy(alpha = 0.45f)),
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val isTilted = tiltPitch > 2f
+                            Text(
+                                text = if (isTilted) "📐 " + Localization.getString("laser_maze_tilt_view", language) + " ${tiltPitch.toInt()}°" else "📐 " + Localization.getString("laser_maze_top_view", language),
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isTilted) palette.accentColor else MaterialTheme.colorScheme.onSurface
+                                ),
+                                modifier = Modifier.clickable {
+                                    SoundManager.playClick()
+                                    toggleTiltView()
+                                }
+                            )
+
+                            if (isLargeMap) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .height(12.dp)
+                                        .width(1.dp)
+                                        .background(MaterialTheme.colorScheme.outlineVariant)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (isAngleAdjustMode) "🔄 " + Localization.getString("laser_maze_mode_tilt", language) else "✋ " + Localization.getString("laser_maze_mode_pan", language),
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isAngleAdjustMode) palette.accentColor else MaterialTheme.colorScheme.onSurfaceVariant
+                                    ),
+                                    modifier = Modifier.clickable {
+                                        SoundManager.playClick()
+                                        isAngleAdjustMode = !isAngleAdjustMode
+                                    }
+                                )
+                            }
+
+                            if (tiltPitch != 18f || tiltYaw != -5f) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "↺ " + Localization.getString("laser_maze_reset_view", language),
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    ),
+                                    modifier = Modifier.clickable {
+                                        SoundManager.playClick()
+                                        resetViewAngle()
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -851,7 +992,7 @@ fun LaserMazeScreen(
                     BriefingMechanicItem(
                         icon = "🪞",
                         title = Localization.getString("piece_mirror_single", language),
-                        desc = "點擊旋轉 90°，實現 45° 精密光束折射",
+                        desc = "點擊旋轉 90°，微傾視角下可清晰看見立體鍍銀鏡面與反射朝向",
                         textColor = palette.onBriefingCardText
                     )
                     BriefingMechanicItem(
@@ -867,9 +1008,9 @@ fun LaserMazeScreen(
                         textColor = palette.onBriefingCardText
                     )
                     BriefingMechanicItem(
-                        icon = "💎",
+                        icon = "🎯",
                         title = Localization.getString("piece_receiver", language),
-                        desc = "需同頻波長光束抵達激發超載，點亮全場水晶即通關",
+                        desc = "雷射的終點目的地！需引導光束擊中受光靶心激發超載，點亮全場終點即通關",
                         textColor = palette.onBriefingCardText
                     )
                 }
@@ -1130,49 +1271,19 @@ private fun DrawScope.drawOpticalPiece(
         }
 
         OpticalPieceType.RECEIVER -> {
-            // 八角切面高能共振水晶 (八面寶石 + 蓄能基座 + 點亮超載脈衝星芒)
-            val crystalRadius = half * 0.78f
-            val baseColor = Color(piece.requiredColorHex ?: 0xFF00E5FF)
-
-            // 1. 金屬蓄能嵌合基座
-            drawCircle(
-                color = Color(0xFF1E293B),
-                radius = crystalRadius * 1.15f,
-                center = Offset(centerX, centerY)
+            // 終點：高辨識度量子受光靶心 (四隅鎖定角標 + 雙層同心雷達靶環 + 醒目量子核心 + 十字準星)
+            drawTargetReceiver(
+                centerX = centerX,
+                centerY = centerY,
+                half = half,
+                piece = piece,
+                isLit = isLit,
+                palette = palette
             )
-            drawCircle(
-                color = if (isLit) baseColor else Color(0xFF475569),
-                radius = crystalRadius * 1.15f,
-                center = Offset(centerX, centerY),
-                style = Stroke(width = 2f)
-            )
-
-            if (isLit) {
-                // 已點亮：超載爆發、高頻脈衝外環
-                drawCircle(
-                    color = baseColor.copy(alpha = 0.35f),
-                    radius = crystalRadius * 1.6f,
-                    center = Offset(centerX, centerY)
-                )
-                drawCircle(
-                    color = baseColor.copy(alpha = 0.65f),
-                    radius = crystalRadius * 1.25f,
-                    center = Offset(centerX, centerY)
-                )
-                // 八角寶石本體
-                drawOctagonalGem(centerX, centerY, crystalRadius, baseColor, isLit = true)
-                // 四向高能十字星芒
-                val flareLen = crystalRadius * 1.4f
-                drawLine(color = Color.White, start = Offset(centerX - flareLen, centerY), end = Offset(centerX + flareLen, centerY), strokeWidth = 2.5f)
-                drawLine(color = Color.White, start = Offset(centerX, centerY - flareLen), end = Offset(centerX, centerY + flareLen), strokeWidth = 2.5f)
-            } else {
-                // 未點亮：沉靜多面體休眠寶石
-                drawOctagonalGem(centerX, centerY, crystalRadius, baseColor, isLit = false)
-            }
         }
 
         OpticalPieceType.MIRROR_SINGLE -> {
-            // 單面 45° 鍍銀反光鏡 (12齒防滑齒輪精密轉盤 + 立體複合鏡板 + 鍍銀反射高光帶 + 金屬固定夾)
+            // 單面 45° 鍍銀反光鏡 (3D 立體斜切鏡面 + 鏡背裝甲側身 + 精密轉盤 + 鍍銀高光 + 合金固定扣)
             rotate(rotationDegrees, pivot = Offset(centerX, centerY)) {
                 drawPrecisionTurntable(centerX, centerY, half, piece.isDecoy)
 
@@ -1180,6 +1291,16 @@ private fun DrawScope.drawOpticalPiece(
                 val p1 = Offset(centerX - half * 0.65f, centerY + half * 0.65f)
                 val p2 = Offset(centerX + half * 0.65f, centerY - half * 0.65f)
                 val backCorner = Offset(centerX - half * 0.45f, centerY - half * 0.45f)
+
+                // 1. 鏡背裝甲側身厚度 (3D Extruded Armor Thickness)
+                val armorSide = Path().apply {
+                    moveTo(p1.x, p1.y)
+                    lineTo(p2.x, p2.y)
+                    lineTo(p2.x - half * 0.08f, p2.y - half * 0.08f)
+                    lineTo(p1.x - half * 0.08f, p1.y - half * 0.08f)
+                    close()
+                }
+                drawPath(armorSide, color = Color(0xFF1E293B))
 
                 val backArmor = Path().apply {
                     moveTo(p1.x, p1.y)
@@ -1193,64 +1314,93 @@ private fun DrawScope.drawOpticalPiece(
                 // 背板微型六角鉚釘
                 drawCircle(color = Color(0xFFB0BEC5), radius = 2.2f, center = Offset(centerX - half * 0.25f, centerY - half * 0.25f))
 
-                // 立體厚度玻璃層
-                drawLine(
-                    color = Color(0xFF37474F),
-                    start = Offset(p1.x - 2f, p1.y - 2f),
-                    end = Offset(p2.x - 2f, p2.y - 2f),
-                    strokeWidth = 7f,
-                    cap = StrokeCap.Round
+                // 2. 45° 玻璃鏡面立體斜切面 (3D Beveled Optical Mirror Prism Facet)
+                // 朝向前向反射側擴展立體斜面
+                val normX = half * 0.12f
+                val normY = half * 0.12f
+                val facetPath = Path().apply {
+                    moveTo(p1.x, p1.y)
+                    lineTo(p2.x, p2.y)
+                    lineTo(p2.x + normX, p2.y + normY)
+                    lineTo(p1.x + normX, p1.y + normY)
+                    close()
+                }
+                // 鏡面主體真空鍍銀層與抗反射青藍微光
+                drawPath(
+                    facetPath,
+                    brush = Brush.linearGradient(
+                        colors = listOf(Color(0xFFE2E8F0), Color.White, Color(0xFFCBD5E1), Color(0xFF94A3B8)),
+                        start = p1,
+                        end = Offset(p2.x + normX, p2.y + normY)
+                    )
                 )
-                // 真空鍍銀反射層
-                drawLine(
-                    color = Color(0xFFE2E8F0),
-                    start = p1,
-                    end = p2,
-                    strokeWidth = 4.5f,
-                    cap = StrokeCap.Round
-                )
+                // 鏡面倒角邊緣高光
+                drawPath(facetPath, color = Color.White.copy(alpha = 0.85f), style = Stroke(width = 1.2f))
+
                 // 鏡面流光高光帶 (Specular Sheen Sweep)
                 drawLine(
                     color = Color.White,
-                    start = Offset(centerX - half * 0.2f, centerY + half * 0.2f),
-                    end = Offset(centerX + half * 0.35f, centerY - half * 0.35f),
+                    start = Offset(centerX - half * 0.18f + normX * 0.5f, centerY + half * 0.18f + normY * 0.5f),
+                    end = Offset(centerX + half * 0.35f + normX * 0.5f, centerY - half * 0.35f + normY * 0.5f),
                     strokeWidth = 2.2f,
                     cap = StrokeCap.Round
                 )
 
                 // 兩端合金夾扣 (Mounting Clamps)
-                drawCircle(color = Color(0xFF78909C), radius = 3.5f, center = p1)
-                drawCircle(color = Color(0xFF78909C), radius = 3.5f, center = p2)
+                drawCircle(color = Color(0xFF37474F), radius = 4.2f, center = p1)
+                drawCircle(color = Color(0xFF90A4AE), radius = 3.0f, center = p1)
+                drawCircle(color = Color(0xFF37474F), radius = 4.2f, center = p2)
+                drawCircle(color = Color(0xFF90A4AE), radius = 3.0f, center = p2)
             }
         }
 
         OpticalPieceType.MIRROR_DOUBLE -> {
-            // 雙面反射鏡 (兩側皆拋光鍍銀，中央高折射水晶夾層)
+            // 雙面反射鏡 (兩側皆具備立體斜切鏡面，中央高折射水晶夾層)
             rotate(rotationDegrees, pivot = Offset(centerX, centerY)) {
                 drawPrecisionTurntable(centerX, centerY, half, piece.isDecoy)
 
                 val p1 = Offset(centerX - half * 0.65f, centerY + half * 0.65f)
                 val p2 = Offset(centerX + half * 0.65f, centerY - half * 0.65f)
+                val normX = half * 0.10f
+                val normY = half * 0.10f
 
-                // 雙面厚度晶體
-                drawLine(
-                    color = Color(0xFF0284C7),
-                    start = p1,
-                    end = p2,
-                    strokeWidth = 7f,
-                    cap = StrokeCap.Round
-                )
-                // 兩側銀白反光面
-                drawLine(
-                    color = Color.White,
-                    start = p1,
-                    end = p2,
-                    strokeWidth = 3f,
-                    cap = StrokeCap.Round
-                )
-                // 兩端夾具
-                drawCircle(color = Color(0xFF38BDF8), radius = 3.8f, center = p1)
-                drawCircle(color = Color(0xFF38BDF8), radius = 3.8f, center = p2)
+                // 中央高折射光學晶體層 (Core Sapphire Crystal)
+                val corePath = Path().apply {
+                    moveTo(p1.x - normX * 0.5f, p1.y - normY * 0.5f)
+                    lineTo(p2.x - normX * 0.5f, p2.y - normY * 0.5f)
+                    lineTo(p2.x + normX * 0.5f, p2.y + normY * 0.5f)
+                    lineTo(p1.x + normX * 0.5f, p1.y + normY * 0.5f)
+                    close()
+                }
+                drawPath(corePath, color = Color(0xFF0284C7))
+
+                // 正面鏡面 (Front Mirror Facet)
+                val frontFacet = Path().apply {
+                    moveTo(p1.x, p1.y)
+                    lineTo(p2.x, p2.y)
+                    lineTo(p2.x + normX, p2.y + normY)
+                    lineTo(p1.x + normX, p1.y + normY)
+                    close()
+                }
+                drawPath(frontFacet, brush = Brush.linearGradient(listOf(Color(0xFFE2E8F0), Color.White, Color(0xFF94A3B8)), start = p1, end = Offset(p2.x + normX, p2.y + normY)))
+                drawPath(frontFacet, color = Color.White.copy(alpha = 0.8f), style = Stroke(width = 1f))
+
+                // 反面鏡面 (Back Mirror Facet)
+                val backFacet = Path().apply {
+                    moveTo(p1.x, p1.y)
+                    lineTo(p2.x, p2.y)
+                    lineTo(p2.x - normX, p2.y - normY)
+                    lineTo(p1.x - normX, p1.y - normY)
+                    close()
+                }
+                drawPath(backFacet, brush = Brush.linearGradient(listOf(Color(0xFF94A3B8), Color.White, Color(0xFFE2E8F0)), start = p1, end = Offset(p2.x - normX, p2.y - normY)))
+                drawPath(backFacet, color = Color.White.copy(alpha = 0.8f), style = Stroke(width = 1f))
+
+                // 兩端合金固定扣
+                drawCircle(color = Color(0xFF0369A1), radius = 4.5f, center = p1)
+                drawCircle(color = Color(0xFF38BDF8), radius = 2.8f, center = p1)
+                drawCircle(color = Color(0xFF0369A1), radius = 4.5f, center = p2)
+                drawCircle(color = Color(0xFF38BDF8), radius = 2.8f, center = p2)
             }
         }
 
@@ -1426,11 +1576,14 @@ private fun DrawScope.drawOpticalPiece(
         }
 
         OpticalPieceType.OBSTACLE_FIXED_MIRROR -> {
-            // 固定折射斜壁 (重裝甲三角基座 + 六角螺栓釘死 + 拋光黃金反射稜鏡)
+            // 固定折射斜壁 (重裝甲三角基座 + 六角螺栓釘死 + 3D 拋光黃金反射稜鏡)
             rotate(rotationDegrees, pivot = Offset(centerX, centerY)) {
                 val t1 = Offset(centerX - half * 0.75f, centerY + half * 0.75f)
                 val t2 = Offset(centerX + half * 0.75f, centerY - half * 0.75f)
                 val t3 = Offset(centerX - half * 0.75f, centerY - half * 0.75f)
+
+                val normX = half * 0.12f
+                val normY = half * 0.12f
 
                 val triangle = Path().apply {
                     moveTo(t1.x, t1.y)
@@ -1446,26 +1599,30 @@ private fun DrawScope.drawOpticalPiece(
                 drawCircle(color = Color(0xFFFDE68A), radius = 2.5f, center = Offset(t3.x + 6f, t3.y + 6f))
                 drawCircle(color = Color(0xFFFDE68A), radius = 2.5f, center = Offset(t1.x + 6f, t1.y - 6f))
 
-                // 45° 拋光黃金反光鏡面 (雙層金色流光)
-                drawLine(
-                    color = Color(0xFFD97706),
-                    start = t1,
-                    end = t2,
-                    strokeWidth = 7.5f,
-                    cap = StrokeCap.Round
+                // 45° 拋光黃金立體斜切鏡面 (3D Golden Prism Facet)
+                val goldFacet = Path().apply {
+                    moveTo(t1.x, t1.y)
+                    lineTo(t2.x, t2.y)
+                    lineTo(t2.x + normX, t2.y + normY)
+                    lineTo(t1.x + normX, t1.y + normY)
+                    close()
+                }
+                drawPath(
+                    goldFacet,
+                    brush = Brush.linearGradient(
+                        colors = listOf(Color(0xFFD97706), Color(0xFFFDE68A), Color(0xFFF59E0B)),
+                        start = t1,
+                        end = Offset(t2.x + normX, t2.y + normY)
+                    )
                 )
-                drawLine(
-                    color = Color(0xFFFBBF24),
-                    start = t1,
-                    end = t2,
-                    strokeWidth = 4f,
-                    cap = StrokeCap.Round
-                )
+                drawPath(goldFacet, color = Color.White.copy(alpha = 0.8f), style = Stroke(width = 1.2f))
+
+                // 鏡面流光
                 drawLine(
                     color = Color.White,
-                    start = Offset(centerX - half * 0.2f, centerY + half * 0.2f),
-                    end = Offset(centerX + half * 0.4f, centerY - half * 0.4f),
-                    strokeWidth = 2f,
+                    start = Offset(centerX - half * 0.18f + normX * 0.5f, centerY + half * 0.18f + normY * 0.5f),
+                    end = Offset(centerX + half * 0.38f + normX * 0.5f, centerY - half * 0.38f + normY * 0.5f),
+                    strokeWidth = 2.2f,
                     cap = StrokeCap.Round
                 )
             }
@@ -1518,7 +1675,14 @@ private fun DrawScope.drawPrecisionTurntable(
 ) {
     val turntableR = half * 0.88f
 
-    // 轉盤主體金屬座
+    // 1. 底盤下沉 3D 陰影厚度邊界 (3D Base Extrusion Shadow)
+    drawOval(
+        color = Color(0xFF090D16).copy(alpha = 0.7f),
+        topLeft = Offset(centerX - turntableR, centerY - turntableR + 3.5f),
+        size = Size(turntableR * 2, turntableR * 2)
+    )
+
+    // 2. 轉盤主體金屬座
     drawCircle(color = Color(0xFF111827), radius = turntableR, center = Offset(centerX, centerY))
     drawCircle(
         color = if (isDecoy) Color(0xFFF59E0B) else Color(0xFF4B5563),
@@ -1527,7 +1691,7 @@ private fun DrawScope.drawPrecisionTurntable(
         style = Stroke(width = 1.5f)
     )
 
-    // 12 齒外周齒輪防滑刻痕 (Knurling Grips)
+    // 3. 12 齒外周齒輪防滑刻痕 (Knurling Grips)
     for (i in 0 until 12) {
         val rad = (i * (360f / 12f)) * (PI.toFloat() / 180f)
         val outerX = centerX + cos(rad) * turntableR
@@ -1542,44 +1706,152 @@ private fun DrawScope.drawPrecisionTurntable(
         )
     }
 
-    // 中心軸承 (Concentric Bearing)
+    // 4. 中心軸承 (Concentric Bearing)
     drawCircle(color = Color(0xFF1F2937), radius = half * 0.28f, center = Offset(centerX, centerY))
     drawCircle(color = Color(0xFFE5E7EB), radius = half * 0.12f, center = Offset(centerX, centerY))
 }
 
 /**
- * 輔助繪製八角切割寶石
+ * 繪製終點量子受光靶心 (超高辨識度目標 Target / 醒目同心靶環 / 瞄準準星)
+ * 專為讓玩家「一眼就知道那就是終點、要讓雷射到達那裡」所打造之旗艦視覺
  */
-private fun DrawScope.drawOctagonalGem(
+private fun DrawScope.drawTargetReceiver(
     centerX: Float,
     centerY: Float,
-    radius: Float,
-    baseColor: Color,
-    isLit: Boolean
+    half: Float,
+    piece: LaserPiece,
+    isLit: Boolean,
+    palette: LaserMazePalette
 ) {
-    val octPath = Path()
-    val sides = 8
-    for (i in 0 until sides) {
-        val rad = (i * (360f / sides) + 22.5f) * (PI.toFloat() / 180f)
-        val x = centerX + cos(rad) * radius
-        val y = centerY + sin(rad) * radius
-        if (i == 0) octPath.moveTo(x, y) else octPath.lineTo(x, y)
+    // 取得指定或預設色彩：未指定特殊波長時，以超醒目的「量子耀金 (#FFB300)」為標誌色，在各風格棋盤均有極高對比
+    val targetColor = if (piece.requiredColorHex != null && piece.requiredColorHex != 0xFF00E5FFL) {
+        Color(piece.requiredColorHex)
+    } else {
+        Color(0xFFFFB300) // 超亮量子金黃
     }
-    octPath.close()
+    val highlightColor = if (isLit) Color.White else Color(0xFFFFE082)
 
-    drawPath(octPath, color = if (isLit) baseColor else Color(0xFF334155))
-    drawPath(octPath, color = if (isLit) Color.White else Color(0xFF64748B), style = Stroke(width = 2f))
+    // 1. 四隅高科技目標鎖定角標 (Target Reticle Brackets: [ ])
+    val bracketSize = half * 0.94f
+    val bracketLen = half * 0.28f
+    val bracketColor = if (isLit) Color.White else targetColor.copy(alpha = 0.95f)
+    val bracketStroke = 2.8f
 
-    // 寶石頂面高光核心
-    val innerR = radius * 0.5f
-    val innerPath = Path()
-    for (i in 0 until sides) {
-        val rad = (i * (360f / sides) + 22.5f) * (PI.toFloat() / 180f)
-        val x = centerX + cos(rad) * innerR
-        val y = centerY + sin(rad) * innerR
-        if (i == 0) innerPath.moveTo(x, y) else innerPath.lineTo(x, y)
+    // 左上角 ┌
+    drawLine(color = bracketColor, start = Offset(centerX - bracketSize, centerY - bracketSize), end = Offset(centerX - bracketSize + bracketLen, centerY - bracketSize), strokeWidth = bracketStroke, cap = StrokeCap.Round)
+    drawLine(color = bracketColor, start = Offset(centerX - bracketSize, centerY - bracketSize), end = Offset(centerX - bracketSize, centerY - bracketSize + bracketLen), strokeWidth = bracketStroke, cap = StrokeCap.Round)
+    // 右上角 ┐
+    drawLine(color = bracketColor, start = Offset(centerX + bracketSize, centerY - bracketSize), end = Offset(centerX + bracketSize - bracketLen, centerY - bracketSize), strokeWidth = bracketStroke, cap = StrokeCap.Round)
+    drawLine(color = bracketColor, start = Offset(centerX + bracketSize, centerY - bracketSize), end = Offset(centerX + bracketSize, centerY - bracketSize + bracketLen), strokeWidth = bracketStroke, cap = StrokeCap.Round)
+    // 右下角 ┘
+    drawLine(color = bracketColor, start = Offset(centerX + bracketSize, centerY + bracketSize), end = Offset(centerX + bracketSize - bracketLen, centerY + bracketSize), strokeWidth = bracketStroke, cap = StrokeCap.Round)
+    drawLine(color = bracketColor, start = Offset(centerX + bracketSize, centerY + bracketSize), end = Offset(centerX + bracketSize, centerY + bracketSize - bracketLen), strokeWidth = bracketStroke, cap = StrokeCap.Round)
+    // 左下角 └
+    drawLine(color = bracketColor, start = Offset(centerX - bracketSize, centerY + bracketSize), end = Offset(centerX - bracketSize + bracketLen, centerY + bracketSize), strokeWidth = bracketStroke, cap = StrokeCap.Round)
+    drawLine(color = bracketColor, start = Offset(centerX - bracketSize, centerY + bracketSize), end = Offset(centerX - bracketSize, centerY + bracketSize - bracketLen), strokeWidth = bracketStroke, cap = StrokeCap.Round)
+
+    // 2. 鈦黑金屬沉頭基盤 (Deep Titanium Hub)
+    val hubRadius = half * 0.76f
+    drawCircle(
+        color = Color(0xFF0F172A),
+        radius = hubRadius,
+        center = Offset(centerX, centerY)
+    )
+
+    if (isLit) {
+        // === 點亮狀態：超載爆發、高頻脈衝外環與十字星芒 ===
+        // 外層廣域超載耀斑光暈 (Overload Bloom)
+        drawCircle(
+            color = targetColor.copy(alpha = 0.35f),
+            radius = half * 1.4f,
+            center = Offset(centerX, centerY)
+        )
+        drawCircle(
+            color = targetColor.copy(alpha = 0.65f),
+            radius = half * 1.08f,
+            center = Offset(centerX, centerY)
+        )
+        // 外靶環超能金屬圈
+        drawCircle(
+            color = Color.White,
+            radius = hubRadius,
+            center = Offset(centerX, centerY),
+            style = Stroke(width = 3.5f)
+        )
+        // 內核超載白熾光
+        drawCircle(
+            color = targetColor,
+            radius = half * 0.52f,
+            center = Offset(centerX, centerY)
+        )
+        drawCircle(
+            color = Color.White,
+            radius = half * 0.36f,
+            center = Offset(centerX, centerY)
+        )
+
+        // 四向超能長星芒
+        val flareLen = half * 1.35f
+        drawLine(color = Color.White, start = Offset(centerX - flareLen, centerY), end = Offset(centerX + flareLen, centerY), strokeWidth = 3.2f)
+        drawLine(color = Color.White, start = Offset(centerX, centerY - flareLen), end = Offset(centerX, centerY + flareLen), strokeWidth = 3.2f)
+        // 45 度副星芒
+        val subLen = half * 0.9f
+        val offsetSub = subLen * 0.707f
+        drawLine(color = targetColor, start = Offset(centerX - offsetSub, centerY - offsetSub), end = Offset(centerX + offsetSub, centerY + offsetSub), strokeWidth = 2.2f)
+        drawLine(color = targetColor, start = Offset(centerX + offsetSub, centerY - offsetSub), end = Offset(centerX - offsetSub, centerY + offsetSub), strokeWidth = 2.2f)
+    } else {
+        // === 未點亮狀態：極高對比終點雷達靶心 (High Contrast Target Bullseye) ===
+        // 外靶環：鮮明金屬瞄準圈
+        drawCircle(
+            color = targetColor.copy(alpha = 0.25f),
+            radius = hubRadius,
+            center = Offset(centerX, centerY)
+        )
+        drawCircle(
+            color = targetColor,
+            radius = hubRadius,
+            center = Offset(centerX, centerY),
+            style = Stroke(width = 3f)
+        )
+
+        // 4 向瞄準十字刻痕 (Crosshair Ticks)
+        val tickInner = hubRadius * 0.65f
+        val tickOuter = hubRadius * 1.15f
+        drawLine(color = targetColor, start = Offset(centerX, centerY - tickOuter), end = Offset(centerX, centerY - tickInner), strokeWidth = 2.5f)
+        drawLine(color = targetColor, start = Offset(centerX, centerY + tickInner), end = Offset(centerX, centerY + tickOuter), strokeWidth = 2.5f)
+        drawLine(color = targetColor, start = Offset(centerX - tickOuter, centerY), end = Offset(centerX - tickInner, centerY), strokeWidth = 2.5f)
+        drawLine(color = targetColor, start = Offset(centerX + tickInner, centerY), end = Offset(centerX + tickOuter, centerY), strokeWidth = 2.5f)
+
+        // 中層：目標同心光環 (Concentric Target Ring)
+        val midRadius = half * 0.52f
+        drawCircle(
+            color = targetColor.copy(alpha = 0.35f),
+            radius = midRadius,
+            center = Offset(centerX, centerY)
+        )
+        drawCircle(
+            color = highlightColor,
+            radius = midRadius,
+            center = Offset(centerX, centerY),
+            style = Stroke(width = 2f)
+        )
+
+        // 核心：高能透光受光晶核 (Luminous Bullseye Core)
+        val coreRadius = half * 0.35f
+        drawCircle(
+            color = targetColor,
+            radius = coreRadius,
+            center = Offset(centerX, centerY)
+        )
+        // 核心純白高光靶心焦點 (Bullseye Center Dot)
+        drawCircle(
+            color = Color.White,
+            radius = coreRadius * 0.55f,
+            center = Offset(centerX, centerY)
+        )
+        // 核心十字瞄準線 (Center Crosshair)
+        val crossLen = coreRadius * 0.85f
+        drawLine(color = Color(0xFF0F172A), start = Offset(centerX - crossLen, centerY), end = Offset(centerX + crossLen, centerY), strokeWidth = 1.5f)
+        drawLine(color = Color(0xFF0F172A), start = Offset(centerX, centerY - crossLen), end = Offset(centerX, centerY + crossLen), strokeWidth = 1.5f)
     }
-    innerPath.close()
-
-    drawPath(innerPath, color = if (isLit) Color.White.copy(alpha = 0.85f) else Color(0xFF475569))
 }
