@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -49,7 +50,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -143,8 +150,10 @@ fun SudokuScreen(
 
         // Stats Header Card (Timer & Wrong Count & Difficulty Badge)
         ElevatedCard(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(4.dp, RoundedCornerShape(18.dp)),
+            shape = RoundedCornerShape(18.dp),
             colors = CardDefaults.elevatedCardColors(
                 containerColor = MaterialTheme.colorScheme.surface
             )
@@ -152,6 +161,14 @@ fun SudokuScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .background(
+                        brush = Brush.verticalGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                MaterialTheme.colorScheme.surface
+                            )
+                        )
+                    )
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
@@ -177,7 +194,12 @@ fun SudokuScreen(
                 // Difficulty Tag
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.border(
+                        1.dp,
+                        Brush.linearGradient(listOf(Color(0xFFFFD54F), Color(0xFFB8860B))),
+                        RoundedCornerShape(12.dp)
+                    )
                 ) {
                     val diffTitle = when (difficulty) {
                         GameDifficulty.BEGINNER -> Localization.getString("diff_name_beginner", language)
@@ -232,7 +254,7 @@ fun SudokuScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Action Toolbar (Undo, Erase, Pencil Mode Toggle)
+        // Action Toolbar (Undo, Erase, Pencil Mode Toggle, Hint)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
@@ -245,8 +267,15 @@ fun SudokuScreen(
             ) {
                 Surface(
                     shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    modifier = Modifier.size(44.dp)
+                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier
+                        .size(46.dp)
+                        .shadow(3.dp, CircleShape)
+                        .border(
+                            1.dp,
+                            Brush.linearGradient(listOf(Color(0xFFB0BEC5), Color(0xFF78909C))),
+                            CircleShape
+                        )
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
@@ -270,12 +299,19 @@ fun SudokuScreen(
             ) {
                 Surface(
                     shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    modifier = Modifier.size(44.dp)
+                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier
+                        .size(46.dp)
+                        .shadow(3.dp, CircleShape)
+                        .border(
+                            1.dp,
+                            Brush.linearGradient(listOf(Color(0xFFB0BEC5), Color(0xFF78909C))),
+                            CircleShape
+                        )
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
-                             imageVector = Icons.Default.Delete,
+                            imageVector = Icons.Default.Delete,
                             contentDescription = "Erase",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -295,14 +331,22 @@ fun SudokuScreen(
             ) {
                 Surface(
                     shape = CircleShape,
-                    color = if (isPencilMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                    modifier = Modifier.size(44.dp)
+                    color = if (isPencilMode) Color(0xFFFFA000) else MaterialTheme.colorScheme.surface,
+                    modifier = Modifier
+                        .size(46.dp)
+                        .shadow(if (isPencilMode) 6.dp else 3.dp, CircleShape)
+                        .border(
+                            1.5.dp,
+                            if (isPencilMode) Brush.linearGradient(listOf(Color(0xFFFFD54F), Color(0xFFFF8F00)))
+                            else Brush.linearGradient(listOf(Color(0xFFB0BEC5), Color(0xFF78909C))),
+                            CircleShape
+                        )
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.Default.Edit,
                             contentDescription = "Pencil Mode",
-                            tint = if (isPencilMode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = if (isPencilMode) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -311,7 +355,7 @@ fun SudokuScreen(
                     text = if (isPencilMode) Localization.getString("pencil_mode_on", language) else Localization.getString("pencil_mode_off", language),
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = if (isPencilMode) FontWeight.Bold else FontWeight.Normal,
-                        color = if (isPencilMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (isPencilMode) Color(0xFFFFA000) else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 )
             }
@@ -324,8 +368,16 @@ fun SudokuScreen(
                 Box {
                     Surface(
                         shape = CircleShape,
-                        color = if (freeHintsRemaining > 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier.size(44.dp)
+                        color = if (freeHintsRemaining > 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                        modifier = Modifier
+                            .size(46.dp)
+                            .shadow(3.dp, CircleShape)
+                            .border(
+                                1.dp,
+                                if (freeHintsRemaining > 0) Brush.linearGradient(listOf(Color(0xFFFFD54F), Color(0xFFFFA000)))
+                                else Brush.linearGradient(listOf(Color(0xFFB0BEC5), Color(0xFF78909C))),
+                                CircleShape
+                            )
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
@@ -515,6 +567,105 @@ fun SudokuScreen(
     }
 }
 
+// 象牙白微倒角瓷板單元格底板繪製 (取代扁平色塊)
+fun DrawScope.drawPorcelainCell(
+    size: Size,
+    isSelected: Boolean,
+    isSameValue: Boolean,
+    isSameRowOrCol: Boolean,
+    isInitial: Boolean,
+    isDarkTheme: Boolean
+) {
+    val w = size.width
+    val h = size.height
+
+    // 1. 底板基礎漸層 (Base Porcelain Gradient)
+    val baseColors = when {
+        isSelected -> {
+            listOf(Color(0xFFE0F7FA), Color(0xFFB2EBF2), Color(0xFF80DEEA))
+        }
+        isSameValue -> {
+            listOf(Color(0xFFFFF9C4), Color(0xFFFFECB3), Color(0xFFFFE082))
+        }
+        isSameRowOrCol -> {
+            if (isDarkTheme) {
+                listOf(Color(0xFF263238), Color(0xFF1E272C))
+            } else {
+                listOf(Color(0xFFF0F7F9), Color(0xFFE4EFF2))
+            }
+        }
+        isInitial -> {
+            if (isDarkTheme) {
+                listOf(Color(0xFF2C2825), Color(0xFF221E1C))
+            } else {
+                listOf(Color(0xFFFAF7F0), Color(0xFFF2ECE1))
+            }
+        }
+        else -> {
+            if (isDarkTheme) {
+                listOf(Color(0xFF1F1E24), Color(0xFF18171D))
+            } else {
+                listOf(Color(0xFFFFFFFF), Color(0xFFFAF8F5))
+            }
+        }
+    }
+
+    drawRect(
+        brush = Brush.verticalGradient(
+            colors = baseColors,
+            startY = 0f,
+            endY = h
+        ),
+        size = size
+    )
+
+    // 2. 瓷板倒角微高光與陰影 (1.5px Bevel Edges)
+    // 左、上晶透微高光線
+    drawLine(
+        color = if (isSelected) Color(0xCC00E5FF) else if (isDarkTheme) Color(0x22FFFFFF) else Color(0x88FFFFFF),
+        start = Offset(0f, 0.75f),
+        end = Offset(w, 0.75f),
+        strokeWidth = if (isSelected) 2.2f else 1.2f
+    )
+    drawLine(
+        color = if (isSelected) Color(0xCC00E5FF) else if (isDarkTheme) Color(0x22FFFFFF) else Color(0x88FFFFFF),
+        start = Offset(0.75f, 0f),
+        end = Offset(0.75f, h),
+        strokeWidth = if (isSelected) 2.2f else 1.2f
+    )
+
+    // 右、下環境陰影線
+    drawLine(
+        color = if (isSelected) Color(0x660097A7) else Color(0x22000000),
+        start = Offset(0f, h - 0.75f),
+        end = Offset(w, h - 0.75f),
+        strokeWidth = 1.2f
+    )
+    drawLine(
+        color = if (isSelected) Color(0x660097A7) else Color(0x22000000),
+        start = Offset(w - 0.75f, 0f),
+        end = Offset(w - 0.75f, h),
+        strokeWidth = 1.2f
+    )
+
+    // 3. 選中聚光燈聚焦微光環 (Spotlight Ring)
+    if (isSelected) {
+        drawRect(
+            brush = Brush.radialGradient(
+                colors = listOf(Color(0x3300E5FF), Color.Transparent),
+                center = Offset(w * 0.5f, h * 0.5f),
+                radius = w * 0.65f
+            ),
+            size = size
+        )
+        drawRect(
+            color = Color(0xFF00BCD4),
+            size = size,
+            style = Stroke(width = 2.5f)
+        )
+    }
+}
+
 @Composable
 fun SudokuGridView(
     gridSize: Int,
@@ -527,20 +678,40 @@ fun SudokuGridView(
     selectedCellIndex: Int?,
     onCellClick: (Int) -> Unit
 ) {
+    // 精雕黑胡桃木與金屬立體底座護框
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(1f)
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(16.dp),
+                ambientColor = Color(0x66000000),
+                spotColor = Color(0x88000000)
+            )
+            .background(
+                brush = Brush.linearGradient(
+                    colors = listOf(Color(0xFF2C1E17), Color(0xFF1E1510), Color(0xFF140D0A)),
+                    start = Offset(0f, 0f),
+                    end = Offset(600f, 600f)
+                ),
+                shape = RoundedCornerShape(16.dp)
+            )
+            .border(
+                width = 3.dp,
+                brush = Brush.linearGradient(
+                    colors = listOf(Color(0xFFFFD54F), Color(0xFF8D6E63), Color(0xFF5D4037)),
+                    start = Offset(0f, 0f),
+                    end = Offset(400f, 400f)
+                ),
+                shape = RoundedCornerShape(16.dp)
+            )
+            .padding(4.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .border(2.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
     ) {
-        val size = maxWidth
-        val cellSide = size / gridSize
-
         Column(modifier = Modifier.fillMaxSize()) {
             for (r in 0 until gridSize) {
-                Row(modifier = Modifier.fillMaxWidth()) {
+                Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
                     for (c in 0 until gridSize) {
                         val index = r * gridSize + c
                         val isInitial = initialBoard.getOrNull(index)?.isNotEmpty() == true
@@ -548,66 +719,164 @@ fun SudokuGridView(
                         val cellNotes = notesBoard[index] ?: emptySet()
                         val isSelected = selectedCellIndex == index
 
-                        // Determine background highlight
                         val isSameRowOrCol = selectedCellIndex != null && (
                                 (selectedCellIndex / gridSize == r) || (selectedCellIndex % gridSize == c)
                                 )
                         val isSameValue = selectedCellIndex != null && cellVal.isNotEmpty() &&
                                 playerBoard.getOrNull(selectedCellIndex) == cellVal
 
-                        val cellBgColor = when {
-                            isSelected -> MaterialTheme.colorScheme.primaryContainer
-                            isSameValue -> MaterialTheme.colorScheme.secondaryContainer
-                            isSameRowOrCol -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-                            isInitial -> MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
-                            else -> MaterialTheme.colorScheme.surface
-                        }
-
-                        // Border thickness for subgrid separation
-                        val borderTop = if (r % subRows == 0 && r != 0) 2.dp else 0.5.dp
-                        val borderLeft = if (c % subCols == 0 && c != 0) 2.dp else 0.5.dp
-
-                        Box(
+                        SudokuCellView(
+                            cellVal = cellVal,
+                            cellNotes = cellNotes,
+                            symbols = symbols,
+                            gridSize = gridSize,
+                            isInitial = isInitial,
+                            isSelected = isSelected,
+                            isSameValue = isSameValue,
+                            isSameRowOrCol = isSameRowOrCol,
+                            onClick = { onCellClick(index) },
                             modifier = Modifier
                                 .weight(1f)
-                                .aspectRatio(1f)
-                                .background(cellBgColor)
-                                .border(
-                                    width = 0.5.dp,
-                                    color = MaterialTheme.colorScheme.outlineVariant
-                                )
-                                .clickable { onCellClick(index) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (cellVal.isNotEmpty()) {
-                                val fontSp = when (gridSize) {
-                                    4 -> 24.sp
-                                    6 -> 20.sp
-                                    9 -> 16.sp
-                                    12 -> 13.sp
-                                    else -> 14.sp
-                                }
-                                Text(
-                                    text = cellVal,
-                                    style = MaterialTheme.typography.bodyLarge.copy(
-                                        fontSize = fontSp,
-                                        fontWeight = if (isInitial) FontWeight.ExtraBold else FontWeight.Medium,
-                                        color = if (isInitial) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.primary
-                                    ),
-                                    textAlign = TextAlign.Center
-                                )
-                            } else if (cellNotes.isNotEmpty()) {
-                                // Draw notes inside cell
-                                SudokuNotesCell(
-                                    gridSize = gridSize,
-                                    symbols = symbols,
-                                    notes = cellNotes
-                                )
-                            }
-                        }
+                                .fillMaxSize()
+                        )
                     }
                 }
             }
+        }
+
+        // 疊加繪製 3x3 宮位之間的立體雙線（深色陰影線 + 拋光黃金線）
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val cellW = size.width / gridSize
+            val cellH = size.height / gridSize
+
+            // 宮位分割垂直線
+            for (c in 1 until gridSize) {
+                if (c % subCols == 0) {
+                    val x = c * cellW
+                    // 陰影線
+                    drawLine(
+                        color = Color(0xAA111827),
+                        start = Offset(x + 1f, 0f),
+                        end = Offset(x + 1f, size.height),
+                        strokeWidth = 3.2f
+                    )
+                    // 金屬高光線
+                    drawLine(
+                        color = Color(0xEEF59E0B),
+                        start = Offset(x, 0f),
+                        end = Offset(x, size.height),
+                        strokeWidth = 2.2f
+                    )
+                }
+            }
+
+            // 宮位分割水平線
+            for (r in 1 until gridSize) {
+                if (r % subRows == 0) {
+                    val y = r * cellH
+                    // 陰影線
+                    drawLine(
+                        color = Color(0xAA111827),
+                        start = Offset(0f, y + 1f),
+                        end = Offset(size.width, y + 1f),
+                        strokeWidth = 3.2f
+                    )
+                    // 金屬高光線
+                    drawLine(
+                        color = Color(0xEEF59E0B),
+                        start = Offset(0f, y),
+                        end = Offset(size.width, y),
+                        strokeWidth = 2.2f
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SudokuCellView(
+    cellVal: String,
+    cellNotes: Set<String>,
+    symbols: List<String>,
+    gridSize: Int,
+    isInitial: Boolean,
+    isSelected: Boolean,
+    isSameValue: Boolean,
+    isSameRowOrCol: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isDark = MaterialTheme.colorScheme.background.red < 0.5f
+
+    Box(
+        modifier = modifier.clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        // 1. 繪製微倒角瓷板單元格底板
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawPorcelainCell(
+                size = size,
+                isSelected = isSelected,
+                isSameValue = isSameValue,
+                isSameRowOrCol = isSameRowOrCol,
+                isInitial = isInitial,
+                isDarkTheme = isDark
+            )
+        }
+
+        // 2. 繪製 3D 浮雕燙金（題目初始）或璀璨藍寶石（玩家填入）數字
+        if (cellVal.isNotEmpty()) {
+            val fontSp = when (gridSize) {
+                4 -> 26.sp
+                6 -> 22.sp
+                9 -> 18.sp
+                12 -> 14.sp
+                else -> 16.sp
+            }
+
+            if (isInitial) {
+                // 題目初始數字：立體浮雕燙金字（底層深金立體陰影 + 表層金黃高光）
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = cellVal,
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontSize = fontSp,
+                            fontWeight = FontWeight.Black,
+                            color = if (isDark) Color(0xFF5D4037) else Color(0xFF795548).copy(alpha = 0.45f)
+                        ),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.offset(x = 0.6.dp, y = 0.8.dp)
+                    )
+                    Text(
+                        text = cellVal,
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontSize = fontSp,
+                            fontWeight = FontWeight.Black,
+                            color = if (isDark) Color(0xFFFFD54F) else Color(0xFFB8860B)
+                        ),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else {
+                // 玩家填入數字：皇家藍寶石質感
+                Text(
+                    text = cellVal,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontSize = fontSp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isDark) Color(0xFF40C4FF) else Color(0xFF0D47A1)
+                    ),
+                    textAlign = TextAlign.Center
+                )
+            }
+        } else if (cellNotes.isNotEmpty()) {
+            // 筆記候選數：小巧雅致微消光石墨灰字型
+            SudokuNotesCell(
+                gridSize = gridSize,
+                symbols = symbols,
+                notes = cellNotes
+            )
         }
     }
 }
@@ -656,7 +925,8 @@ fun SudokuNotesCell(
                         text = if (notes.contains(symbol)) symbol else "",
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontSize = noteFontSize,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                            fontWeight = FontWeight.SemiBold
                         ),
                         textAlign = TextAlign.Center
                     )
@@ -666,6 +936,7 @@ fun SudokuNotesCell(
     }
 }
 
+// 晶透 3D 圓形水晶數字鍵盤
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SudokuKeypad(
@@ -674,24 +945,43 @@ fun SudokuKeypad(
 ) {
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         symbols.forEach { symbol ->
             Surface(
                 onClick = { onSymbolInput(symbol) },
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surface,
                 modifier = Modifier
-                    .width(48.dp)
-                    .height(48.dp)
+                    .size(52.dp)
+                    .shadow(elevation = 4.dp, shape = CircleShape)
+                    .border(
+                        width = 1.5.dp,
+                        brush = Brush.linearGradient(
+                            listOf(Color(0xFFFFD54F), Color(0xFFB8860B), Color(0xFF8D6E63))
+                        ),
+                        shape = CircleShape
+                    )
             ) {
-                Box(contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            brush = Brush.verticalGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.85f),
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                )
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
                         text = symbol,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFF5D4037)
                         )
                     )
                 }
