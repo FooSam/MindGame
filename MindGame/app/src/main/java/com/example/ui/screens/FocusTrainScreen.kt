@@ -23,17 +23,17 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -45,8 +45,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -55,7 +60,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.AppLanguage
@@ -71,20 +75,24 @@ import kotlin.math.min
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-// Harmonious Pastel Palette for Wheel Sectors
-private val sectorColors = listOf(
-    Color(0xFFFFB4BA), // Soft Rose Pink
-    Color(0xFFBAE6FD), // Soft Sky Blue
-    Color(0xFFBBF7D0), // Soft Mint Green
-    Color(0xFFFEF08A), // Soft Lemon Yellow
-    Color(0xFFE9D5FF), // Soft Lavender
-    Color(0xFFFED7AA), // Soft Peach Orange
-    Color(0xFF99F6E4), // Soft Aqua Cyan
-    Color(0xFFDDD6FE), // Soft Periwinkle
-    Color(0xFFD9F99D), // Soft Lime
-    Color(0xFFFECDD3), // Soft Blossom
-    Color(0xFFA5F3FC), // Soft Ice Blue
-    Color(0xFFFDE68A)  // Soft Butter
+// 星際寶石扇區調色盤 (青金石、皇家紫水晶、祖母綠、琥珀赤金、冰魄天青、熾炎紅寶石)
+private val celestialSectorBrushes = listOf(
+    // 1. 青金石藍 (Lapis Lazuli)
+    Brush.radialGradient(listOf(Color(0xFF283593), Color(0xFF1A237E), Color(0xFF0D1242))),
+    // 2. 皇家紫水晶 (Royal Amethyst)
+    Brush.radialGradient(listOf(Color(0xFF6A1B9A), Color(0xFF4A148C), Color(0xFF24074D))),
+    // 3. 祖母綠晶石 (Emerald Crystal)
+    Brush.radialGradient(listOf(Color(0xFF00695C), Color(0xFF004D40), Color(0xFF00251A))),
+    // 4. 琥珀耀金 (Amber Sun)
+    Brush.radialGradient(listOf(Color(0xFFFF8F00), Color(0xFFE65100), Color(0xFF5D1D00))),
+    // 5. 冰魄天青 (Glacial Cyan)
+    Brush.radialGradient(listOf(Color(0xFF0277BD), Color(0xFF01579B), Color(0xFF002F6C))),
+    // 6. 熾炎紅寶石 (Ruby Flame)
+    Brush.radialGradient(listOf(Color(0xFFC2185B), Color(0xFF880E4F), Color(0xFF4A0020))),
+    // 7. 幻彩鈷藍 (Cobalt Prismatic)
+    Brush.radialGradient(listOf(Color(0xFF1565C0), Color(0xFF0D47A1), Color(0xFF002171))),
+    // 8. 幽影紫晶 (Shadow Plum)
+    Brush.radialGradient(listOf(Color(0xFF7B1FA2), Color(0xFF38006B), Color(0xFF180033)))
 )
 
 @Composable
@@ -106,261 +114,276 @@ fun FocusTrainScreen(
     onCellClick: (Int) -> Unit,
     onLeaderboardClick: () -> Unit
 ) {
-    Column(
+    // 次世代曜石星穹背景
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // Top Navigation Bar
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBackClick) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back"
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        Color(0xFF141722),
+                        Color(0xFF0E1118),
+                        Color(0xFF07090D)
                     )
-                }
-                Spacer(modifier = Modifier.width(4.dp))
-                val diffTitleKey = when (difficulty) {
-                    GameDifficulty.BEGINNER -> "diff_beginner"
-                    GameDifficulty.INTERMEDIATE -> "diff_intermediate"
-                    GameDifficulty.ADVANCED -> "diff_advanced"
-                    GameDifficulty.HARD -> "diff_hard"
-                    GameDifficulty.HELL -> "diff_hell"
-                    GameDifficulty.EPIC -> "diff_epic"
-                }
-                Column {
-                    Text(
-                        text = Localization.getString("game_focus_train", language),
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold
-                        )
-                    )
-                    Text(
-                        text = "${Localization.getString(diffTitleKey, language)} (1~${config.totalNumbers})",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    )
-                }
-            }
-
-            IconButton(onClick = onLeaderboardClick) {
-                Icon(
-                    imageVector = Icons.Default.Leaderboard,
-                    contentDescription = "Leaderboard",
-                    tint = MaterialTheme.colorScheme.primary
                 )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Status Card: Target, Timer, Mistakes
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Top Navigation Bar
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Current Target
-                Column(horizontalAlignment = Alignment.Start) {
-                    Text(
-                        text = Localization.getString("current_target_label", language),
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color(0xFFECEFF1)
                         )
-                    )
-                    Text(
-                        text = if (gameStatus == GameStatus.PLAYING) "$currentTarget" else "-",
-                        style = MaterialTheme.typography.headlineMedium.copy(
-                            fontWeight = FontWeight.ExtraBold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    )
-                }
-
-                // Mistakes Counter
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = Localization.getString("mistakes_label", language),
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    )
-                    Text(
-                        text = "$wrongCount",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = if (wrongCount > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-                        )
-                    )
-                }
-
-                // Timer
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = Localization.getString("time_elapsed_label", language),
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    )
-                    Text(
-                        text = formatTimeMillis(elapsedTimeMillis),
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // Center Game Board Area
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-            contentAlignment = Alignment.Center
-        ) {
-            if (gameStatus == GameStatus.IDLE) {
-                // Ready Overlay: Central Start Button & Instructions
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth(0.90f)
-                        .padding(16.dp),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                        modifier = Modifier.padding(24.dp)
-                    ) {
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    val diffTitleKey = when (difficulty) {
+                        GameDifficulty.BEGINNER -> "diff_beginner"
+                        GameDifficulty.INTERMEDIATE -> "diff_intermediate"
+                        GameDifficulty.ADVANCED -> "diff_advanced"
+                        GameDifficulty.HARD -> "diff_hard"
+                        GameDifficulty.HELL -> "diff_hell"
+                        GameDifficulty.EPIC -> "diff_epic"
+                    }
+                    Column {
                         Text(
                             text = Localization.getString("game_focus_train", language),
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color(0xFFF5F7FA)
                             )
                         )
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Text(
-                            text = Localization.getString("focus_train_ready_hint", language),
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                textAlign = TextAlign.Center,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                lineHeight = 20.sp
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFFFB300))
                             )
-                        )
-                        Spacer(modifier = Modifier.height(20.dp))
-                        Button(
-                            onClick = onStartClick,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(52.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PlayArrow,
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(5.dp))
                             Text(
-                                text = Localization.getString("game_start_button", language),
-                                style = MaterialTheme.typography.titleMedium.copy(
+                                text = "${Localization.getString(diffTitleKey, language)} (1~${config.totalNumbers})",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = Color(0xFFFFB300),
                                     fontWeight = FontWeight.Bold
                                 )
                             )
                         }
                     }
                 }
-            } else {
-                // Active Dynamic Annular Sector Wheel
-                RotatingAnnularWheelBoard(
-                    difficulty = difficulty,
-                    config = config,
-                    numbers = numbers,
-                    clearedIndices = clearedIndices,
-                    wrongTapIndex = wrongTapIndex,
-                    isPlaying = gameStatus == GameStatus.PLAYING,
-                    onCellClick = onCellClick
-                )
-            }
-        }
 
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // Bottom Controls
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Left: Leaderboard Button
-            OutlinedButton(
-                onClick = onLeaderboardClick,
-                shape = RoundedCornerShape(14.dp),
-                modifier = if (gameStatus == GameStatus.IDLE) Modifier.fillMaxWidth() else Modifier
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Leaderboard,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = Localization.getString("leaderboard_button", language),
-                    style = MaterialTheme.typography.labelLarge
-                )
-            }
-
-            // Right: Restart Button (Only when playing or completed)
-            if (gameStatus != GameStatus.IDLE) {
-                Button(
-                    onClick = onResetClick,
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondary
-                    )
+                IconButton(
+                    onClick = onLeaderboardClick,
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(Color(0x22FFFFFF))
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Refresh,
+                        imageVector = Icons.Default.Leaderboard,
+                        contentDescription = "Leaderboard",
+                        tint = Color(0xFFFFD54F)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Status Card: Target, Timer, Mistakes (星盤 HUD 儀表板)
+            FocusTrainHudHeader(
+                currentTarget = currentTarget,
+                wrongCount = wrongCount,
+                elapsedTimeMillis = elapsedTimeMillis,
+                gameStatus = gameStatus,
+                language = language
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Center Game Board Area (星穹天體儀旋轉輪盤)
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                if (gameStatus == GameStatus.IDLE) {
+                    // Ready Overlay: Central Start Button & Instructions
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth(0.92f)
+                            .padding(16.dp),
+                        shape = RoundedCornerShape(24.dp),
+                        color = Color(0xFF1B202C)
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier
+                                .drawBehind {
+                                    drawRoundRect(
+                                        brush = Brush.verticalGradient(
+                                            listOf(Color(0xFFC5A059), Color(0xFF423828))
+                                        ),
+                                        topLeft = Offset.Zero,
+                                        size = size,
+                                        cornerRadius = CornerRadius(24.dp.toPx(), 24.dp.toPx()),
+                                        style = Stroke(width = 1.8.dp.toPx())
+                                    )
+                                }
+                                .padding(24.dp)
+                        ) {
+                            // 星盤圖騰日輪預覽
+                            Box(
+                                modifier = Modifier
+                                    .size(76.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.radialGradient(
+                                            listOf(Color(0xFFFFD54F), Color(0xFFFF8F00), Color(0xFF3E2723))
+                                        )
+                                    )
+                                    .drawBehind {
+                                        drawCircle(Color(0xFFFFF9C4), radius = size.minDimension / 2f, style = Stroke(width = 2.dp.toPx()))
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "1",
+                                    style = MaterialTheme.typography.titleLarge.copy(
+                                        fontSize = 32.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color(0xFF1E1400)
+                                    )
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Text(
+                                text = Localization.getString("game_focus_train", language),
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color(0xFFFFD54F)
+                                )
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = Localization.getString("focus_train_ready_hint", language),
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    textAlign = TextAlign.Center,
+                                    color = Color(0xFFB0BEC5),
+                                    lineHeight = 22.sp
+                                )
+                            )
+                            Spacer(modifier = Modifier.height(22.dp))
+                            Button(
+                                onClick = onStartClick,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(52.dp),
+                                shape = RoundedCornerShape(18.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFFFFB300)
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = null,
+                                    tint = Color(0xFF1E1400),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = Localization.getString("game_start_button", language),
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color(0xFF1E1400)
+                                    )
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    // Active Dynamic Annular Sector Wheel (星穹天體儀雙向旋轉星盤)
+                    RotatingAnnularWheelBoard(
+                        difficulty = difficulty,
+                        config = config,
+                        numbers = numbers,
+                        clearedIndices = clearedIndices,
+                        wrongTapIndex = wrongTapIndex,
+                        isPlaying = gameStatus == GameStatus.PLAYING,
+                        onCellClick = onCellClick
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Bottom Controls
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Left: Leaderboard Button
+                OutlinedButton(
+                    onClick = onLeaderboardClick,
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Color(0xFFFFD54F)
+                    ),
+                    modifier = if (gameStatus == GameStatus.IDLE) Modifier.fillMaxWidth() else Modifier
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Leaderboard,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = Localization.getString("game_reset_button", language),
+                        text = Localization.getString("leaderboard_button", language),
                         style = MaterialTheme.typography.labelLarge.copy(
                             fontWeight = FontWeight.Bold
                         )
                     )
+                }
+
+                // Right: Restart Button
+                if (gameStatus != GameStatus.IDLE) {
+                    Button(
+                        onClick = onResetClick,
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF37474F)
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = Localization.getString("game_reset_button", language),
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        )
+                    }
                 }
             }
         }
@@ -368,50 +391,124 @@ fun FocusTrainScreen(
 
     // Completed Settlement Dialog
     if (gameStatus == GameStatus.COMPLETED && lastCompletedTimeMillis != null) {
-        AlertDialog(
-            onDismissRequest = onResetClick,
-            shape = RoundedCornerShape(24.dp),
-            title = {
+        FocusTrainCompletedDialog(
+            timeMillis = lastCompletedTimeMillis,
+            wrongCount = wrongCount,
+            language = language,
+            onPlayAgain = onStartClick,
+            onBackToMenu = onBackClick
+        )
+    }
+}
+
+/**
+ * 頂部星盤 HUD 儀表板
+ */
+@Composable
+private fun FocusTrainHudHeader(
+    currentTarget: Int,
+    wrongCount: Int,
+    elapsedTimeMillis: Long,
+    gameStatus: GameStatus,
+    language: AppLanguage
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = Color(0xFF1B202A)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .drawBehind {
+                    drawRoundRect(
+                        color = Color(0x33FFFFFF),
+                        topLeft = Offset.Zero,
+                        size = size,
+                        cornerRadius = CornerRadius(18.dp.toPx(), 18.dp.toPx()),
+                        style = Stroke(width = 1.dp.toPx())
+                    )
+                }
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Current Target (星核聚光膠囊)
+            Column(horizontalAlignment = Alignment.Start) {
                 Text(
-                    text = Localization.getString("game_completed_title", language),
-                    style = MaterialTheme.typography.titleLarge.copy(
+                    text = Localization.getString("current_target_label", language),
+                    style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = Color(0xFFB0BEC5)
                     )
                 )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = Localization.getString("record_time_format", language, formatTimeMillis(lastCompletedTimeMillis)),
-                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
-                    )
-                    if (wrongCount > 0) {
-                        Text(
-                            text = "${Localization.getString("mistakes_label", language)}: $wrongCount",
-                            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.error)
-                        )
-                    }
-                    Text(
-                        text = Localization.getString("record_saved_message", language),
-                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = onStartClick,
-                    shape = RoundedCornerShape(12.dp)
+                Spacer(modifier = Modifier.height(2.dp))
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFF262C38)
                 ) {
-                    Text(Localization.getString("play_again_button", language))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = onBackClick) {
-                    Text(Localization.getString("back_to_menu", language))
+                    Text(
+                        text = if (gameStatus == GameStatus.PLAYING) "$currentTarget" else "-",
+                        modifier = Modifier
+                            .drawBehind {
+                                drawRoundRect(
+                                    brush = Brush.verticalGradient(
+                                        listOf(Color(0xFFFFD54F), Color(0xFFFF8F00))
+                                    ),
+                                    topLeft = Offset.Zero,
+                                    size = size,
+                                    cornerRadius = CornerRadius(12.dp.toPx(), 12.dp.toPx()),
+                                    style = Stroke(width = 1.5.dp.toPx())
+                                )
+                            }
+                            .padding(horizontal = 14.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFFFFD54F)
+                        )
+                    )
                 }
             }
-        )
+
+            // Mistakes Counter
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = Localization.getString("mistakes_label", language),
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFB0BEC5)
+                    )
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "$wrongCount",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        color = if (wrongCount > 0) Color(0xFFFF5252) else Color(0xFFECEFF1)
+                    )
+                )
+            }
+
+            // Timer (全息電漿碼錶)
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = Localization.getString("time_elapsed_label", language),
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFB0BEC5)
+                    )
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = formatTimeMillis(elapsedTimeMillis),
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        fontFamily = FontFamily.Monospace,
+                        color = Color(0xFF00E5FF)
+                    )
+                )
+            }
+        }
     }
 }
 
@@ -498,13 +595,10 @@ private fun RotatingAnnularWheelBoard(
             else -> 24.sp
         }
 
-        // Colors
-        val defaultBorderColor = Color(0xFF334155).copy(alpha = 0.35f)
-        val clearedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
-        val errorBorderColor = MaterialTheme.colorScheme.error
-        val clearedBgColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-        val errorBgColor = MaterialTheme.colorScheme.errorContainer
-        val centerDefaultBgColor = Color(0xFFFFFFFF)
+        // 金屬星軌線條色彩
+        val goldTrackColor = Color(0xFFC5A059)
+        val stardustClearedBg = Brush.verticalGradient(listOf(Color(0xFF0F131C), Color(0xFF181C26)))
+        val errorBg = Brush.radialGradient(listOf(Color(0xFFD50000), Color(0xFF6A0000)))
 
         // 1. Canvas Layer: Draws Annular Sectors & Center Circle
         Canvas(
@@ -553,33 +647,24 @@ private fun RotatingAnnularWheelBoard(
                     }
                 }
         ) {
-            // Draw Center Circle
-            val isCenterCleared = clearedIndices.contains(0)
-            val isCenterWrong = wrongTapIndex == 0
-            val centerFill = when {
-                isCenterWrong -> errorBgColor
-                isCenterCleared -> clearedBgColor
-                else -> centerDefaultBgColor
-            }
-            val centerBorder = when {
-                isCenterWrong -> errorBorderColor
-                isCenterCleared -> clearedBorderColor
-                else -> defaultBorderColor
-            }
-
+            // 最外圍星盤金屬底座護盤
             drawCircle(
-                color = centerFill,
-                radius = r0,
+                brush = Brush.radialGradient(
+                    listOf(Color(0xFF1E232E), Color(0xFF0E1118)),
+                    center,
+                    maxRadius + 8.dp.toPx()
+                ),
+                radius = maxRadius + 6.dp.toPx(),
                 center = center
             )
             drawCircle(
-                color = centerBorder,
-                radius = r0,
+                color = Color(0x66C5A059),
+                radius = maxRadius + 6.dp.toPx(),
                 center = center,
-                style = Stroke(width = if (isCenterWrong) 3.dp.toPx() else 2.dp.toPx())
+                style = Stroke(width = 2.dp.toPx())
             )
 
-            // Draw Annular Sectors
+            // Draw Annular Sectors (星際寶石同心圓扇區)
             var sectorGlobalIdx = 1
             config.rings.forEachIndexed { rIdx, ringInfo ->
                 val rIn = innerRadii[rIdx]
@@ -599,18 +684,6 @@ private fun RotatingAnnularWheelBoard(
 
                     val startAngleDeg = (sweepAngleDeg * k) + ringAngle
 
-                    val fillColor = when {
-                        isWrong -> errorBgColor
-                        isCleared -> clearedBgColor
-                        else -> sectorColors[(rIdx * 7 + k) % sectorColors.size]
-                    }
-
-                    val borderColor = when {
-                        isWrong -> errorBorderColor
-                        isCleared -> clearedBorderColor
-                        else -> defaultBorderColor
-                    }
-
                     val sectorPath = createAnnularSectorPath(
                         center = center,
                         innerRadius = rIn,
@@ -619,17 +692,60 @@ private fun RotatingAnnularWheelBoard(
                         sweepAngleDeg = sweepAngleDeg
                     )
 
+                    // 扇區底色 (寶石晶質漸層 / 消除下沉金屬槽 / 錯誤電弧紅)
+                    when {
+                        isWrong -> drawPath(path = sectorPath, brush = errorBg)
+                        isCleared -> drawPath(path = sectorPath, brush = stardustClearedBg)
+                        else -> {
+                            val brushIdx = (rIdx * 7 + k) % celestialSectorBrushes.size
+                            drawPath(path = sectorPath, brush = celestialSectorBrushes[brushIdx])
+                        }
+                    }
+
+                    // 扇區拋光黃金輻條與軌道線
                     drawPath(
                         path = sectorPath,
-                        color = fillColor
-                    )
-                    drawPath(
-                        path = sectorPath,
-                        color = borderColor,
-                        style = Stroke(width = if (isWrong) 2.5.dp.toPx() else 1.5.dp.toPx())
+                        color = if (isWrong) Color(0xFFFF1744) else if (isCleared) Color(0x33C5A059) else goldTrackColor,
+                        style = Stroke(width = if (isWrong) 2.5.dp.toPx() else 1.2.dp.toPx())
                     )
                 }
             }
+
+            // Draw Center Circle (中央曜石日輪金核)
+            val isCenterCleared = clearedIndices.contains(0)
+            val isCenterWrong = wrongTapIndex == 0
+
+            when {
+                isCenterWrong -> drawCircle(brush = errorBg, radius = r0, center = center)
+                isCenterCleared -> drawCircle(brush = stardustClearedBg, radius = r0, center = center)
+                else -> {
+                    // 黑曜金太陽日輪
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            listOf(Color(0xFFFFD54F), Color(0xFFFF8F00), Color(0xFF3E2723), Color(0xFF1A1311)),
+                            center,
+                            r0
+                        ),
+                        radius = r0,
+                        center = center
+                    )
+                }
+            }
+
+            // 中央日輪立體黃金外飾圈
+            drawCircle(
+                color = if (isCenterWrong) Color(0xFFFF1744) else Color(0xFFFFF9C4),
+                radius = r0,
+                center = center,
+                style = Stroke(width = if (isCenterWrong) 3.dp.toPx() else 2.dp.toPx())
+            )
+            // 內同心齒輪細環
+            drawCircle(
+                color = Color(0x66FFD54F),
+                radius = r0 * 0.72f,
+                center = center,
+                style = Stroke(width = 1.dp.toPx())
+            )
         }
 
         // 2. Text Overlay Layer: Renders numbers upright in their respective sector centers
@@ -638,11 +754,6 @@ private fun RotatingAnnularWheelBoard(
             val centerNum = numbers.getOrNull(0) ?: 1
             val isCenterCleared = clearedIndices.contains(0)
             val isCenterWrong = wrongTapIndex == 0
-            val centerTextColor = when {
-                isCenterWrong -> MaterialTheme.colorScheme.onErrorContainer
-                isCenterCleared -> Color(0xFF94A3B8).copy(alpha = 0.4f)
-                else -> Color(0xFF1E293B)
-            }
 
             Box(
                 modifier = Modifier
@@ -655,13 +766,17 @@ private fun RotatingAnnularWheelBoard(
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontSize = centerFontSizeSp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = centerTextColor,
+                        color = when {
+                            isCenterWrong -> Color(0xFFFF8A80)
+                            isCenterCleared -> Color(0x66B0BEC5)
+                            else -> Color(0xFFFFFFFF)
+                        },
                         textAlign = TextAlign.Center
                     )
                 )
             }
 
-            // Ring Numbers
+            // Ring Numbers (3D 浮雕燙金星紋數字)
             var textGlobalIdx = 1
             config.rings.forEachIndexed { rIdx, ringInfo ->
                 val rIn = innerRadii[rIdx]
@@ -691,9 +806,9 @@ private fun RotatingAnnularWheelBoard(
                     val yOffsetDp = with(density) { yPosPx.toDp() }
 
                     val textColor = when {
-                        isWrong -> MaterialTheme.colorScheme.onErrorContainer
-                        isCleared -> Color(0xFF94A3B8).copy(alpha = 0.35f)
-                        else -> Color(0xFF1E293B)
+                        isWrong -> Color(0xFFFF5252)
+                        isCleared -> Color(0x44B0BEC5)
+                        else -> Color(0xFFFFD54F) // 耀眼燙金色
                     }
 
                     val boxSizeDp = 40.dp
@@ -748,4 +863,144 @@ private fun createAnnularSectorPath(
     path.arcTo(innerRect, startAngleDeg + sweepAngleDeg, -sweepAngleDeg, false)
     path.close()
     return path
+}
+
+/**
+ * 現代手遊高級星盤通關結算對話框
+ */
+@Composable
+private fun FocusTrainCompletedDialog(
+    timeMillis: Long,
+    wrongCount: Int,
+    language: AppLanguage,
+    onPlayAgain: () -> Unit,
+    onBackToMenu: () -> Unit
+) {
+    val starCount = if (wrongCount == 0) 3 else if (wrongCount <= 3) 2 else 1
+
+    AlertDialog(
+        onDismissRequest = onPlayAgain,
+        shape = RoundedCornerShape(24.dp),
+        title = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // 星星成就列
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    repeat(3) { i ->
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = null,
+                            tint = if (i < starCount) Color(0xFFFFD54F) else Color(0xFF455A64),
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = Localization.getString("game_completed_title", language),
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFFFFD54F),
+                        textAlign = TextAlign.Center
+                    )
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // 用時大卡片
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = Color(0xFF1E2430),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .drawBehind {
+                                drawRoundRect(
+                                    color = Color(0x66C5A059),
+                                    topLeft = Offset.Zero,
+                                    size = size,
+                                    cornerRadius = CornerRadius(18.dp.toPx(), 18.dp.toPx()),
+                                    style = Stroke(width = 1.5.dp.toPx())
+                                )
+                            }
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = Localization.getString("time_elapsed_label", language),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = Color(0xFFB0BEC5),
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = formatTimeMillis(timeMillis),
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color(0xFF00E5FF)
+                            )
+                        )
+                    }
+                }
+
+                if (wrongCount > 0) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "${Localization.getString("mistakes_label", language)}: $wrongCount 次",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = Color(0xFFFF5252),
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = Localization.getString("record_saved_message", language),
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = Color(0xFF78909C)
+                    )
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onPlayAgain,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB300)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    text = Localization.getString("play_again_button", language),
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFF1E1400)
+                    )
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onBackToMenu) {
+                Text(
+                    text = Localization.getString("back_to_menu", language),
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFB0BEC5)
+                    )
+                )
+            }
+        }
+    )
 }
