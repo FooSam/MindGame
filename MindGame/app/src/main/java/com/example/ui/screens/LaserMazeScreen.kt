@@ -24,8 +24,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.Leaderboard
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -46,10 +48,13 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.audio.SoundManager
 import com.example.data.model.AppLanguage
 import com.example.data.model.GameDifficulty
@@ -85,6 +90,35 @@ private data class MazeParticle(
     val color: Color,
     val radius: Float
 )
+
+/**
+ * 依關卡難度、通關時間與旋轉步數科學評定 1~3 顆 3D 金星勳章
+ */
+fun calculateLaserMazeStars(difficulty: GameDifficulty, timeMs: Long, moves: Int): Int {
+    val sec = timeMs / 1000
+    return when (difficulty) {
+        GameDifficulty.BEGINNER -> when {
+            sec <= 25 && moves <= 6 -> 3
+            sec <= 50 -> 2
+            else -> 1
+        }
+        GameDifficulty.INTERMEDIATE -> when {
+            sec <= 40 && moves <= 10 -> 3
+            sec <= 80 -> 2
+            else -> 1
+        }
+        GameDifficulty.ADVANCED -> when {
+            sec <= 65 && moves <= 16 -> 3
+            sec <= 130 -> 2
+            else -> 1
+        }
+        GameDifficulty.HARD, GameDifficulty.HELL, GameDifficulty.EPIC -> when {
+            sec <= 100 && moves <= 24 -> 3
+            sec <= 200 -> 2
+            else -> 1
+        }
+    }
+}
 
 /**
  * 《雷射迷宮》(Laser Maze) 主畫面
@@ -330,107 +364,150 @@ fun LaserMazeScreen(
     AppBackground(themeStyle = appTheme) {
         Scaffold(
             topBar = {
+                // 頂部全息儀表 HUD
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .padding(horizontal = 14.dp, vertical = 6.dp)
                         .statusBarsPadding(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = {
-                        SoundManager.playClick()
-                        if (!isCleared) onGameInterrupted()
-                        onBackClick()
-                    }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onBackground
-                        )
+                    // 返回按鈕 (晶透圓形按鈕)
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        IconButton(
+                            onClick = {
+                                SoundManager.playClick()
+                                if (!isCleared) onGameInterrupted()
+                                onBackClick()
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = MaterialTheme.colorScheme.onBackground,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
 
-                    // 關卡進度膠囊晶片
+                    // 關卡進度全息膠囊晶片
                     Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
+                        shape = RoundedCornerShape(20.dp),
+                        color = Color(0xFF0F172A).copy(alpha = 0.85f),
+                        border = BorderStroke(
+                            1.5.dp,
+                            Brush.horizontalGradient(
+                                listOf(palette.accentColor.copy(alpha = 0.8f), Color(0xFF38BDF8), palette.accentColor.copy(alpha = 0.4f))
+                            )
+                        )
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = Localization.getString("laser_maze_title", language),
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                text = "⚡ " + Localization.getString("laser_maze_title", language),
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.Black,
+                                    color = Color(0xFF38BDF8),
+                                    fontSize = 14.sp
                                 )
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = MaterialTheme.colorScheme.primary
+                                shape = RoundedCornerShape(10.dp),
+                                color = palette.accentColor
                             ) {
                                 Text(
                                     text = Localization.getString("laser_maze_level", language, currentLevel),
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onPrimary,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color.Black,
                                         fontSize = 11.sp
                                     ),
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                                 )
                             }
                         }
                     }
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        // 3D 視角切換按鈕 (微傾 18° <-> 正俯視 0°)
-                        IconButton(onClick = {
-                            SoundManager.playClick()
-                            toggleTiltView()
-                        }) {
-                            Text(
-                                text = if (tiltPitch > 4f) "📐" else "平",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        // 3D / 平面 視角晶片
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (tiltPitch > 4f) palette.accentColor.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border = BorderStroke(1.dp, if (tiltPitch > 4f) palette.accentColor else Color.Transparent)
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    SoundManager.playClick()
+                                    toggleTiltView()
+                                },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Text(
+                                    text = if (tiltPitch > 4f) "📐" else "平",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
 
                         // 任務簡報與指引按鈕
-                        IconButton(onClick = {
-                            SoundManager.playClick()
-                            showBriefingDialog = true
-                        }) {
+                        IconButton(
+                            onClick = {
+                                SoundManager.playClick()
+                                showBriefingDialog = true
+                            },
+                            modifier = Modifier.size(36.dp)
+                        ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.HelpOutline,
                                 contentDescription = "Help",
-                                tint = MaterialTheme.colorScheme.onBackground
+                                tint = MaterialTheme.colorScheme.onBackground,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
 
                         // 重設按鈕
-                        IconButton(onClick = {
-                            SoundManager.playClick()
-                            loadLevel(currentLevel, showBriefing = false)
-                        }) {
+                        IconButton(
+                            onClick = {
+                                SoundManager.playClick()
+                                loadLevel(currentLevel, showBriefing = false)
+                            },
+                            modifier = Modifier.size(36.dp)
+                        ) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
                                 contentDescription = "Reset",
-                                tint = MaterialTheme.colorScheme.onBackground
+                                tint = MaterialTheme.colorScheme.onBackground,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
 
                         // 排行榜按鈕
-                        IconButton(onClick = {
-                            SoundManager.playClick()
-                            onLeaderboardClick()
-                        }) {
+                        IconButton(
+                            onClick = {
+                                SoundManager.playClick()
+                                onLeaderboardClick()
+                            },
+                            modifier = Modifier.size(36.dp)
+                        ) {
                             Icon(
                                 imageVector = Icons.Default.Leaderboard,
                                 contentDescription = "Leaderboard",
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = palette.accentColor,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
@@ -445,81 +522,95 @@ fun LaserMazeScreen(
                     .padding(horizontal = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // 頂部數據狀態列 (耗時、步數、水晶充能)
+                // 頂部全息數據狀態列 (耗時、步數、受光靶心)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // 耗時
+                    // 耗時晶片
                     Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color(0xFF0F172A).copy(alpha = 0.8f),
+                        border = BorderStroke(1.2.dp, Color(0xFF38BDF8).copy(alpha = 0.6f)),
+                        modifier = Modifier.weight(1.1f)
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
                         ) {
-                            Text(text = "⏱ ", fontSize = 12.sp)
+                            Text(text = "⏱ ", fontSize = 13.sp)
                             val totalSec = elapsedTimeMs / 1000
                             val mins = totalSec / 60
                             val secs = totalSec % 60
                             val tenths = (elapsedTimeMs % 1000) / 100
                             Text(
                                 text = String.format("%02d:%02d.%d", mins, secs, tenths),
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.Black,
+                                    color = Color(0xFF38BDF8),
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 14.sp
                                 )
                             )
                         }
                     }
 
-                    // 步數
+                    // 步數晶片
                     Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f)
-                    ) {
-                        Text(
-                            text = Localization.getString("laser_maze_moves", language, moveCount),
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            ),
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                        )
-                    }
-
-                    // 水晶充能指示
-                    val litCount = boardState.litReceiverIndices.size
-                    val totalCount = boardState.receivers.size
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (litCount == totalCount && totalCount > 0) {
-                            palette.accentColor.copy(alpha = 0.25f)
-                        } else {
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f)
-                        },
-                        border = if (litCount == totalCount && totalCount > 0) {
-                            BorderStroke(1.5.dp, palette.accentColor)
-                        } else null
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color(0xFF0F172A).copy(alpha = 0.8f),
+                        border = BorderStroke(1.2.dp, Color(0xFFFFD54F).copy(alpha = 0.5f)),
+                        modifier = Modifier.weight(0.9f)
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(text = "🔄 ", fontSize = 12.sp)
+                            Text(
+                                text = Localization.getString("laser_maze_moves", language, moveCount),
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFFFD54F),
+                                    fontSize = 12.sp
+                                )
+                            )
+                        }
+                    }
+
+                    // 靶心水晶充能指示晶片
+                    val litCount = boardState.litReceiverIndices.size
+                    val totalCount = boardState.receivers.size
+                    val isAllLit = litCount == totalCount && totalCount > 0
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = if (isAllLit) Color(0xFF064E3B).copy(alpha = 0.85f) else Color(0xFF0F172A).copy(alpha = 0.8f),
+                        border = BorderStroke(
+                            1.2.dp,
+                            if (isAllLit) Color(0xFF34D399) else palette.boardBorderColor.copy(alpha = 0.5f)
+                        ),
+                        modifier = Modifier.weight(1.0f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
                         ) {
                             Text(
-                                text = "🎯 ",
+                                text = if (isAllLit) "⚡ " else "🎯 ",
                                 fontSize = 12.sp
                             )
                             Text(
                                 text = Localization.getString("laser_maze_crystals", language, litCount, totalCount),
                                 style = MaterialTheme.typography.labelMedium.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = if (litCount == totalCount && totalCount > 0) palette.accentColor else MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = if (isAllLit) Color(0xFF34D399) else Color(0xFFE2E8F0),
+                                    fontSize = 12.sp
                                 )
                             )
                         }
@@ -918,37 +1009,114 @@ fun LaserMazeScreen(
         }
     }
 
-    // 開局「任務簡報與光學指引」彈窗 (Mission Briefing Dialog)
+    // 開局「戰術任務簡報與光學指引」全息彈窗 (LaserMazeBriefingDialog)
     if (showBriefingDialog) {
-        AlertDialog(
-            onDismissRequest = {
+        LaserMazeBriefingDialog(
+            currentLevel = currentLevel,
+            gridSize = boardState.gridSize,
+            language = language,
+            palette = palette,
+            onDismiss = {
                 showBriefingDialog = false
                 isTimerRunning = true
-            },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = "📡 ", fontSize = 22.sp)
-                    Text(
-                        text = Localization.getString("laser_maze_briefing_title", language),
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-                    )
+            }
+        )
+    }
+
+    // 次世代 3 星成就通關結算面板 (LaserMazeVictoryDialog)
+    if (showClearDialog) {
+        val litCount = boardState.litReceiverIndices.size
+        val totalCount = boardState.receivers.size
+        LaserMazeVictoryDialog(
+            currentLevel = currentLevel,
+            elapsedTimeMs = elapsedTimeMs,
+            moveCount = moveCount,
+            litCount = litCount,
+            totalCount = totalCount,
+            difficulty = difficulty,
+            language = language,
+            onNextLevel = {
+                showClearDialog = false
+                if (currentLevel < 10) {
+                    loadLevel(currentLevel + 1, showBriefing = true)
+                } else {
+                    loadLevel(1, showBriefing = true)
                 }
             },
-            text = {
+            onLeaderboard = {
+                showClearDialog = false
+                onLeaderboardClick()
+            },
+            onBack = {
+                showClearDialog = false
+                onBackClick()
+            }
+        )
+    }
+}
+
+/**
+ * 次世代戰術任務簡報與光學指引彈窗 (LaserMazeBriefingDialog)
+ */
+@Composable
+private fun LaserMazeBriefingDialog(
+    currentLevel: Int,
+    gridSize: Int,
+    language: AppLanguage,
+    palette: LaserMazePalette,
+    onDismiss: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.78f))
+                .padding(20.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                shape = RoundedCornerShape(26.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
+                border = BorderStroke(
+                    width = 2.dp,
+                    brush = Brush.verticalGradient(
+                        listOf(Color(0xFF38BDF8), palette.accentColor, Color(0xFF1E293B))
+                    )
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
+            ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .padding(22.dp)
                         .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    // 頂部大徽章
+                    Text(
+                        text = "📡 戰術光學任務簡報 📡",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Black,
+                            color = Color(0xFF38BDF8)
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
                     // 關卡規格與目標卡片
                     Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = palette.briefingCardBg,
-                        border = BorderStroke(1.dp, palette.boardBorderColor.copy(alpha = 0.5f)),
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color(0xFF1E293B).copy(alpha = 0.9f),
+                        border = BorderStroke(1.dp, palette.accentColor.copy(alpha = 0.4f)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
+                        Column(modifier = Modifier.padding(14.dp)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -958,15 +1126,16 @@ fun LaserMazeScreen(
                                     text = Localization.getString("laser_maze_level", language, currentLevel),
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontWeight = FontWeight.Bold,
-                                        color = palette.accentColor
+                                        color = Color(0xFFFFD54F)
                                     )
                                 )
                                 Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = palette.accentColor.copy(alpha = 0.15f)
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = palette.accentColor.copy(alpha = 0.2f),
+                                    border = BorderStroke(1.dp, palette.accentColor.copy(alpha = 0.6f))
                                 ) {
                                     Text(
-                                        text = Localization.getString("laser_maze_grid_dim", language, boardState.gridSize, boardState.gridSize),
+                                        text = Localization.getString("laser_maze_grid_dim", language, gridSize, gridSize),
                                         style = MaterialTheme.typography.labelSmall.copy(
                                             color = palette.accentColor,
                                             fontWeight = FontWeight.Bold
@@ -975,192 +1144,464 @@ fun LaserMazeScreen(
                                     )
                                 }
                             }
-                            Spacer(modifier = Modifier.height(6.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = Localization.getString("laser_maze_mission_goal", language),
-                                style = MaterialTheme.typography.bodySmall.copy(color = palette.onBriefingCardText)
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = Color(0xFF94A3B8),
+                                    lineHeight = 16.sp
+                                )
                             )
                         }
                     }
 
+                    Spacer(modifier = Modifier.height(14.dp))
+
                     Text(
-                        text = Localization.getString("laser_maze_mechanics_title", language),
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                        text = "⚡ " + Localization.getString("laser_maze_mechanics_title", language),
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFE2E8F0)
+                        ),
+                        modifier = Modifier.align(Alignment.Start)
                     )
 
-                    // 機關清單提示
-                    BriefingMechanicItem(
-                        icon = "🪞",
-                        title = Localization.getString("piece_mirror_single", language),
-                        desc = "點擊旋轉 90°，微傾視角下可清晰看見立體鍍銀鏡面與反射朝向",
-                        textColor = palette.onBriefingCardText
-                    )
-                    BriefingMechanicItem(
-                        icon = "🌀",
-                        title = Localization.getString("piece_portal", language),
-                        desc = "成對時空蟲洞，光束射入時跨越空間即刻躍遷穿出",
-                        textColor = palette.onBriefingCardText
-                    )
-                    BriefingMechanicItem(
-                        icon = "🎨",
-                        title = "三原色濾光鏡與混光稜鏡",
-                        desc = "濾除或合成專屬波長（紅/綠/藍），匹配共振水晶",
-                        textColor = palette.onBriefingCardText
-                    )
-                    BriefingMechanicItem(
-                        icon = "🎯",
-                        title = Localization.getString("piece_receiver", language),
-                        desc = "雷射的終點目的地！需引導光束擊中受光靶心激發超載，點亮全場終點即通關",
-                        textColor = palette.onBriefingCardText
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        SoundManager.playClick()
-                        showBriefingDialog = false
-                        isTimerRunning = true
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = palette.accentColor)
-                ) {
-                    Text(
-                        text = Localization.getString("laser_maze_start_mission", language),
-                        fontWeight = FontWeight.Bold
-                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // 4 大光學機關項目
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        BriefingMechanicItem(
+                            icon = "🪞",
+                            title = Localization.getString("piece_mirror_single", language),
+                            desc = "點擊旋轉 90°，微傾視角下可清晰看見立體鍍銀鏡面與反射朝向",
+                            textColor = Color(0xFFCBD5E1)
+                        )
+                        BriefingMechanicItem(
+                            icon = "🌀",
+                            title = Localization.getString("piece_portal", language),
+                            desc = "成對時空蟲洞，光束射入時跨越空間即刻躍遷穿出",
+                            textColor = Color(0xFFCBD5E1)
+                        )
+                        BriefingMechanicItem(
+                            icon = "🎨",
+                            title = "三原色濾光鏡與混光稜鏡",
+                            desc = "濾除或合成專屬波長（紅/綠/藍），匹配共振水晶",
+                            textColor = Color(0xFFCBD5E1)
+                        )
+                        BriefingMechanicItem(
+                            icon = "🎯",
+                            title = Localization.getString("piece_receiver", language),
+                            desc = "雷射目的地！引導光束照射全場受光靶心激發超載即通關",
+                            textColor = Color(0xFFCBD5E1)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    // 啟動任務大按鈕
+                    Button(
+                        onClick = {
+                            SoundManager.playClick()
+                            onDismiss()
+                        },
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = palette.accentColor),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                    ) {
+                        Text(
+                            text = "🚀 " + Localization.getString("laser_maze_start_mission", language),
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
+                            )
+                        )
+                    }
                 }
             }
-        )
+        }
     }
+}
 
-    // 通關結算彈窗
-    if (showClearDialog) {
-        AlertDialog(
-            onDismissRequest = { },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = "⚡ ", fontSize = 22.sp)
-                    Text(
-                        text = Localization.getString("laser_maze_win_title", language),
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+/**
+ * 次世代手遊 3 星成就結算面板 (LaserMazeVictoryDialog)
+ */
+@Composable
+private fun LaserMazeVictoryDialog(
+    currentLevel: Int,
+    elapsedTimeMs: Long,
+    moveCount: Int,
+    litCount: Int,
+    totalCount: Int,
+    difficulty: GameDifficulty,
+    language: AppLanguage,
+    onNextLevel: () -> Unit,
+    onLeaderboard: () -> Unit,
+    onBack: () -> Unit
+) {
+    val stars = calculateLaserMazeStars(difficulty, elapsedTimeMs, moveCount)
+
+    Dialog(
+        onDismissRequest = {},
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.78f))
+                .padding(20.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                shape = RoundedCornerShape(26.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
+                border = BorderStroke(
+                    width = 2.dp,
+                    brush = Brush.verticalGradient(
+                        listOf(Color(0xFFFFD54F), Color(0xFF38BDF8), Color(0xFFA855F7))
                     )
-                }
-            },
-            text = {
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
+            ) {
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(22.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    // 頂部大徽章
                     Text(
-                        text = Localization.getString("laser_maze_win_desc", language),
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = "⚡ 光學迷宮任務達成 ⚡",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Black,
+                            color = Color(0xFF38BDF8)
                         )
                     )
 
-                    Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
-                        modifier = Modifier.fillMaxWidth()
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // 1~3 顆 3D 炫金成就星章
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = Localization.getString("your_time", language),
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            )
-                            val totalSec = elapsedTimeMs / 1000
-                            val mins = totalSec / 60
-                            val secs = totalSec % 60
-                            val tenths = (elapsedTimeMs % 1000) / 100
-                            Text(
-                                text = String.format("%02d:%02d.%d", mins, secs, tenths),
-                                style = MaterialTheme.typography.headlineMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceEvenly
-                            ) {
-                                Text(
-                                    text = "旋轉步數：$moveCount 步",
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        for (i in 1..3) {
+                            val earned = i <= stars
+                            Canvas(modifier = Modifier.size(if (i == 2) 48.dp else 40.dp)) {
+                                val r = size.minDimension / 2f
+                                val cx = size.width / 2f
+                                val cy = size.height / 2f
+
+                                if (earned) {
+                                    // 外層金色星芒光暈
+                                    drawCircle(
+                                        brush = Brush.radialGradient(
+                                            colors = listOf(Color(0xFFFFD54F).copy(alpha = 0.5f), Color.Transparent),
+                                            center = Offset(cx, cy),
+                                            radius = r * 1.3f
+                                        ),
+                                        radius = r * 1.25f,
+                                        center = Offset(cx, cy)
                                     )
-                                )
-                                Text(
-                                    text = "評級：⭐⭐⭐ 大師",
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFFFFB300)
+                                    // 3D 星星切面
+                                    val path = Path()
+                                    val points = 5
+                                    val outerR = r * 0.95f
+                                    val innerR = r * 0.42f
+                                    for (p in 0 until points * 2) {
+                                        val rad = if (p % 2 == 0) outerR else innerR
+                                        val angle = (p * PI / points - PI / 2).toFloat()
+                                        val x = cx + rad * cos(angle)
+                                        val y = cy + rad * sin(angle)
+                                        if (p == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                                    }
+                                    path.close()
+                                    drawPath(
+                                        path = path,
+                                        brush = Brush.verticalGradient(
+                                            listOf(Color(0xFFFFF9C4), Color(0xFFFFD54F), Color(0xFFB58107)),
+                                            startY = cy - r,
+                                            endY = cy + r
+                                        )
                                     )
-                                )
+                                    // 頂部高光星芒點
+                                    drawCircle(color = Color.White, radius = 3.5f, center = Offset(cx, cy - r * 0.45f))
+                                } else {
+                                    // 未解鎖暗星
+                                    val path = Path()
+                                    val points = 5
+                                    val outerR = r * 0.90f
+                                    val innerR = r * 0.40f
+                                    for (p in 0 until points * 2) {
+                                        val rad = if (p % 2 == 0) outerR else innerR
+                                        val angle = (p * PI / points - PI / 2).toFloat()
+                                        val x = cx + rad * cos(angle)
+                                        val y = cy + rad * sin(angle)
+                                        if (p == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                                    }
+                                    path.close()
+                                    drawPath(path = path, color = Color(0xFF334155))
+                                }
                             }
                         }
                     }
 
+                    // 星級評價名稱
+                    val rankTitleKey = when (stars) {
+                        3 -> "laser_maze_rank_3star"
+                        2 -> "laser_maze_rank_2star"
+                        else -> "laser_maze_rank_1star"
+                    }
+                    Text(
+                        text = Localization.getString(rankTitleKey, language),
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFFFFD54F)
+                        ),
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // 通關耗時金色高光銘牌
+                    val totalSec = elapsedTimeMs / 1000
+                    val mins = totalSec / 60
+                    val secs = totalSec % 60
+                    val tenths = (elapsedTimeMs % 1000) / 100
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color(0xFF1E293B).copy(alpha = 0.9f),
+                        border = BorderStroke(1.2.dp, Color(0xFFFFD54F).copy(alpha = 0.5f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = Localization.getString("your_time", language),
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    color = Color(0xFF94A3B8)
+                                )
+                            )
+                            Text(
+                                text = String.format("%02d:%02d.%d", mins, secs, tenths),
+                                style = MaterialTheme.typography.headlineLarge.copy(
+                                    fontWeight = FontWeight.Black,
+                                    color = Color(0xFFFFD54F),
+                                    fontFamily = FontFamily.Monospace
+                                )
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // 4 大作戰數據卡片 (2x2 Grid)
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // 旋轉步數
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFF1E293B).copy(alpha = 0.7f),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(10.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = Localization.getString("laser_maze_moves", language, 0).replace("0", "").trim(),
+                                        style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFF94A3B8), fontSize = 10.sp)
+                                    )
+                                    Text(
+                                        text = "🔄 $moveCount 步",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF38BDF8)
+                                        )
+                                    )
+                                }
+                            }
+
+                            // 水晶靶心充能
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFF1E293B).copy(alpha = 0.7f),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(10.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = "水晶充能",
+                                        style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFF94A3B8), fontSize = 10.sp)
+                                    )
+                                    Text(
+                                        text = "⚡ $litCount / $totalCount",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF34D399)
+                                        )
+                                    )
+                                }
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // 關卡進度
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFF1E293B).copy(alpha = 0.7f),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(10.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = "關卡進度",
+                                        style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFF94A3B8), fontSize = 10.sp)
+                                    )
+                                    Text(
+                                        text = "🚩 第 $currentLevel 關",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFFA855F7)
+                                        )
+                                    )
+                                }
+                            }
+
+                            // 難度等級
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFF1E293B).copy(alpha = 0.7f),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(10.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = "光學難度",
+                                        style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFF94A3B8), fontSize = 10.sp)
+                                    )
+                                    Text(
+                                        text = "⚙️ ${Localization.getString(difficulty.name.lowercase(), language)}",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFFFF9800)
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
                     Text(
                         text = "✓ " + Localization.getString("score_saved", language),
                         style = MaterialTheme.typography.labelSmall.copy(
-                            color = MaterialTheme.colorScheme.primary,
+                            color = Color(0xFF34D399),
                             fontWeight = FontWeight.Bold
                         ),
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        SoundManager.playClick()
-                        showClearDialog = false
-                        if (currentLevel < 10) {
-                            loadLevel(currentLevel + 1, showBriefing = true)
-                        } else {
-                            loadLevel(1, showBriefing = true)
-                        }
-                    }
-                ) {
-                    Text(
-                        text = if (currentLevel < 10) {
-                            Localization.getString("laser_maze_next_level", language)
-                        } else {
-                            Localization.getString("play_again", language)
-                        }
-                    )
-                }
-            },
-            dismissButton = {
-                Row {
-                    TextButton(
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // 推薦主行動按鈕：下一關 / 再來一局
+                    Button(
                         onClick = {
                             SoundManager.playClick()
-                            showClearDialog = false
-                            onLeaderboardClick()
-                        }
+                            onNextLevel()
+                        },
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF38BDF8)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(46.dp)
                     ) {
-                        Text(Localization.getString("leaderboard_title", language))
+                        Text(
+                            text = if (currentLevel < 10) {
+                                "▶ " + Localization.getString("laser_maze_next_level", language)
+                            } else {
+                                "🔄 " + Localization.getString("play_again", language)
+                            },
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
+                            )
+                        )
                     }
-                    TextButton(
-                        onClick = {
-                            SoundManager.playClick()
-                            showClearDialog = false
-                            onBackClick()
-                        }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // 次要按鈕列：排行榜與主選單
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(Localization.getString("back_to_menu", language))
+                        OutlinedButton(
+                            onClick = {
+                                SoundManager.playClick()
+                                onLeaderboard()
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, Color(0xFF475569)),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(42.dp)
+                        ) {
+                            Text(
+                                text = "🏆 " + Localization.getString("leaderboard_title", language),
+                                color = Color(0xFFE2E8F0),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                SoundManager.playClick()
+                                onBack()
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, Color(0xFF475569)),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(42.dp)
+                        ) {
+                            Text(
+                                text = "🏠 " + Localization.getString("back_to_menu", language),
+                                color = Color(0xFF94A3B8),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                 }
             }
-        )
+        }
     }
 }
 

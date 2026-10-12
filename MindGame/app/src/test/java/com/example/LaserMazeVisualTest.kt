@@ -61,4 +61,45 @@ class LaserMazeVisualTest {
             assertTrue("Yaw 絕對值不可超過 30 度: $clampedYaw", kotlin.math.abs(clampedYaw) <= 30f)
         }
     }
+
+    @Test
+    fun testCalculateLaserMazeStars() {
+        // BEGINNER 難度
+        org.junit.Assert.assertEquals(3, com.example.ui.screens.calculateLaserMazeStars(com.example.data.model.GameDifficulty.BEGINNER, 15000L, 5))
+        org.junit.Assert.assertEquals(3, com.example.ui.screens.calculateLaserMazeStars(com.example.data.model.GameDifficulty.BEGINNER, 25000L, 6))
+        org.junit.Assert.assertEquals(2, com.example.ui.screens.calculateLaserMazeStars(com.example.data.model.GameDifficulty.BEGINNER, 26000L, 5))
+        org.junit.Assert.assertEquals(2, com.example.ui.screens.calculateLaserMazeStars(com.example.data.model.GameDifficulty.BEGINNER, 20000L, 7))
+        org.junit.Assert.assertEquals(2, com.example.ui.screens.calculateLaserMazeStars(com.example.data.model.GameDifficulty.BEGINNER, 50000L, 4))
+        org.junit.Assert.assertEquals(1, com.example.ui.screens.calculateLaserMazeStars(com.example.data.model.GameDifficulty.BEGINNER, 51000L, 3))
+
+        // INTERMEDIATE 難度
+        org.junit.Assert.assertEquals(3, com.example.ui.screens.calculateLaserMazeStars(com.example.data.model.GameDifficulty.INTERMEDIATE, 35000L, 8))
+        org.junit.Assert.assertEquals(2, com.example.ui.screens.calculateLaserMazeStars(com.example.data.model.GameDifficulty.INTERMEDIATE, 45000L, 8))
+        org.junit.Assert.assertEquals(1, com.example.ui.screens.calculateLaserMazeStars(com.example.data.model.GameDifficulty.INTERMEDIATE, 85000L, 5))
+
+        // ADVANCED 難度
+        org.junit.Assert.assertEquals(3, com.example.ui.screens.calculateLaserMazeStars(com.example.data.model.GameDifficulty.ADVANCED, 60000L, 12))
+        org.junit.Assert.assertEquals(2, com.example.ui.screens.calculateLaserMazeStars(com.example.data.model.GameDifficulty.ADVANCED, 80000L, 12))
+        org.junit.Assert.assertEquals(1, com.example.ui.screens.calculateLaserMazeStars(com.example.data.model.GameDifficulty.ADVANCED, 140000L, 10))
+
+        // HARD 難度
+        org.junit.Assert.assertEquals(3, com.example.ui.screens.calculateLaserMazeStars(com.example.data.model.GameDifficulty.HARD, 90000L, 20))
+        org.junit.Assert.assertEquals(2, com.example.ui.screens.calculateLaserMazeStars(com.example.data.model.GameDifficulty.HARD, 120000L, 20))
+        org.junit.Assert.assertEquals(1, com.example.ui.screens.calculateLaserMazeStars(com.example.data.model.GameDifficulty.HARD, 210000L, 15))
+    }
+
+    @Test
+    fun testLaserMazeRankLocalizationKeys() {
+        val keys = listOf(
+            "laser_maze_rank_3star",
+            "laser_maze_rank_2star",
+            "laser_maze_rank_1star"
+        )
+        for (key in keys) {
+            val zh = com.example.data.model.Localization.getString(key, com.example.data.model.AppLanguage.TRADITIONAL_CHINESE)
+            val en = com.example.data.model.Localization.getString(key, com.example.data.model.AppLanguage.ENGLISH)
+            assertTrue("繁中字串 $key 不應為空", zh.isNotBlank())
+            assertTrue("英文字串 $key 不應為空", en.isNotBlank())
+        }
+    }
 }

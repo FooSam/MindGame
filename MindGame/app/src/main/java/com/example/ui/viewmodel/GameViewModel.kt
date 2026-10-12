@@ -2276,65 +2276,78 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
         val spawnCount = config.simultaneousTargets.coerceAtMost(availableHoles.size)
         val selectedHoles = availableHoles.shuffled().take(spawnCount)
-        val now = System.currentTimeMillis()
+        val staggerDelay = config.staggerDelayMs
 
-        val updatedList = currentHoles.toMutableList()
+        viewModelScope.launch {
+            for ((index, hole) in selectedHoles.withIndex()) {
+                if (!isActive || _whackStatus.value != GameStatus.PLAYING) break
 
-        for (hole in selectedHoles) {
-            val rand = Math.random().toFloat()
-            val isBomb = rand < config.bombProb
-            val isBonus = !isBomb && rand < (config.bombProb + config.bonusProb)
-            val isFakeOut = !isBomb && !isBonus && (Math.random().toFloat() < config.fakeOutProb)
+                // 若非第一個目標，則短暫交錯延遲後依序冒出，避免同一瞬間全部出現
+                if (index > 0 && staggerDelay > 0L) {
+                    delay(staggerDelay)
+                    if (!isActive || _whackStatus.value != GameStatus.PLAYING) break
+                }
 
-            val type = when {
-                isBomb -> AvatarType.BOMB
-                isBonus -> AvatarType.BONUS
-                else -> AvatarType.NORMAL
-            }
+                // 確認該洞口目前未被佔用
+                val latestHoles = _whackHoles.value
+                val targetHole = latestHoles.getOrNull(hole.holeIndex) ?: continue
+                if (targetHole.isPopping || targetHole.isHit) continue
 
-            val expression = if (isFakeOut) AvatarExpression.FAKE_OUT else AvatarExpression.NORMAL
-            val avatarIdx = AvatarCatalog.getRandomAvatarIndex()
+                val now = System.currentTimeMillis()
+                val rand = Math.random().toFloat()
+                val isBomb = rand < config.bombProb
+                val isBonus = !isBomb && rand < (config.bombProb + config.bonusProb)
+                val isFakeOut = !isBomb && !isBonus && (Math.random().toFloat() < config.fakeOutProb)
 
-            val stayMs = config.calculateStayDuration(isFakeOut)
+                val type = when {
+                    isBomb -> AvatarType.BOMB
+                    isBonus -> AvatarType.BONUS
+                    else -> AvatarType.NORMAL
+                }
 
-            val newHoleState = WhackHoleState(
-                holeIndex = hole.holeIndex,
-                avatar = CharacterAvatar(
-                    id = "avatar_${hole.holeIndex}_$now",
-                    avatarIndex = avatarIdx,
-                    type = type,
-                    expression = expression
-                ),
-                isPopping = true,
-                isHit = false,
-                isFakeOut = isFakeOut,
-                spawnTimeMs = now,
-                stayDurationMs = stayMs
-            )
-            updatedList[hole.holeIndex] = newHoleState
+                val expression = if (isFakeOut) AvatarExpression.FAKE_OUT else AvatarExpression.NORMAL
+                val avatarIdx = AvatarCatalog.getRandomAvatarIndex()
+                val stayMs = config.calculateStayDuration(isFakeOut)
 
-            // 啟動單個洞口超時自動縮回
-            viewModelScope.launch {
-                delay(stayMs)
-                val current = _whackHoles.value.getOrNull(hole.holeIndex)
-                if (current != null && current.isPopping && !current.isHit) {
-                    // 若是正常/黃金目標且玩家沒打到，判定為漏打 (Miss)，重置 Combo
-                    if (current.avatar?.type == AvatarType.NORMAL || current.avatar?.type == AvatarType.BONUS) {
-                        if (!current.isFakeOut) {
-                            _whackCombo.value = 0
-                            _whackMisses.value = _whackMisses.value + 1
+                val newHoleState = WhackHoleState(
+                    holeIndex = hole.holeIndex,
+                    avatar = CharacterAvatar(
+                        id = "avatar_${hole.holeIndex}_$now",
+                        avatarIndex = avatarIdx,
+                        type = type,
+                        expression = expression
+                    ),
+                    isPopping = true,
+                    isHit = false,
+                    isFakeOut = isFakeOut,
+                    spawnTimeMs = now,
+                    stayDurationMs = stayMs
+                )
+                val updatedList = latestHoles.toMutableList()
+                updatedList[hole.holeIndex] = newHoleState
+                _whackHoles.value = updatedList
+
+                // 啟動單個洞口超時自動縮回（依各自的 stayMs，因此會依序縮回）
+                launch {
+                    delay(stayMs)
+                    val current = _whackHoles.value.getOrNull(hole.holeIndex)
+                    if (current != null && current.isPopping && !current.isHit) {
+                        // 若是正常/黃金目標且玩家沒打到，判定為漏打 (Miss)，重置 Combo
+                        if (current.avatar?.type == AvatarType.NORMAL || current.avatar?.type == AvatarType.BONUS) {
+                            if (!current.isFakeOut) {
+                                _whackCombo.value = 0
+                                _whackMisses.value = _whackMisses.value + 1
+                            }
                         }
+                        // 縮回洞中
+                        val resetHole = WhackHoleState(holeIndex = hole.holeIndex)
+                        val list = _whackHoles.value.toMutableList()
+                        list[hole.holeIndex] = resetHole
+                        _whackHoles.value = list
                     }
-                    // 縮回洞中
-                    val resetHole = WhackHoleState(holeIndex = hole.holeIndex)
-                    val list = _whackHoles.value.toMutableList()
-                    list[hole.holeIndex] = resetHole
-                    _whackHoles.value = list
                 }
             }
         }
-
-        _whackHoles.value = updatedList
     }
 
     fun onWhackHoleTapped(holeIndex: Int) {

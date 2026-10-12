@@ -1,15 +1,11 @@
 package com.example.ui.screens
 
 import android.os.SystemClock
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -28,6 +24,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -57,9 +55,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -69,14 +69,18 @@ import com.example.data.model.AppLanguage
 import com.example.data.model.GameDifficulty
 import com.example.data.model.Localization
 import com.example.game.pinball.FloatingText
+import com.example.game.pinball.NightMarketBall
 import com.example.game.pinball.NightMarketBallState
 import com.example.game.pinball.NightMarketPhysicsEngine
+import com.example.game.pinball.NightMarketPin
 import com.example.game.pinball.Particle
+import com.example.game.pinball.RewardSlot
 import com.example.ui.components.AppBackground
 import com.example.ui.theme.AppThemeStyle
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 data class NightMarketPrize(
     val rankName: String,
@@ -85,6 +89,36 @@ data class NightMarketPrize(
     val bonusDesc: String?
 )
 
+/**
+ * 依落球平均分與關卡難度科學評定 1~3 顆 3D 金星勳章
+ */
+fun calculateNightMarketStars(difficulty: GameDifficulty, score: Int, totalSlots: Int): Int {
+    val avg = if (totalSlots > 0) score.toFloat() / totalSlots else 0f
+    return when (difficulty) {
+        GameDifficulty.BEGINNER -> when {
+            avg >= 35f -> 3
+            avg >= 22f -> 2
+            else -> 1
+        }
+        GameDifficulty.INTERMEDIATE -> when {
+            avg >= 38f -> 3
+            avg >= 25f -> 2
+            else -> 1
+        }
+        else -> when {
+            avg >= 42f -> 3
+            avg >= 28f -> 2
+            else -> 1
+        }
+    }
+}
+
+/**
+ * 《夜市珠霸王》次世代頂級視覺重構畫面 (NightMarketPinballScreen)
+ * 導入台灣經典紅檜原木底盤與復古黃銅包角、立體車削黃銅釘陣與碰撞金芒、
+ * 超寫實鍍鉻鏡面鋼珠與永久堆疊留存光影、深木格獎勵槽與紅絲絨吸震墊、
+ * 復古紅燈籠記分牌 HUD、夜市香腸攤兌獎大典與次世代手遊成就 3 星結算面板。
+ */
 @Composable
 fun NightMarketPinballScreen(
     difficulty: GameDifficulty,
@@ -122,13 +156,13 @@ fun NightMarketPinballScreen(
             onPinHit = { pin, impulse ->
                 SoundManager.playPinDrop()
                 score += 5
-                if (Math.random() < 0.35) {
+                if (Math.random() < 0.45) {
                     particles.add(
                         Particle(
                             x = pin.x,
                             y = pin.y,
-                            vx = (Math.random().toFloat() - 0.5f) * 60f,
-                            vy = (Math.random().toFloat() - 0.5f) * 60f,
+                            vx = (Math.random().toFloat() - 0.5f) * 70f,
+                            vy = (Math.random().toFloat() - 0.5f) * 70f,
                             color = Color(0xFFFFD54F)
                         )
                     )
@@ -140,7 +174,7 @@ fun NightMarketPinballScreen(
                 ballsRemaining--
                 SoundManager.playCoinOrSausage()
                 floatingTexts.add(
-                    FloatingText("+${slot.points}分", (slot.minX + slot.maxX) / 2f, 560f - 110f, Color(0xFFFFCA28))
+                    FloatingText("+${slot.points}分", (slot.minX + slot.maxX) / 2f, 560f - 110f, Color(0xFFFFD54F))
                 )
 
                 // 啟動下一球裝填倒數；若已打完全部鋼珠，等待看清全盤後結算
@@ -291,12 +325,12 @@ fun NightMarketPinballScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = "🍢 " + Localization.getString("game_night_market_pinball", language),
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
                         color = Color(0xFFFF7043)
                     )
                     Text(
                         text = "${difficulty.name} • ${elapsedSeconds}s",
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -308,77 +342,37 @@ fun NightMarketPinballScreen(
                     Icon(
                         imageVector = Icons.Default.Leaderboard,
                         contentDescription = "Leaderboard",
-                        tint = Color(0xFFFF7043)
+                        tint = Color(0xFFFFB300)
                     )
-                }
-            }
-
-            // 夜市香腸與得分看板
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceAround,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFFFFE0B2)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "🏮 總得分: ",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                            color = Color(0xFFD84315)
-                        )
-                        Text(
-                            text = "$score",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
-                            color = Color(0xFFBF360C)
-                        )
-                    }
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "已落槽: ",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "${engine.settledBalls.size} / $totalBallsCount 珠",
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Black),
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "待發: $ballsRemaining 珠",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // 復古木紋夜市台面畫布
+            // ★★★ 復古紅燈籠與木雕記分牌 HUD (VintageNightMarketHud) ★★★
+            VintageNightMarketHud(
+                score = score,
+                settledCount = engine.settledBalls.size,
+                totalBalls = totalBallsCount,
+                ballsRemaining = ballsRemaining
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // ★★★ 台灣經典紅檜原木底盤與復古黃銅夜市台面 (Taiwan Vintage Cabinet) ★★★
             BoxWithConstraints(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(22.dp))
-                    .background(Color(0xFF4E342E))
+                    .background(Color(0xFF3E2723))
+                    .border(
+                        width = 2.dp,
+                        brush = Brush.verticalGradient(
+                            listOf(Color(0xFF8D6E63), Color(0xFF4E342E), Color(0xFF2E1C14))
+                        ),
+                        shape = RoundedCornerShape(22.dp)
+                    )
             ) {
                 val canvasWidth = constraints.maxWidth.toFloat()
                 val canvasHeight = constraints.maxHeight.toFloat()
@@ -417,207 +411,60 @@ fun NightMarketPinballScreen(
                             }
                         }
                 ) {
-                    // 依賴 renderTick 保證高幀率即時連續繪製
                     val _currentTick = renderTick
 
-                    // 1. 復古木紋背景與邊框
-                    drawRect(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(Color(0xFF5D4037), Color(0xFF3E2723))
-                        )
-                    )
-
-                    // 2. 右側發射走道木質隔板與獨立通道
                     val divX = engine.mainBoardWidth * scaleX
                     val alleyRightX = (engine.virtualWidth - 6f) * scaleX
-                    drawRect(
-                        color = Color(0xFF2D1E18).copy(alpha = 0.65f),
-                        topLeft = Offset(divX, 55f * scaleY),
-                        size = Size(alleyRightX - divX, canvasHeight - 55f * scaleY)
-                    )
-                    drawLine(
-                        color = Color(0xFF8D6E63),
-                        start = Offset(divX, 55f * scaleY),
-                        end = Offset(divX, canvasHeight),
-                        strokeWidth = 4.dp.toPx()
-                    )
-                    drawLine(
-                        color = Color(0xFFBCAAA4),
-                        start = Offset(divX - 1.dp.toPx(), 55f * scaleY),
-                        end = Offset(divX - 1.dp.toPx(), canvasHeight),
-                        strokeWidth = 1.dp.toPx()
+
+                    // 1. 繪製紅檜溫潤原木底板、復古黃銅包角與發射走道 (Cabinet & Rails)
+                    drawTaiwanVintageNightMarketCabinet(
+                        engine = engine,
+                        scaleX = scaleX,
+                        scaleY = scaleY,
+                        canvasWidth = canvasWidth,
+                        canvasHeight = canvasHeight,
+                        divX = divX,
+                        alleyRightX = alleyRightX,
+                        plungerDragDistance = plungerDragDistance,
+                        maxDragDistance = maxDragDistance,
+                        isGameOver = isGameOver
                     )
 
-                    // 2.1 頂部弧形木外導軌 (平順延展至天花板頂壁，徹底消除向下倒勾)
-                    val woodArchPath = Path().apply {
-                        moveTo(alleyRightX, 55f * scaleY)
-                        cubicTo(
-                            alleyRightX, 16f * scaleY,
-                            divX + 5f * scaleX, 16f * scaleY,
-                            divX - 25f * scaleX, 16f * scaleY
-                        )
-                        lineTo(12f * scaleX, 16f * scaleY)
-                    }
-                    drawPath(
-                        path = woodArchPath,
-                        color = Color(0xFFFFB74D),
-                        style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
+                    // 2. 繪製底部深木格獎勵槽與紅絲絨吸震墊 (Vintage Reward Slots)
+                    drawVintageRewardSlots(
+                        engine = engine,
+                        scaleX = scaleX,
+                        scaleY = scaleY
                     )
 
-                    // 2.2 走道下方實體長彈簧與拉桿
-                    val plungerCenterX = (engine.virtualWidth - engine.alleyWidth / 2f) * scaleX
-                    val pullRatio = (plungerDragDistance / maxDragDistance).coerceIn(0f, 1f)
-                    val plungerTopY = (engine.virtualHeight - 50f + pullRatio * 35f) * scaleY
-                    val plungerBottomY = canvasHeight - 4.dp.toPx()
-
-                    val coilCount = 8
-                    val coilStep = (plungerBottomY - plungerTopY) / coilCount
-                    for (i in 0 until coilCount) {
-                        val cy = plungerTopY + i * coilStep
-                        val cOffset = if (i % 2 == 0) -5.dp.toPx() else 5.dp.toPx()
-                        drawLine(
-                            color = Color(0xFFCFD8DC),
-                            start = Offset(plungerCenterX - cOffset, cy),
-                            end = Offset(plungerCenterX + cOffset, cy + coilStep),
-                            strokeWidth = 2.dp.toPx(),
-                            cap = StrokeCap.Round
-                        )
-                    }
-                    drawRoundRect(
-                        color = Color(0xFFEF6C00),
-                        topLeft = Offset(plungerCenterX - 8.dp.toPx(), plungerTopY - 5.dp.toPx()),
-                        size = Size(16.dp.toPx(), 6.dp.toPx()),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx(), 2.dp.toPx())
+                    // 3. 繪製立體車削黃銅釘陣 (Hyper Brass Pegs)
+                    drawHyperBrassPegs(
+                        pins = engine.pins,
+                        scaleX = scaleX,
+                        scaleY = scaleY
                     )
 
-                    // 2.3 發射走道蓄力百分比反饋
-                    if (engine.ball.state == NightMarketBallState.WAITING_LAUNCH && !isGameOver) {
-                        drawContext.canvas.nativeCanvas.apply {
-                            val paint = android.graphics.Paint().apply {
-                                color = if (pullRatio > 0.05f) android.graphics.Color.argb(255, 255, 112, 67) else android.graphics.Color.argb(200, 255, 183, 77)
-                                textSize = 11.sp.toPx()
-                                isFakeBoldText = true
-                                textAlign = android.graphics.Paint.Align.CENTER
-                            }
-                            val label = if (pullRatio > 0.05f) "${(pullRatio * 100).toInt()}%" else "▼下拉"
-                            drawText(label, plungerCenterX, plungerTopY - 26.dp.toPx(), paint)
-                        }
-                    }
-
-                    // 3. 底部加長深木槽 (Deep Wooden Reward Slots: 105f 長度，可堆疊 4~5 顆鋼珠)
-                    val slotDepth = 105f
-                    val sy = (engine.virtualHeight - slotDepth) * scaleY
-                    val sh = slotDepth * scaleY
-
-                    for (slot in engine.rewardSlots) {
-                        val sx = slot.minX * scaleX
-                        val sw = (slot.maxX - slot.minX) * scaleX
-
-                        // 深木槽底板漸層 (立體深邃木格質感)
-                        drawRoundRect(
-                            brush = Brush.verticalGradient(
-                                colors = if (slot.hitAnim > 0f) {
-                                    listOf(Color.White, Color(0xFFFFD54F))
-                                } else {
-                                    listOf(Color(0xFF3E2723), Color(0xFF261815), Color(0xFF1B0F0B))
-                                }
-                            ),
-                            topLeft = Offset(sx + 1.5f, sy),
-                            size = Size(sw - 3f, sh),
-                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx(), 6.dp.toPx())
-                        )
-
-                        // 槽底吸震軟墊
-                        drawRoundRect(
-                            color = Color(0xFF5D4037).copy(alpha = 0.5f),
-                            topLeft = Offset(sx + 3f, (engine.virtualHeight - 14f) * scaleY),
-                            size = Size(sw - 6f, 12f * scaleY),
-                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx(), 3.dp.toPx())
-                        )
-
-                        // 槽位黃銅拋光立體隔板 (Polished Brass Divider)
-                        drawLine(
-                            color = Color(0xFFFFD54F),
-                            start = Offset(sx + 1f, sy - 8f * scaleY),
-                            end = Offset(sx + 1f, engine.virtualHeight * scaleY),
-                            strokeWidth = 3.5.dp.toPx(),
-                            cap = StrokeCap.Round
-                        )
-                        drawLine(
-                            color = Color(0xFFFFF9C4),
-                            start = Offset(sx + 0.5f, sy - 7f * scaleY),
-                            end = Offset(sx + 0.5f, engine.virtualHeight * scaleY),
-                            strokeWidth = 1.dp.toPx()
-                        )
-                        // 隔板頂部黃銅圓帽
-                        drawCircle(
-                            color = Color(0xFFFFD54F),
-                            radius = 3.dp.toPx(),
-                            center = Offset(sx + 1f, sy - 8f * scaleY)
-                        )
-
-                        // 槽頂標籤 (自適應槽寬動態排版：大字分數 + 小字說明)
-                        val maxPoints = engine.rewardSlots.maxOfOrNull { it.points } ?: 50
-                        val isSpecial = slot.points == maxPoints
-                        val topLabel = "${slot.points}"
-                        val bottomLabel = if (isSpecial) "特獎" else "分"
-
-                        drawContext.canvas.nativeCanvas.apply {
-                            val topTextSize = (sw * 0.36f).coerceIn(9f, 15f) * scaleX
-                            val topPaint = android.graphics.Paint().apply {
-                                color = if (isSpecial) android.graphics.Color.YELLOW else android.graphics.Color.WHITE
-                                textSize = topTextSize
-                                isFakeBoldText = true
-                                textAlign = android.graphics.Paint.Align.CENTER
-                            }
-                            drawText(topLabel, sx + sw / 2f, sy + 22f * scaleY, topPaint)
-
-                            val bottomTextSize = (sw * 0.25f).coerceIn(6.5f, 10.5f) * scaleX
-                            val bottomPaint = android.graphics.Paint().apply {
-                                color = if (isSpecial) android.graphics.Color.argb(255, 255, 179, 0) else android.graphics.Color.argb(220, 255, 255, 255)
-                                textSize = bottomTextSize
-                                isFakeBoldText = true
-                                textAlign = android.graphics.Paint.Align.CENTER
-                            }
-                            drawText(bottomLabel, sx + sw / 2f, sy + 38f * scaleY, bottomPaint)
-                        }
-                    }
-
-                    // 4. 黃銅釘陣 (Brass Pins)
-                    for (pin in engine.pins) {
-                        val px = pin.x * scaleX
-                        val py = pin.y * scaleY
-                        val pr = pin.radius * scaleX * (1f + pin.hitAnim * 0.25f)
-
-                        drawCircle(
-                            color = Color(0xFFFFD54F),
-                            radius = pr,
-                            center = Offset(px, py)
-                        )
-                        drawCircle(
-                            color = Color(0xFFFFF9C4),
-                            radius = pr * 0.5f,
-                            center = Offset(px - pr * 0.25f, py - pr * 0.25f)
-                        )
-                    }
-
-                    // 5. 難度特殊機關
+                    // 4. 難度特殊機關精雕
                     engine.spinningPaddle?.let { pad ->
                         val cx = pad.center.x * scaleX
                         val cy = pad.center.y * scaleY
                         val cr = pad.radius * scaleX
                         drawCircle(
-                            color = Color(0xFF29B6F6),
-                            radius = cr * 0.4f,
+                            brush = Brush.radialGradient(
+                                colors = listOf(Color(0xFF38BDF8), Color(0xFF0284C7)),
+                                center = Offset(cx, cy),
+                                radius = cr * 0.45f
+                            ),
+                            radius = cr * 0.45f,
                             center = Offset(cx, cy)
                         )
                         for (i in 0 until 4) {
                             val ang = (pad.angleDeg + i * 90f) * (PI / 180f)
                             drawLine(
-                                color = Color(0xFFE1F5FE),
+                                color = Color(0xFFE0F2FE),
                                 start = Offset(cx, cy),
                                 end = Offset((cx + cos(ang) * cr).toFloat(), (cy + sin(ang) * cr).toFloat()),
-                                strokeWidth = 3.dp.toPx(),
+                                strokeWidth = 3.2.dp.toPx(),
                                 cap = StrokeCap.Round
                             )
                         }
@@ -631,10 +478,17 @@ fun NightMarketPinballScreen(
                         val ty = (gy + sin(rad) * gate.length * scaleY).toFloat()
 
                         drawLine(
-                            color = Color(0xFFFF7043),
+                            color = Color(0xFFFF5722),
                             start = Offset(gx, gy),
                             end = Offset(tx, ty),
                             strokeWidth = 6.dp.toPx(),
+                            cap = StrokeCap.Round
+                        )
+                        drawLine(
+                            color = Color(0xFFFFCCBC),
+                            start = Offset(gx, gy),
+                            end = Offset(tx, ty),
+                            strokeWidth = 2.dp.toPx(),
                             cap = StrokeCap.Round
                         )
                         drawCircle(
@@ -644,49 +498,16 @@ fun NightMarketPinballScreen(
                         )
                     }
 
-                    // 6. ★★★ 留存鋼珠與當前運動鋼珠繪製 (落槽永久保留堆疊，絕不消失) ★★★
-                    // 6.1 繪製所有已落槽堆疊鋼珠 (Settled Balls in Slots)
-                    for (sBall in engine.settledBalls) {
-                        val sbx = sBall.x * scaleX
-                        val sby = sBall.y * scaleY
-                        val sbr = engine.ball.radius * scaleX
+                    // 5. ★★★ 留存鋼珠與當前運動鋼珠繪製 (超寫實鏡面鍍鉻與堆疊留存) ★★★
+                    drawNightMarketChromeBalls(
+                        engine = engine,
+                        scaleX = scaleX,
+                        scaleY = scaleY,
+                        plungerDragDistance = plungerDragDistance,
+                        maxDragDistance = maxDragDistance
+                    )
 
-                        drawCircle(
-                            brush = Brush.radialGradient(
-                                colors = listOf(Color.White, Color(0xFFCFD8DC), Color(0xFF455A64)),
-                                center = Offset(sbx - sbr * 0.35f, sby - sbr * 0.35f),
-                                radius = sbr
-                            ),
-                            radius = sbr,
-                            center = Offset(sbx, sby)
-                        )
-                        drawCircle(
-                            color = Color.White.copy(alpha = 0.5f),
-                            radius = sbr * 0.25f,
-                            center = Offset(sbx - sbr * 0.35f, sby - sbr * 0.35f)
-                        )
-                    }
-
-                    // 6.2 繪製當前發射/運動中之鋼珠 (Active Flying Ball)
-                    val ball = engine.ball
-                    if (ball.state != NightMarketBallState.SETTLED) {
-                        val bx = ball.x * scaleX
-                        val pullOffset = if (ball.state == NightMarketBallState.WAITING_LAUNCH) (plungerDragDistance / maxDragDistance) * 35f else 0f
-                        val by = (ball.y + pullOffset) * scaleY
-                        val br = ball.radius * scaleX
-
-                        drawCircle(
-                            brush = Brush.radialGradient(
-                                colors = listOf(Color.White, Color(0xFFCFD8DC), Color(0xFF546E7A)),
-                                center = Offset(bx - br * 0.3f, by - br * 0.3f),
-                                radius = br
-                            ),
-                            radius = br,
-                            center = Offset(bx, by)
-                        )
-                    }
-
-                    // 7. 粒子與浮動文字
+                    // 6. 粒子與浮動文字
                     for (p in particles) {
                         drawCircle(
                             color = p.color.copy(alpha = p.alpha.coerceIn(0f, 1f)),
@@ -704,7 +525,7 @@ fun NightMarketPinballScreen(
                                     (txt.color.green * 255).toInt(),
                                     (txt.color.blue * 255).toInt()
                                 )
-                                textSize = 15.sp.toPx() * scaleX
+                                textSize = 16.sp.toPx() * scaleX
                                 isFakeBoldText = true
                                 textAlign = android.graphics.Paint.Align.CENTER
                             }
@@ -716,7 +537,7 @@ fun NightMarketPinballScreen(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // 底部極簡蓄力指示與玩法說明 (釋出垂直空間，彈珠台視野大台化)
+            // 底部極簡蓄力指示與玩法說明
             val powerFraction = (plungerDragDistance / maxDragDistance).coerceIn(0f, 1f)
             Surface(
                 shape = RoundedCornerShape(16.dp),
@@ -755,7 +576,7 @@ fun NightMarketPinballScreen(
                         horizontalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = "💡 螢幕中間或右側向下拉動蓄力，鬆手彈射",
+                            text = "💡 螢幕向下拉動蓄力，鬆手彈射鋼珠",
                             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -764,169 +585,765 @@ fun NightMarketPinballScreen(
             }
         }
 
-        // ★★★ 台灣夜市真實彈珠台：打完全部鋼珠後統一兌獎結算彈窗 ★★★
+        // ★★★ 台灣夜市真實彈珠台：打完全部鋼珠後統一兌獎結算彈窗 (NightMarketVictoryDialog) ★★★
         if (isGameOver) {
-            val totalSlots = engine.rewardSlots.size
-            val slotCounts = (0 until totalSlots).map { slotId -> engine.settledBalls.count { it.slotIndex == slotId } }
-            val maxInSlot = slotCounts.maxOrNull() ?: 0
-            val isGrandSlam = slotCounts.all { it == 1 }
+            NightMarketVictoryDialog(
+                difficulty = difficulty,
+                score = score,
+                engine = engine,
+                totalBallsCount = totalBallsCount,
+                elapsedSeconds = elapsedSeconds,
+                language = language,
+                onPlayAgain = {
+                    SoundManager.playClick()
+                    restartGame()
+                },
+                onLeaderboard = {
+                    SoundManager.playClick()
+                    onLeaderboardClick()
+                },
+                onBackMenu = {
+                    SoundManager.playClick()
+                    onBackClick()
+                }
+            )
+        }
+    }
+}
 
-            val bonusSausage = if (maxInSlot >= 3) 1 else 0
-            val bonusDesc = when {
-                isGrandSlam -> "👑 傳奇大滿貫！全盤 $totalSlots 槽均勻各落 1 顆珠子！"
-                maxInSlot >= 3 -> "🎯 一統天下彩蛋！單槽聚集 $maxInSlot 顆 (+1 香腸)"
-                else -> null
-            }
-
-            val avgBallPoints = if (totalSlots > 0) score.toFloat() / totalSlots else 0f
-            val prize = when {
-                isGrandSlam -> NightMarketPrize("🏆 傳奇大滿貫特等獎！", 5, "烤香腸 5 支 + 豪華大娃娃 🧸", bonusDesc)
-                avgBallPoints >= 38f -> NightMarketPrize("頭獎 (香腸霸主)", 3 + bonusSausage, "烤香腸 ${3 + bonusSausage} 支 + 懷舊彈珠汽水 🍾", bonusDesc)
-                avgBallPoints >= 26f -> NightMarketPrize("二獎 (夜市神射)", 2 + bonusSausage, "烤香腸 ${2 + bonusSausage} 支 🌭", bonusDesc)
-                avgBallPoints >= 18f -> NightMarketPrize("三獎 (夜市高手)", 1 + bonusSausage, "烤香腸 ${1 + bonusSausage} 支 🌭", bonusDesc)
-                else -> NightMarketPrize("安慰獎 (好滋味)", bonusSausage, if (bonusSausage > 0) "烤香腸 1 支 🌭" else "懷舊沙士糖 1 顆 🍬", bonusDesc)
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.8f)),
-                contentAlignment = Alignment.Center
+/**
+ * 復古紅燈籠與木雕記分牌 HUD
+ */
+@Composable
+private fun VintageNightMarketHud(
+    score: Int,
+    settledCount: Int,
+    totalBalls: Int,
+    ballsRemaining: Int
+) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = Color(0xFF2E1C14).copy(alpha = 0.88f),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(
+                width = 1.2.dp,
+                brush = Brush.horizontalGradient(
+                    listOf(Color(0xFFFFB300), Color(0xFFFF7043), Color(0xFFFFB300))
+                ),
+                shape = RoundedCornerShape(16.dp)
+            )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 🏮 得分大字
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Card(
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth(0.90f)
-                        .padding(16.dp),
-                    shape = RoundedCornerShape(26.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        .size(34.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFD84315)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "🏮", fontSize = 18.sp)
+                }
+                Column {
+                    Text(
+                        text = "總得分",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = Color(0xFFFFCCBC)
+                    )
+                    Text(
+                        text = String.format("%,d", score),
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Black,
+                            fontFamily = FontFamily.Monospace
+                        ),
+                        color = Color(0xFFFFD54F)
+                    )
+                }
+            }
+
+            // 🍢 落槽與待發進度
+            Column(horizontalAlignment = Alignment.End) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "落槽: ",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = Color(0xFFBCAAA4)
+                    )
+                    Text(
+                        text = "$settledCount / $totalBalls 珠",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Black),
+                        color = Color(0xFFFFAB91)
+                    )
+                }
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "待發: $ballsRemaining 珠",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+                    color = Color(0xFFFFE0B2)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 繪製紅檜溫潤原木底板、復古黃銅包角與發射走道 (Cabinet & Rails)
+ */
+private fun DrawScope.drawTaiwanVintageNightMarketCabinet(
+    engine: NightMarketPhysicsEngine,
+    scaleX: Float,
+    scaleY: Float,
+    canvasWidth: Float,
+    canvasHeight: Float,
+    divX: Float,
+    alleyRightX: Float,
+    plungerDragDistance: Float,
+    maxDragDistance: Float,
+    isGameOver: Boolean
+) {
+    // 1. 溫潤紅檜原木多層漸層木紋底板
+    drawRect(
+        brush = Brush.verticalGradient(
+            colors = listOf(Color(0xFF5D4037), Color(0xFF4E342E), Color(0xFF2E1C14))
+        )
+    )
+
+    // 1.1 細膩微木質紋理線條 (Taiwan Cypress Wood Grain)
+    val grainCount = 12
+    for (i in 1..grainCount) {
+        val gy = canvasHeight * (i / (grainCount + 1f))
+        drawLine(
+            color = Color(0xFF3E2723).copy(alpha = 0.35f),
+            start = Offset(0f, gy),
+            end = Offset(canvasWidth, gy),
+            strokeWidth = 1.2.dp.toPx()
+        )
+    }
+
+    // 1.2 四角復古黃銅護角包邊 (Brass Corner Brackets)
+    val bracketSize = 22.dp.toPx()
+    val brassGold = Color(0xFFFFD54F)
+    val brassDark = Color(0xFFB58107)
+
+    // 左上包角
+    drawPath(
+        path = Path().apply {
+            moveTo(0f, 0f)
+            lineTo(bracketSize, 0f)
+            lineTo(bracketSize, 5.dp.toPx())
+            lineTo(5.dp.toPx(), 5.dp.toPx())
+            lineTo(5.dp.toPx(), bracketSize)
+            lineTo(0f, bracketSize)
+            close()
+        },
+        brush = Brush.linearGradient(listOf(brassGold, brassDark), start = Offset(0f, 0f), end = Offset(bracketSize, bracketSize))
+    )
+    drawCircle(color = Color(0xFFFFF9C4), radius = 2.dp.toPx(), center = Offset(7.dp.toPx(), 7.dp.toPx()))
+
+    // 右上包角
+    drawPath(
+        path = Path().apply {
+            moveTo(canvasWidth, 0f)
+            lineTo(canvasWidth - bracketSize, 0f)
+            lineTo(canvasWidth - bracketSize, 5.dp.toPx())
+            lineTo(canvasWidth - 5.dp.toPx(), 5.dp.toPx())
+            lineTo(canvasWidth - 5.dp.toPx(), bracketSize)
+            lineTo(canvasWidth, bracketSize)
+            close()
+        },
+        brush = Brush.linearGradient(listOf(brassGold, brassDark), start = Offset(canvasWidth, 0f), end = Offset(canvasWidth - bracketSize, bracketSize))
+    )
+    drawCircle(color = Color(0xFFFFF9C4), radius = 2.dp.toPx(), center = Offset(canvasWidth - 7.dp.toPx(), 7.dp.toPx()))
+
+    // 2. 右側發射走道木質通道與深色槽底
+    drawRect(
+        color = Color(0xFF1E130E).copy(alpha = 0.75f),
+        topLeft = Offset(divX, 55f * scaleY),
+        size = Size(alleyRightX - divX, canvasHeight - 55f * scaleY)
+    )
+
+    // 2.1 紅檜實木隔離板
+    drawRect(
+        brush = Brush.horizontalGradient(
+            colors = listOf(Color(0xFF8D6E63), Color(0xFFBCAAA4), Color(0xFF5D4037)),
+            startX = divX - 4.dp.toPx(),
+            endX = divX + 2.dp.toPx()
+        ),
+        topLeft = Offset(divX - 4.dp.toPx(), 55f * scaleY),
+        size = Size(6.dp.toPx(), canvasHeight - 55f * scaleY)
+    )
+    drawLine(
+        color = Color(0xFFD7CCC8),
+        start = Offset(divX - 3.dp.toPx(), 55f * scaleY),
+        end = Offset(divX - 3.dp.toPx(), canvasHeight),
+        strokeWidth = 1.dp.toPx()
+    )
+
+    // 2.2 頂部雙層拋光黃銅圓弧反彈導軌
+    val woodArchPath = Path().apply {
+        moveTo(alleyRightX, 55f * scaleY)
+        cubicTo(
+            alleyRightX, 16f * scaleY,
+            divX + 5f * scaleX, 16f * scaleY,
+            divX - 25f * scaleX, 16f * scaleY
+        )
+        lineTo(12f * scaleX, 16f * scaleY)
+    }
+    // 底層陰影管
+    drawPath(
+        path = woodArchPath,
+        color = Color(0xFF1F140E),
+        style = Stroke(width = 5.dp.toPx(), cap = StrokeCap.Round)
+    )
+    // 中層黃銅管
+    drawPath(
+        path = woodArchPath,
+        color = Color(0xFFFFB300),
+        style = Stroke(width = 3.2.dp.toPx(), cap = StrokeCap.Round)
+    )
+    // 頂層純白鏡面高光線
+    drawPath(
+        path = woodArchPath,
+        color = Color.White,
+        style = Stroke(width = 1.2.dp.toPx(), cap = StrokeCap.Round)
+    )
+
+    // 2.3 發射走道實體彈簧與拉桿
+    val plungerCenterX = (engine.virtualWidth - engine.alleyWidth / 2f) * scaleX
+    val pullRatio = (plungerDragDistance / maxDragDistance).coerceIn(0f, 1f)
+    val plungerTopY = (engine.virtualHeight - 50f + pullRatio * 35f) * scaleY
+    val plungerBottomY = canvasHeight - 4.dp.toPx()
+
+    val coilCount = 8
+    val coilStep = (plungerBottomY - plungerTopY) / coilCount
+    for (i in 0 until coilCount) {
+        val cy = plungerTopY + i * coilStep
+        val cOffset = if (i % 2 == 0) -5.dp.toPx() else 5.dp.toPx()
+        drawLine(
+            color = if (pullRatio > 0.05f) Color(0xFFFFCCBC) else Color(0xFFCFD8DC),
+            start = Offset(plungerCenterX - cOffset, cy),
+            end = Offset(plungerCenterX + cOffset, cy + coilStep),
+            strokeWidth = 2.2.dp.toPx(),
+            cap = StrokeCap.Round
+        )
+    }
+    // 紅漆木質拉把
+    drawRoundRect(
+        color = if (pullRatio > 0.05f) Color(0xFFFF3D00) else Color(0xFFD84315),
+        topLeft = Offset(plungerCenterX - 8.dp.toPx(), plungerTopY - 5.dp.toPx()),
+        size = Size(16.dp.toPx(), 6.dp.toPx()),
+        cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx(), 2.dp.toPx())
+    )
+
+    // 2.4 發射走道蓄力百分比反饋
+    if (engine.ball.state == NightMarketBallState.WAITING_LAUNCH && !isGameOver) {
+        drawContext.canvas.nativeCanvas.apply {
+            val paint = android.graphics.Paint().apply {
+                color = if (pullRatio > 0.05f) android.graphics.Color.argb(255, 255, 112, 67) else android.graphics.Color.argb(220, 255, 183, 77)
+                textSize = 11.sp.toPx()
+                isFakeBoldText = true
+                textAlign = android.graphics.Paint.Align.CENTER
+            }
+            val label = if (pullRatio > 0.05f) "${(pullRatio * 100).toInt()}%" else "▼下拉"
+            drawText(label, plungerCenterX, plungerTopY - 26.dp.toPx(), paint)
+        }
+    }
+}
+
+/**
+ * 繪製底部深木格獎勵槽與紅絲絨吸震墊 (Vintage Reward Slots)
+ */
+private fun DrawScope.drawVintageRewardSlots(
+    engine: NightMarketPhysicsEngine,
+    scaleX: Float,
+    scaleY: Float
+) {
+    val slotDepth = 105f
+    val sy = (engine.virtualHeight - slotDepth) * scaleY
+    val sh = slotDepth * scaleY
+
+    for (slot in engine.rewardSlots) {
+        val sx = slot.minX * scaleX
+        val sw = (slot.maxX - slot.minX) * scaleX
+
+        // 深木格立體槽底漸層
+        drawRoundRect(
+            brush = Brush.verticalGradient(
+                colors = if (slot.hitAnim > 0f) {
+                    listOf(Color.White, Color(0xFFFFD54F))
+                } else {
+                    listOf(Color(0xFF3E2723), Color(0xFF261815), Color(0xFF1B0F0B))
+                }
+            ),
+            topLeft = Offset(sx + 1.5f, sy),
+            size = Size(sw - 3f, sh),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx(), 6.dp.toPx())
+        )
+
+        // 槽底經典夜市紅色吸震絨布墊
+        drawRoundRect(
+            color = Color(0xFFB71C1C).copy(alpha = 0.85f),
+            topLeft = Offset(sx + 2.5f, (engine.virtualHeight - 14f) * scaleY),
+            size = Size(sw - 5f, 12f * scaleY),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx(), 3.dp.toPx())
+        )
+
+        // 槽位黃銅拋光立體隔板
+        drawLine(
+            color = Color(0xFFFFD54F),
+            start = Offset(sx + 1f, sy - 8f * scaleY),
+            end = Offset(sx + 1f, engine.virtualHeight * scaleY),
+            strokeWidth = 3.5.dp.toPx(),
+            cap = StrokeCap.Round
+        )
+        drawLine(
+            color = Color(0xFFFFF9C4),
+            start = Offset(sx + 0.5f, sy - 7f * scaleY),
+            end = Offset(sx + 0.5f, engine.virtualHeight * scaleY),
+            strokeWidth = 1.dp.toPx()
+        )
+        // 隔板頂端圓潤黃銅帽
+        drawCircle(
+            color = Color(0xFFFFD54F),
+            radius = 3.dp.toPx(),
+            center = Offset(sx + 1f, sy - 8f * scaleY)
+        )
+
+        // 槽頂標籤 (自適應槽寬動態排版)
+        val maxPoints = engine.rewardSlots.maxOfOrNull { it.points } ?: 50
+        val isSpecial = slot.points == maxPoints
+        val topLabel = "${slot.points}"
+        val bottomLabel = if (isSpecial) "特獎" else "分"
+
+        drawContext.canvas.nativeCanvas.apply {
+            val topTextSize = (sw * 0.36f).coerceIn(9f, 15f) * scaleX
+            val topPaint = android.graphics.Paint().apply {
+                color = if (isSpecial) android.graphics.Color.YELLOW else android.graphics.Color.WHITE
+                textSize = topTextSize
+                isFakeBoldText = true
+                textAlign = android.graphics.Paint.Align.CENTER
+            }
+            drawText(topLabel, sx + sw / 2f, sy + 22f * scaleY, topPaint)
+
+            val bottomTextSize = (sw * 0.25f).coerceIn(6.5f, 10.5f) * scaleX
+            val bottomPaint = android.graphics.Paint().apply {
+                color = if (isSpecial) android.graphics.Color.argb(255, 255, 179, 0) else android.graphics.Color.argb(220, 255, 255, 255)
+                textSize = bottomTextSize
+                isFakeBoldText = true
+                textAlign = android.graphics.Paint.Align.CENTER
+            }
+            drawText(bottomLabel, sx + sw / 2f, sy + 38f * scaleY, bottomPaint)
+        }
+    }
+}
+
+/**
+ * 繪製立體車削黃銅釘陣 (Hyper Brass Pegs)
+ */
+private fun DrawScope.drawHyperBrassPegs(
+    pins: List<NightMarketPin>,
+    scaleX: Float,
+    scaleY: Float
+) {
+    for (pin in pins) {
+        val px = pin.x * scaleX
+        val py = pin.y * scaleY
+        val pr = pin.radius * scaleX * (1f + pin.hitAnim * 0.22f)
+
+        // 1. 受擊瞬間向外擴散的淡金色衝擊震盪微光圈
+        if (pin.hitAnim > 0.05f) {
+            drawCircle(
+                color = Color(0xFFFFD54F).copy(alpha = pin.hitAnim.coerceIn(0f, 0.8f)),
+                radius = pr * (1.3f + (1f - pin.hitAnim) * 0.8f),
+                center = Offset(px, py),
+                style = Stroke(width = 1.5.dp.toPx())
+            )
+        }
+
+        // 2. 外圈開孔深色受壓木孔陰影凹槽
+        drawCircle(
+            color = Color(0xFF1B0F0B),
+            radius = pr * 1.12f,
+            center = Offset(px + 0.8f * scaleX, py + 1.2f * scaleY)
+        )
+
+        // 3. 中圈車削黃銅金屬多層漸層圓柱體
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(Color(0xFFFFF9C4), Color(0xFFFFD54F), Color(0xFFB58107), Color(0xFF795548)),
+                center = Offset(px - pr * 0.25f, py - pr * 0.25f),
+                radius = pr
+            ),
+            radius = pr,
+            center = Offset(px, py)
+        )
+
+        // 4. 頂部拋光偏心純白高光微點
+        drawCircle(
+            color = Color.White.copy(alpha = 0.95f),
+            radius = pr * 0.32f,
+            center = Offset(px - pr * 0.25f, py - pr * 0.25f)
+        )
+    }
+}
+
+/**
+ * 繪製留存鋼珠與當前運動鋼珠 (超寫實鏡面鍍鉻與堆疊留存)
+ */
+private fun DrawScope.drawNightMarketChromeBalls(
+    engine: NightMarketPhysicsEngine,
+    scaleX: Float,
+    scaleY: Float,
+    plungerDragDistance: Float,
+    maxDragDistance: Float
+) {
+    val sbr = engine.ball.radius * scaleX
+
+    // 1. 繪製所有已落槽堆疊鋼珠 (Settled Balls in Slots)
+    for (sBall in engine.settledBalls) {
+        val sbx = sBall.x * scaleX
+        val sby = sBall.y * scaleY
+
+        // 接觸陰影
+        drawCircle(
+            color = Color(0x66000000),
+            radius = sbr * 0.95f,
+            center = Offset(sbx + 1.5f * scaleX, sby + 2f * scaleY)
+        )
+        // 拋光金屬球體
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(Color.White, Color(0xFFF1F5F9), Color(0xFFCBD5E1), Color(0xFF64748B), Color(0xFF334155)),
+                center = Offset(sbx - sbr * 0.35f, sby - sbr * 0.35f),
+                radius = sbr * 1.05f
+            ),
+            radius = sbr,
+            center = Offset(sbx, sby)
+        )
+        // 偏心純白高光
+        drawCircle(
+            color = Color.White.copy(alpha = 0.9f),
+            radius = sbr * 0.28f,
+            center = Offset(sbx - sbr * 0.32f, sby - sbr * 0.32f)
+        )
+    }
+
+    // 2. 繪製當前運動中之鋼珠 (Active Flying Ball)
+    val ball = engine.ball
+    if (ball.state != NightMarketBallState.SETTLED) {
+        val bx = ball.x * scaleX
+        val pullOffset = if (ball.state == NightMarketBallState.WAITING_LAUNCH) (plungerDragDistance / maxDragDistance) * 35f else 0f
+        val by = (ball.y + pullOffset) * scaleY
+
+        // 移動微光流光
+        val speedSq = ball.vx * ball.vx + ball.vy * ball.vy
+        if (speedSq > 2000f) {
+            val speed = sqrt(speedSq)
+            val dirX = -ball.vx / speed
+            val dirY = -ball.vy / speed
+            val trailLen = (speed * 0.035f).coerceIn(3f, 18f) * scaleX
+            drawLine(
+                brush = Brush.linearGradient(
+                    colors = listOf(Color(0xFFFFD54F).copy(alpha = 0.5f), Color.Transparent),
+                    start = Offset(bx, by),
+                    end = Offset(bx + dirX * trailLen, by + dirY * trailLen)
+                ),
+                start = Offset(bx, by),
+                end = Offset(bx + dirX * trailLen, by + dirY * trailLen),
+                strokeWidth = sbr * 1.4f,
+                cap = StrokeCap.Round
+            )
+        }
+
+        // 金屬投射陰影
+        drawCircle(
+            color = Color(0x66000000),
+            radius = sbr * 0.95f,
+            center = Offset(bx + 2f * scaleX, by + 2.5f * scaleY)
+        )
+
+        // 拋光金屬球體
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(Color.White, Color(0xFFF1F5F9), Color(0xFFCBD5E1), Color(0xFF64748B), Color(0xFF334155)),
+                center = Offset(bx - sbr * 0.35f, by - sbr * 0.35f),
+                radius = sbr * 1.05f
+            ),
+            radius = sbr,
+            center = Offset(bx, by)
+        )
+
+        // 底部木質微暖光反射 (Warm ambient bounce)
+        drawArc(
+            brush = Brush.radialGradient(
+                colors = listOf(Color(0x66FFAB91), Color.Transparent),
+                center = Offset(bx, by + sbr * 0.5f),
+                radius = sbr * 0.7f
+            ),
+            startAngle = 30f,
+            sweepAngle = 120f,
+            useCenter = false,
+            topLeft = Offset(bx - sbr * 0.85f, by - sbr * 0.85f),
+            size = Size(sbr * 1.7f, sbr * 1.7f),
+            style = Stroke(width = sbr * 0.28f, cap = StrokeCap.Round)
+        )
+
+        // 頂部純白聚光點
+        drawCircle(
+            color = Color.White,
+            radius = sbr * 0.28f,
+            center = Offset(bx - sbr * 0.32f, by - sbr * 0.32f)
+        )
+    }
+}
+
+/**
+ * 台灣夜市真實彈珠台：打完全部鋼珠後統一兌獎結算彈窗 (NightMarketVictoryDialog)
+ */
+@Composable
+private fun NightMarketVictoryDialog(
+    difficulty: GameDifficulty,
+    score: Int,
+    engine: NightMarketPhysicsEngine,
+    totalBallsCount: Int,
+    elapsedSeconds: Int,
+    language: AppLanguage,
+    onPlayAgain: () -> Unit,
+    onLeaderboard: () -> Unit,
+    onBackMenu: () -> Unit
+) {
+    val totalSlots = engine.rewardSlots.size
+    val slotCounts = (0 until totalSlots).map { slotId -> engine.settledBalls.count { it.slotIndex == slotId } }
+    val maxInSlot = slotCounts.maxOrNull() ?: 0
+    val isGrandSlam = slotCounts.all { it == 1 }
+
+    val bonusSausage = if (maxInSlot >= 3) 1 else 0
+    val bonusDesc = when {
+        isGrandSlam -> "👑 傳奇大滿貫！全盤 $totalSlots 槽均勻各落 1 顆珠子！"
+        maxInSlot >= 3 -> "🎯 一統天下彩蛋！單槽聚集 $maxInSlot 顆 (+1 香腸)"
+        else -> null
+    }
+
+    val avgBallPoints = if (totalSlots > 0) score.toFloat() / totalSlots else 0f
+    val prize = when {
+        isGrandSlam -> NightMarketPrize("🏆 傳奇大滿貫特等獎！", 5, "烤香腸 5 支 + 豪華大娃娃 🧸", bonusDesc)
+        avgBallPoints >= 38f -> NightMarketPrize("頭獎 (香腸霸主)", 3 + bonusSausage, "烤香腸 ${3 + bonusSausage} 支 + 懷舊彈珠汽水 🍾", bonusDesc)
+        avgBallPoints >= 26f -> NightMarketPrize("二獎 (夜市神射)", 2 + bonusSausage, "烤香腸 ${2 + bonusSausage} 支 🌭", bonusDesc)
+        avgBallPoints >= 18f -> NightMarketPrize("三獎 (夜市高手)", 1 + bonusSausage, "烤香腸 ${1 + bonusSausage} 支 🌭", bonusDesc)
+        else -> NightMarketPrize("安慰獎 (好滋味)", bonusSausage, if (bonusSausage > 0) "烤香腸 1 支 🌭" else "懷舊沙士糖 1 顆 🍬", bonusDesc)
+    }
+
+    val stars = calculateNightMarketStars(difficulty, score, totalSlots)
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.82f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .padding(14.dp),
+            shape = RoundedCornerShape(26.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF2E1C14)),
+            border = androidx.compose.foundation.BorderStroke(
+                width = 1.5.dp,
+                brush = Brush.verticalGradient(
+                    listOf(Color(0xFFFFD54F), Color(0xFFFF7043), Color(0xFF4E342E))
+                )
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // 3 星耀眼金色徽章
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    for (i in 1..3) {
+                        val isLit = i <= stars
+                        Box(
+                            modifier = Modifier
+                                .size(if (i == 2) 46.dp else 38.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (isLit) {
+                                        Brush.radialGradient(
+                                            listOf(Color(0xFFFFF9C4), Color(0xFFFFD54F), Color(0xFFF57F17))
+                                        )
+                                    } else {
+                                        Brush.radialGradient(
+                                            listOf(Color(0xFF4E342E), Color(0xFF1B0F0B))
+                                        )
+                                    }
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = "Star $i",
+                                tint = if (isLit) Color.White else Color(0xFF8D6E63),
+                                modifier = Modifier.size(if (i == 2) 26.dp else 20.dp)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text(
+                    text = "🏮 夜市香腸攤 兌獎處 🏮",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
+                    color = Color(0xFFFFD54F),
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = Color(0xFF3E2723).copy(alpha = 0.85f),
+                    modifier = Modifier.fillMaxWidth(),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF5D4037))
                 ) {
                     Column(
-                        modifier = Modifier.padding(20.dp),
+                        modifier = Modifier.padding(14.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "🏮 夜市彈珠香腸攤 兌獎處 🏮",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
-                            color = Color(0xFFD84315),
+                            text = prize.rankName,
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Black),
+                            color = Color(0xFFFFAB91)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "獎品：${prize.giftName}",
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                            color = Color(0xFFFFE0B2),
                             textAlign = TextAlign.Center
                         )
 
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        Surface(
-                            shape = RoundedCornerShape(18.dp),
-                            color = Color(0xFFFFE0B2).copy(alpha = 0.6f),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(14.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                        prize.bonusDesc?.let { bDesc ->
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = Color(0xFFD84315)
                             ) {
                                 Text(
-                                    text = prize.rankName,
-                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Black),
-                                    color = Color(0xFFBF360C)
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "獎品：${prize.giftName}",
-                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = Color(0xFFE65100),
-                                    textAlign = TextAlign.Center
-                                )
-
-                                prize.bonusDesc?.let { bDesc ->
-                                    Spacer(modifier = Modifier.height(6.dp))
-                                    Surface(
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = Color(0xFFFFCC80)
-                                    ) {
-                                        Text(
-                                            text = bDesc,
-                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                            color = Color(0xFFB71C1C),
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = "🎯 本局總分: $score 分 (打完 10 顆鋼珠)",
-                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Black),
-                                    color = MaterialTheme.colorScheme.primary
+                                    text = bDesc,
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = Color.White,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                 )
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // 各槽落球狀況列表
+                        Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "📊 各槽落球成果 (常態分佈):",
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = "🎯 本局總分: $score 分 (打完 $totalBallsCount 顆鋼珠)",
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.Black,
+                                fontFamily = FontFamily.Monospace
+                            ),
+                            color = Color(0xFFFFD54F)
                         )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // 各槽落球狀況列表 (自適應全部槽數排版)
+                Text(
+                    text = "📊 各槽落球成果 (常態分佈):",
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                    color = Color(0xFFBCAAA4)
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    engine.rewardSlots.forEachIndexed { idx, rSlot ->
+                        val count = if (idx < slotCounts.size) slotCounts[idx] else 0
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 1.dp)
                         ) {
-                            val slotLabels = listOf("10分", "20分", "30分", "50分", "30分", "20分")
-                            slotCounts.forEachIndexed { idx, count ->
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .padding(horizontal = 2.dp)
-                                ) {
-                                    Text(
-                                        text = "${count}珠",
-                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black),
-                                        color = if (count > 0) Color(0xFFD84315) else Color.Gray
-                                    )
-                                    Text(
-                                        text = slotLabels[idx],
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontSize = 9.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
+                            Text(
+                                text = "${count}珠",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black),
+                                fontSize = 10.sp,
+                                color = if (count > 0) Color(0xFFFF7043) else Color(0xFF8D6E63)
+                            )
+                            Text(
+                                text = "${rSlot.points}分",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 8.5.sp,
+                                color = Color(0xFFD7CCC8)
+                            )
                         }
+                    }
+                }
 
-                        Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Button(
-                                onClick = {
-                                    SoundManager.playClick()
-                                    restartGame()
-                                },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7043))
-                            ) {
-                                Icon(Icons.Default.Refresh, contentDescription = null)
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("再來一盤", fontWeight = FontWeight.Bold)
-                            }
+                Button(
+                    onClick = onPlayAgain,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5722))
+                ) {
+                    Icon(Icons.Default.Refresh, contentDescription = null, tint = Color.White)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("再來一盤", fontWeight = FontWeight.Bold, color = Color.White)
+                }
 
-                            Button(
-                                onClick = {
-                                    SoundManager.playClick()
-                                    onBackClick()
-                                },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                            ) {
-                                Text("收下獎勵", fontWeight = FontWeight.Bold)
-                            }
-                        }
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Button(
+                        onClick = onLeaderboard,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(46.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706))
+                    ) {
+                        Icon(Icons.Default.Leaderboard, contentDescription = null, tint = Color.White)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("排行榜", fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+
+                    Button(
+                        onClick = onBackMenu,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(46.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4E342E))
+                    ) {
+                        Text("收下獎勵", fontWeight = FontWeight.Bold, color = Color(0xFFFFCCBC))
                     }
                 }
             }

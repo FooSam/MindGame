@@ -46,7 +46,8 @@ data class WhackDifficultyConfig(
     val spawnIntervalMs: Long,
     val gameDurationMs: Long = 45_000L,
     val fakeOutMinStayMs: Long = 400L,
-    val fakeOutMaxStayMs: Long = 600L
+    val fakeOutMaxStayMs: Long = 600L,
+    val staggerDelayMs: Long = 160L
 ) {
     fun calculateStayDuration(isFakeOut: Boolean): Long {
         return if (isFakeOut) {
@@ -96,56 +97,59 @@ data class WhackDifficultyConfig(
                     rows = 3,
                     cols = 3,
                     totalHoles = 9,
-                    stayDurationMs = 900L,
+                    stayDurationMs = 950L,
                     fakeOutProb = 0.20f,
                     bombProb = 0.15f,
                     bonusProb = 0.10f,
                     simultaneousTargets = 1,
                     spawnIntervalMs = 850L,
-                    fakeOutMinStayMs = 600L,
-                    fakeOutMaxStayMs = 800L
+                    fakeOutMinStayMs = 650L,
+                    fakeOutMaxStayMs = 850L
                 )
                 GameDifficulty.HARD -> WhackDifficultyConfig(
                     difficulty = difficulty,
                     rows = 3,
                     cols = 3,
                     totalHoles = 9,
-                    stayDurationMs = 700L,
+                    stayDurationMs = 1050L,
                     fakeOutProb = 0.30f,
                     bombProb = 0.20f,
                     bonusProb = 0.12f,
                     simultaneousTargets = 2,
-                    spawnIntervalMs = 650L,
-                    fakeOutMinStayMs = 500L,
-                    fakeOutMaxStayMs = 650L
+                    spawnIntervalMs = 850L,
+                    fakeOutMinStayMs = 700L,
+                    fakeOutMaxStayMs = 850L,
+                    staggerDelayMs = 180L
                 )
                 GameDifficulty.HELL -> WhackDifficultyConfig(
                     difficulty = difficulty,
                     rows = 4,
                     cols = 3,
                     totalHoles = 12,
-                    stayDurationMs = 550L,
+                    stayDurationMs = 900L,
                     fakeOutProb = 0.40f,
                     bombProb = 0.25f,
                     bonusProb = 0.15f,
                     simultaneousTargets = 2,
-                    spawnIntervalMs = 450L,
-                    fakeOutMinStayMs = 420L,
-                    fakeOutMaxStayMs = 520L
+                    spawnIntervalMs = 700L,
+                    fakeOutMinStayMs = 600L,
+                    fakeOutMaxStayMs = 750L,
+                    staggerDelayMs = 160L
                 )
                 GameDifficulty.EPIC -> WhackDifficultyConfig(
                     difficulty = difficulty,
                     rows = 4,
                     cols = 3,
                     totalHoles = 12,
-                    stayDurationMs = 450L,
+                    stayDurationMs = 800L,
                     fakeOutProb = 0.50f,
                     bombProb = 0.30f,
                     bonusProb = 0.20f,
                     simultaneousTargets = 3,
-                    spawnIntervalMs = 380L,
-                    fakeOutMinStayMs = 380L,
-                    fakeOutMaxStayMs = 450L
+                    spawnIntervalMs = 600L,
+                    fakeOutMinStayMs = 520L,
+                    fakeOutMaxStayMs = 650L,
+                    staggerDelayMs = 150L
                 )
             }
         }

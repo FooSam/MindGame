@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -389,12 +390,37 @@ fun GlassPuzzleCubeScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // 計時與進度狀態卡片
-                ElevatedCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp)
+                // 次世代星穹水晶儀表板 HUD (CrystalAstrolabeHud)
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .border(
+                            width = 1.2.dp,
+                            brush = Brush.horizontalGradient(
+                                listOf(
+                                    currentGlassTheme.edgeHighlightColor.copy(alpha = 0.55f),
+                                    Color(0x3394A3B8),
+                                    currentGlassTheme.edgeHighlightColor.copy(alpha = 0.55f)
+                                )
+                            ),
+                            shape = RoundedCornerShape(18.dp)
+                        ),
+                    color = Color(0xCC0F172A),
+                    shadowElevation = 8.dp
                 ) {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+                    Column(
+                        modifier = Modifier
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        Color(0xFF1E293B).copy(alpha = 0.85f),
+                                        Color(0xFF0F172A).copy(alpha = 0.95f)
+                                    )
+                                )
+                            )
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                    ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -403,47 +429,98 @@ fun GlassPuzzleCubeScreen(
                             val seconds = (elapsedTimeMillis / 1000) % 60
                             val minutes = (elapsedTimeMillis / 1000) / 60
                             val timeStr = String.format("%02d:%02d", minutes, seconds)
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = Color(0x3338BDF8),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x6638BDF8))
+                            ) {
                                 Text(
                                     text = "⏱ $timeStr",
                                     style = MaterialTheme.typography.titleMedium.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color(0xFFE0F2FE),
+                                        letterSpacing = 1.2.sp
+                                    ),
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                                 )
                             }
 
-                            Text(
-                                text = Localization.getString("glass_cube_progress", language, filledCellCount),
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontWeight = FontWeight.SemiBold
+                            val progressPct = ((filledCellCount.toFloat() / 54f) * 100).toInt()
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "💎 $filledCellCount / 54",
+                                    style = MaterialTheme.typography.titleSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFFFFD54F)
+                                    )
                                 )
-                            )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "($progressPct%)",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = Color(0xFF94A3B8),
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                )
+                            }
                         }
 
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
-                        LinearProgressIndicator(
-                            progress = { (filledCellCount.toFloat() / 54f).coerceIn(0f, 1f) },
+                        // 54 格流光水晶能量管 (Prismatic Mana Tube)
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(8.dp)
-                                .clip(RoundedCornerShape(4.dp)),
-                            color = currentGlassTheme.baseColor,
-                            trackColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
+                                .height(10.dp)
+                                .clip(RoundedCornerShape(5.dp))
+                                .background(Color(0xFF0B1120))
+                                .border(1.dp, Color(0x4464748B), RoundedCornerShape(5.dp))
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(fraction = (filledCellCount.toFloat() / 54f).coerceIn(0f, 1f))
+                                    .height(10.dp)
+                                    .clip(RoundedCornerShape(5.dp))
+                                    .background(
+                                        Brush.horizontalGradient(
+                                            listOf(
+                                                currentGlassTheme.baseColor,
+                                                currentGlassTheme.edgeHighlightColor,
+                                                Color.White.copy(alpha = 0.9f)
+                                            )
+                                        )
+                                    )
+                            )
+                        }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // 中央 3D 掌上型玻璃魔方視圖
+                // 中央 3D 掌上型玻璃魔方視圖 (星空天文台懸浮舞台)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.12f))
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(
+                            Brush.radialGradient(
+                                listOf(
+                                    Color(0xFF1E293B).copy(alpha = 0.50f),
+                                    Color(0xFF0B1120).copy(alpha = 0.88f)
+                                )
+                            )
+                        )
+                        .border(
+                            width = 1.2.dp,
+                            brush = Brush.verticalGradient(
+                                listOf(
+                                    Color(0x5594A3B8),
+                                    Color(0x22334155)
+                                )
+                            ),
+                            shape = RoundedCornerShape(22.dp)
+                        )
                         .onGloballyPositioned { coordinates ->
                             cubeCanvasBounds = coordinates.boundsInRoot()
                         }
@@ -489,10 +566,11 @@ fun GlassPuzzleCubeScreen(
                         hoverCandidate = currentSnapCandidate
                     )
 
-                    // 旋轉與操作小提示標籤
+                    // 旋轉與操作小提示標籤 (全息微倒角膠囊)
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+                        color = Color(0xCC0F172A),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x3394A3B8)),
                         modifier = Modifier
                             .align(Alignment.BottomStart)
                             .padding(10.dp)
@@ -500,25 +578,46 @@ fun GlassPuzzleCubeScreen(
                         Text(
                             text = "🔄 " + Localization.getString("glass_cube_remove_hint", language),
                             style = MaterialTheme.typography.labelSmall.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = Color(0xFFE2E8F0),
+                                fontWeight = FontWeight.SemiBold
                             ),
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                         )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // 底欄待拼方塊盤 (Inventory Tray)
-                ElevatedCard(
+                // 底欄待拼水晶珠寶展示托盤 (Jeweler Velvet Obsidian Showcase Tray)
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(150.dp),
-                    shape = RoundedCornerShape(20.dp)
+                        .height(156.dp)
+                        .clip(RoundedCornerShape(22.dp))
+                        .border(
+                            width = 1.2.dp,
+                            brush = Brush.verticalGradient(
+                                listOf(
+                                    Color(0x6694A3B8),
+                                    Color(0x22334155)
+                                )
+                            ),
+                            shape = RoundedCornerShape(22.dp)
+                        ),
+                    color = Color(0xEE0B1120),
+                    shadowElevation = 10.dp
                 ) {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        Color(0xFF1E293B).copy(alpha = 0.75f),
+                                        Color(0xFF0F172A).copy(alpha = 0.95f)
+                                    )
+                                )
+                            )
                             .padding(vertical = 8.dp)
                     ) {
                         Row(
@@ -528,19 +627,35 @@ fun GlassPuzzleCubeScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = Localization.getString("glass_cube_tray_title", language) + " (${inventoryPieces.size})",
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "💎 " + Localization.getString("glass_cube_tray_title", language),
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color(0xFFF1F5F9)
+                                    )
                                 )
-                            )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = Color(0x3338BDF8)
+                                ) {
+                                    Text(
+                                        text = "${inventoryPieces.size}",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = Color(0xFF38BDF8),
+                                            fontWeight = FontWeight.Bold
+                                        ),
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
 
                             Text(
-                                text = Localization.getString("glass_cube_rotate_hint", language),
+                                text = "✨ " + Localization.getString("glass_cube_rotate_hint", language),
                                 style = MaterialTheme.typography.labelSmall.copy(
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.SemiBold
+                                    color = Color(0xFFFFD54F),
+                                    fontWeight = FontWeight.Bold
                                 )
                             )
                         }
@@ -644,24 +759,47 @@ fun GlassPuzzleCubeScreen(
                 }
             }
 
-            // 通關慶祝彈窗
+            // 次世代手遊成就 3 星結算彈窗 (GlassCubeVictoryDialog)
             if (isCompleted) {
+                val stars = calculateCubeStars(difficulty, elapsedTimeMillis)
+                val seconds = (elapsedTimeMillis / 1000) % 60
+                val minutes = (elapsedTimeMillis / 1000) / 60
+                val timeStr = String.format("%02d:%02d", minutes, seconds)
+
                 AlertDialog(
                     onDismissRequest = { /* 不自動關閉 */ },
+                    containerColor = Color(0xFF0F172A),
+                    shape = RoundedCornerShape(24.dp),
                     icon = {
-                        Icon(
-                            imageVector = Icons.Default.EmojiEvents,
-                            contentDescription = null,
-                            tint = Color(0xFFFBBF24),
-                            modifier = Modifier.size(48.dp)
-                        )
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(72.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.radialGradient(
+                                        listOf(Color(0xFFFFD54F).copy(alpha = 0.35f), Color.Transparent)
+                                    )
+                                )
+                                .border(1.5.dp, Color(0xFFFFD54F), CircleShape)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.EmojiEvents,
+                                contentDescription = null,
+                                tint = Color(0xFFFFD54F),
+                                modifier = Modifier.size(42.dp)
+                            )
+                        }
                     },
                     title = {
                         Text(
                             text = Localization.getString("glass_cube_completed_title", language),
                             style = MaterialTheme.typography.headlineSmall.copy(
-                                fontWeight = FontWeight.Bold
-                            )
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color(0xFFFFF7ED)
+                            ),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
                         )
                     },
                     text = {
@@ -669,86 +807,141 @@ fun GlassPuzzleCubeScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
+                            // 3D 浮雕金星成就列
+                            Row(
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                for (i in 1..3) {
+                                    Icon(
+                                        imageVector = Icons.Default.Star,
+                                        contentDescription = null,
+                                        tint = if (i <= stars) Color(0xFFFFD54F) else Color(0xFF475569),
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .padding(horizontal = 4.dp)
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
                             Text(
                                 text = Localization.getString("glass_cube_completed_desc", language),
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFF94A3B8)),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
+
                             Spacer(modifier = Modifier.height(14.dp))
-                            val seconds = (elapsedTimeMillis / 1000) % 60
-                            val minutes = (elapsedTimeMillis / 1000) / 60
-                            val timeStr = String.format("%02d:%02d", minutes, seconds)
+
+                            // 巨幅燙金計時銘牌
                             Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.primaryContainer,
+                                shape = RoundedCornerShape(16.dp),
+                                color = Color(0xFF1E293B),
+                                border = androidx.compose.foundation.BorderStroke(1.2.dp, Color(0x6638BDF8)),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(12.dp),
-                                    horizontalArrangement = Arrangement.Center,
-                                    verticalAlignment = Alignment.CenterVertically
+                                Column(
+                                    modifier = Modifier.padding(vertical = 12.dp, horizontal = 16.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
                                     Text(
-                                        text = Localization.getString("glass_cube_time", language) + ": ",
-                                        style = MaterialTheme.typography.titleMedium
+                                        text = Localization.getString("glass_cube_time", language),
+                                        style = MaterialTheme.typography.labelMedium.copy(color = Color(0xFF94A3B8))
                                     )
+                                    Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = timeStr,
-                                        style = MaterialTheme.typography.titleLarge.copy(
-                                            fontWeight = FontWeight.ExtraBold,
-                                            color = MaterialTheme.colorScheme.primary
+                                        style = MaterialTheme.typography.headlineMedium.copy(
+                                            fontWeight = FontWeight.Black,
+                                            color = Color(0xFFFFD54F),
+                                            letterSpacing = 2.sp
                                         )
                                     )
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
 
-                            // 操作按鈕一：[再玩一局]
+                            // 54 格完美合體成就徽章
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0x3310B981),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x6610B981)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "💎 54 / 54 完全合體達成！",
+                                        style = MaterialTheme.typography.labelMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF6EE7B7)
+                                        )
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(18.dp))
+
+                            // 操作按鈕一：[再玩一局] (金橙水晶按鈕)
                             Button(
                                 onClick = {
                                     SoundManager.playClick()
                                     initGame()
                                 },
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp)
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE65100))
                             ) {
+                                Icon(imageVector = Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = Localization.getString("glass_cube_play_again", language),
-                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.ExtraBold)
                                 )
                             }
 
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            // 操作按鈕二：[排行榜]
-                            OutlinedButton(
+                            // 操作按鈕二：[排行榜] (深藍水晶按鈕)
+                            Button(
                                 onClick = {
                                     SoundManager.playClick()
                                     onLeaderboardClick()
                                 },
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp)
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7))
                             ) {
+                                Icon(imageVector = Icons.Default.Leaderboard, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = Localization.getString("leaderboard_title", language),
-                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.ExtraBold)
                                 )
                             }
 
                             Spacer(modifier = Modifier.height(8.dp))
 
                             // 操作按鈕三：[返回選單]
-                            TextButton(
+                            OutlinedButton(
                                 onClick = {
                                     SoundManager.playClick()
                                     onBackClick()
                                 },
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(14.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x6694A3B8))
                             ) {
                                 Text(
                                     text = Localization.getString("back_to_menu", language),
                                     style = MaterialTheme.typography.bodyMedium.copy(
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = Color(0xFFE2E8F0),
+                                        fontWeight = FontWeight.SemiBold
                                     )
                                 )
                             }
@@ -999,6 +1192,137 @@ fun findHitCell(
 /**
  * 3D 掌上型玻璃魔方渲染 Canvas
  */
+/**
+ * 星穹天體儀懸浮底座 (Celestial Astrolabe Pedestal)
+ */
+fun DrawScope.drawCelestialAstrolabePedestal(
+    canvasCenter: Offset,
+    cubeRadius: Float,
+    rotX: Float,
+    glassTheme: GlassTheme
+) {
+    // 1. 空間景深星雲柔和光暈 (Radial Glow)
+    val glowRadius = cubeRadius * 1.85f
+    drawCircle(
+        brush = Brush.radialGradient(
+            colors = listOf(
+                glassTheme.glowColor.copy(alpha = 0.32f),
+                glassTheme.baseColor.copy(alpha = 0.08f),
+                Color.Transparent
+            ),
+            center = canvasCenter,
+            radius = glowRadius
+        ),
+        radius = glowRadius,
+        center = canvasCenter
+    )
+
+    // 2. 懸浮天體儀底盤同心金屬光環軌道 (隨俯仰角 rotX 產生自然透視壓縮)
+    val tiltFactor = (kotlin.math.cos(Math.toRadians(rotX.toDouble())).toFloat()).coerceIn(0.22f, 1f)
+    val ringCenterY = canvasCenter.y + cubeRadius * 1.08f
+    val ringCenter = Offset(canvasCenter.x, ringCenterY)
+    val ringRx = cubeRadius * 1.48f
+    val ringRy = ringRx * 0.34f * tiltFactor
+
+    // 內層反光流光橢圓
+    drawOval(
+        brush = Brush.radialGradient(
+            colors = listOf(
+                glassTheme.baseColor.copy(alpha = 0.15f),
+                Color.Transparent
+            ),
+            center = ringCenter,
+            radius = ringRx
+        ),
+        topLeft = Offset(ringCenter.x - ringRx, ringCenter.y - ringRy),
+        size = androidx.compose.ui.geometry.Size(ringRx * 2f, ringRy * 2f)
+    )
+
+    // 外軌道金屬光環 (Outer Orbital Ring)
+    drawOval(
+        color = Color(0x6694A3B8),
+        topLeft = Offset(ringCenter.x - ringRx, ringCenter.y - ringRy),
+        size = androidx.compose.ui.geometry.Size(ringRx * 2f, ringRy * 2f),
+        style = Stroke(width = 2.0f)
+    )
+    // 內軌道流光光環 (Inner Radiant Ring)
+    val innerRx = ringRx * 0.72f
+    val innerRy = ringRy * 0.72f
+    drawOval(
+        color = glassTheme.edgeHighlightColor.copy(alpha = 0.45f),
+        topLeft = Offset(ringCenter.x - innerRx, ringCenter.y - innerRy),
+        size = androidx.compose.ui.geometry.Size(innerRx * 2f, innerRy * 2f),
+        style = Stroke(width = 1.2f)
+    )
+
+    // 四向天體刻度節點 (Compass Cardinal Nodes)
+    val cardinalOffsets = listOf(
+        Offset(ringCenter.x - ringRx, ringCenter.y),
+        Offset(ringCenter.x + ringRx, ringCenter.y),
+        Offset(ringCenter.x, ringCenter.y - ringRy),
+        Offset(ringCenter.x, ringCenter.y + ringRy)
+    )
+    for (node in cardinalOffsets) {
+        drawCircle(
+            color = glassTheme.edgeHighlightColor.copy(alpha = 0.85f),
+            radius = 3.2f,
+            center = node
+        )
+        drawCircle(
+            color = Color.White,
+            radius = 1.5f,
+            center = node
+        )
+    }
+}
+
+/**
+ * 頂點微光星芒高光 (Specular Starlet)
+ */
+fun DrawScope.drawSpecularStarlet(center: Offset, color: Color) {
+    val r = 5.0f
+    // 十字星芒
+    drawLine(
+        color = Color.White.copy(alpha = 0.95f),
+        start = Offset(center.x - r, center.y),
+        end = Offset(center.x + r, center.y),
+        strokeWidth = 1.2f
+    )
+    drawLine(
+        color = Color.White.copy(alpha = 0.95f),
+        start = Offset(center.x, center.y - r),
+        end = Offset(center.x, center.y + r),
+        strokeWidth = 1.2f
+    )
+    drawCircle(color = Color.White, radius = 1.8f, center = center)
+    drawCircle(color = color.copy(alpha = 0.50f), radius = 3.8f, center = center)
+}
+
+/**
+ * 四角全息對齊直角鎖定標記 (Corner Reticle Brackets)
+ */
+fun DrawScope.drawQuadReticleBrackets(
+    p0: Offset, p1: Offset, p2: Offset, p3: Offset,
+    color: Color,
+    bracketLenRatio: Float = 0.28f
+) {
+    val corners = listOf(
+        Pair(p0, listOf(p1, p3)),
+        Pair(p1, listOf(p2, p0)),
+        Pair(p2, listOf(p3, p1)),
+        Pair(p3, listOf(p0, p2))
+    )
+    for ((corner, neighbors) in corners) {
+        val n0 = corner + (neighbors[0] - corner) * bracketLenRatio
+        val n1 = corner + (neighbors[1] - corner) * bracketLenRatio
+        drawLine(color = color, start = corner, end = n0, strokeWidth = 3.2f, cap = StrokeCap.Round)
+        drawLine(color = color, start = corner, end = n1, strokeWidth = 3.2f, cap = StrokeCap.Round)
+    }
+}
+
+/**
+ * 3D 掌上型玻璃魔方渲染 Canvas (HyperCrystalGlassCube)
+ */
 @Composable
 fun Cube3DCanvas(
     modifier: Modifier,
@@ -1011,6 +1335,14 @@ fun Cube3DCanvas(
     Canvas(modifier = modifier) {
         val canvasCenter = Offset(size.width / 2f, size.height / 2f)
         val cubeRadius = (size.width.coerceAtMost(size.height) * 0.28f)
+
+        // 1. 空間景深天體儀底座與星雲光暈
+        drawCelestialAstrolabePedestal(
+            canvasCenter = canvasCenter,
+            cubeRadius = cubeRadius,
+            rotX = rotX,
+            glassTheme = glassTheme
+        )
 
         // 12 條立方體主稜線頂點定義 (3D 空間半徑 1.5)
         val edgePairs = listOf(
@@ -1094,18 +1426,32 @@ fun Cube3DCanvas(
             if (edge.third > 0f) {
                 // 深色骨架外框
                 drawLine(
-                    color = Color(0xCC0F172A),
+                    color = Color(0xEE0F172A),
                     start = edge.first,
                     end = edge.second,
                     strokeWidth = 3.6f
                 )
                 // 晶體倒角微高光線
                 drawLine(
-                    color = glassTheme.edgeHighlightColor.copy(alpha = 0.85f),
+                    color = glassTheme.edgeHighlightColor.copy(alpha = 0.90f),
                     start = edge.first,
                     end = edge.second,
-                    strokeWidth = 1.5f
+                    strokeWidth = 1.6f
                 )
+            }
+        }
+
+        // 第四階段：正面最外側突出頂點微星芒高光
+        val cubeVertices8 = listOf(
+            floatArrayOf(-1.5f, -1.5f, -1.5f), floatArrayOf( 1.5f, -1.5f, -1.5f),
+            floatArrayOf(-1.5f,  1.5f, -1.5f), floatArrayOf( 1.5f,  1.5f, -1.5f),
+            floatArrayOf(-1.5f, -1.5f,  1.5f), floatArrayOf( 1.5f, -1.5f,  1.5f),
+            floatArrayOf(-1.5f,  1.5f,  1.5f), floatArrayOf( 1.5f,  1.5f,  1.5f)
+        )
+        for (v in cubeVertices8) {
+            val proj = projectPoint(v[0], v[1], v[2], rotX, rotY, canvasCenter, cubeRadius)
+            if (proj.second > 0.35f) {
+                drawSpecularStarlet(proj.first, glassTheme.edgeHighlightColor)
             }
         }
     }
@@ -1153,7 +1499,7 @@ fun DrawScope.drawCubeFace(
             val curPos = CellPos(r, c)
             val occupant = cellOccupantMap[curPos]
 
-            // 1. 底層九宮格深色接縫溝槽 (深色暗槽，解決在亮色底色上對比不足的問題)
+            // 1. 底層九宮格深色接縫溝槽
             val grooveColor = if (isFront) {
                 Color(0x990F172A)
             } else {
@@ -1162,7 +1508,7 @@ fun DrawScope.drawCubeFace(
             drawPath(quadPath, color = grooveColor, style = Stroke(width = if (isFront) 3.2f else 1.5f))
 
             if (occupant != null) {
-                // 2. 繪製該格上的 3D 浮雕立體水晶方塊
+                // 2. 繪製該格上的 3D 浮雕立體水晶方塊 (寶石切面)
                 drawCellCrystal(
                     vertices = vertices,
                     face = face,
@@ -1174,7 +1520,7 @@ fun DrawScope.drawCubeFace(
                     radius = radius
                 )
             } else {
-                // 3. 空格子：向中心微縮 7%，露出一顆顆獨立魔方水晶方塊 (Cubie Tile) 顆粒感
+                // 3. 空格子：向中心微縮 7%，露出一顆顆獨立魔方水晶凹槽 (Sunken Crystal Tile)
                 val centerPt = Offset((p0.x + p1.x + p2.x + p3.x) / 4f, (p0.y + p1.y + p2.y + p3.y) / 4f)
                 val inset0 = centerPt + (p0 - centerPt) * 0.93f
                 val inset1 = centerPt + (p1 - centerPt) * 0.93f
@@ -1189,7 +1535,7 @@ fun DrawScope.drawCubeFace(
                     close()
                 }
 
-                // 超清通透水晶玻璃底色 (極致透明，消除大藍板油漆感)
+                // 超清通透水晶玻璃底色
                 val fillColor = if (isFront) {
                     glassTheme.baseColor.copy(alpha = 0.08f)
                 } else {
@@ -1199,14 +1545,14 @@ fun DrawScope.drawCubeFace(
 
                 // 晶體微倒角高光邊線
                 val highlightColor = if (isFront) {
-                    Color.White.copy(alpha = 0.55f)
+                    Color.White.copy(alpha = 0.60f)
                 } else {
                     Color.White.copy(alpha = 0.18f)
                 }
                 drawPath(insetPath, color = highlightColor, style = Stroke(width = if (isFront) 1.2f else 0.8f))
             }
 
-            // 4. 拖曳懸浮吸附預覽高光 (合法: 翡翠綠螢光；不合法: 紅色警告陰影)
+            // 4. 拖曳懸浮吸附預覽高光 (合法: 翡翠晶綠全息光柱+四角鎖定標記；不合法: 脈衝赤紅警告陰影)
             if (hoverCandidate != null && hoverCandidate.face == face && hoverCandidate.targetCells.contains(curPos)) {
                 val centerPt = Offset((p0.x + p1.x + p2.x + p3.x) / 4f, (p0.y + p1.y + p2.y + p3.y) / 4f)
                 val inset0 = centerPt + (p0 - centerPt) * 0.93f
@@ -1221,6 +1567,7 @@ fun DrawScope.drawCubeFace(
                     close()
                 }
                 if (hoverCandidate.isValid) {
+                    // 全息翡翠晶綠透光光柱
                     drawPath(
                         snapPath,
                         color = Color(0xFF10B981).copy(alpha = 0.55f),
@@ -1231,7 +1578,13 @@ fun DrawScope.drawCubeFace(
                         color = Color(0xFF6EE7B7),
                         style = Stroke(width = 3.6f)
                     )
+                    // 四角瞄準直角標記
+                    drawQuadReticleBrackets(
+                        inset0, inset1, inset2, inset3,
+                        color = Color(0xFFE6FFFA)
+                    )
                 } else {
+                    // 脈衝赤紅警告陰影
                     drawPath(
                         snapPath,
                         color = Color(0xFFEF4444).copy(alpha = 0.45f),
@@ -1241,6 +1594,11 @@ fun DrawScope.drawCubeFace(
                         snapPath,
                         color = Color(0xFFF87171),
                         style = Stroke(width = 3.2f)
+                    )
+                    // 四角警示直角標記
+                    drawQuadReticleBrackets(
+                        inset0, inset1, inset2, inset3,
+                        color = Color(0xFFFF8A80)
                     )
                 }
             }
@@ -1276,7 +1634,7 @@ fun DrawScope.drawCubeFace(
 }
 
 /**
- * 繪製單個網格上的 3D 立體水晶方塊 (凸出玻璃面的真實 3D 浮雕與光影，告別平面油漆感)
+ * 繪製單個網格上的 3D 立體水晶方塊 (寶石切面與晶瑩雙倒角 Prismatic Gemstone)
  */
 fun DrawScope.drawCellCrystal(
     vertices: Array<FloatArray>,
@@ -1293,7 +1651,7 @@ fun DrawScope.drawCellCrystal(
     val cY = (vertices[0][1] + vertices[1][1] + vertices[2][1] + vertices[3][1]) / 4f
     val cZ = (vertices[0][2] + vertices[1][2] + vertices[2][2] + vertices[3][2]) / 4f
 
-    // 2. 3D 空間微內縮 6% (相鄰方塊間保留清晰深色凹槽接縫，不互相黏結)
+    // 2. 3D 空間微內縮 6% (相鄰方塊間保留清晰深色凹槽接縫)
     val insetRatio = 0.94f
     val b0 = floatArrayOf(cX + (vertices[0][0] - cX) * insetRatio, cY + (vertices[0][1] - cY) * insetRatio, cZ + (vertices[0][2] - cZ) * insetRatio)
     val b1 = floatArrayOf(cX + (vertices[1][0] - cX) * insetRatio, cY + (vertices[1][1] - cY) * insetRatio, cZ + (vertices[1][2] - cZ) * insetRatio)
@@ -1357,7 +1715,7 @@ fun DrawScope.drawCellCrystal(
         }
     }
 
-    // 6. 繪製頂面 (Top Face)
+    // 6. 繪製頂面 (Top Face) - 寶石切面與晶瑩雙倒角
     val topPath = Path().apply {
         moveTo(pt0.x, pt0.y)
         lineTo(pt1.x, pt1.y)
@@ -1371,10 +1729,55 @@ fun DrawScope.drawCellCrystal(
     drawPath(topPath, color = color.copy(alpha = baseAlpha), style = Fill)
 
     if (isFront) {
-        // 頂面覆蓋柔和高光微白層
-        drawPath(topPath, color = Color.White.copy(alpha = 0.25f), style = Fill)
+        val topCenter = Offset((pt0.x + pt1.x + pt2.x + pt3.x) / 4f, (pt0.y + pt1.y + pt2.y + pt3.y) / 4f)
+
+        // 四向斜切寶石切面 (Facet Faceting)
+        // 上切面 (pt0-pt1-center): 受頂光亮面
+        val facetTop = Path().apply {
+            moveTo(pt0.x, pt0.y)
+            lineTo(pt1.x, pt1.y)
+            lineTo(topCenter.x, topCenter.y)
+            close()
+        }
+        drawPath(facetTop, color = Color.White.copy(alpha = 0.26f), style = Fill)
+
+        // 左切面 (pt3-pt0-center): 受側光微亮面
+        val facetLeft = Path().apply {
+            moveTo(pt3.x, pt3.y)
+            lineTo(pt0.x, pt0.y)
+            lineTo(topCenter.x, topCenter.y)
+            close()
+        }
+        drawPath(facetLeft, color = Color.White.copy(alpha = 0.16f), style = Fill)
+
+        // 右切面 (pt1-pt2-center): 背光過渡面
+        val facetRight = Path().apply {
+            moveTo(pt1.x, pt1.y)
+            lineTo(pt2.x, pt2.y)
+            lineTo(topCenter.x, topCenter.y)
+            close()
+        }
+        drawPath(facetRight, color = Color.Black.copy(alpha = 0.08f), style = Fill)
+
+        // 下切面 (pt2-pt3-center): 深色微陰影面
+        val facetBottom = Path().apply {
+            moveTo(pt2.x, pt2.y)
+            lineTo(pt3.x, pt3.y)
+            lineTo(topCenter.x, topCenter.y)
+            close()
+        }
+        drawPath(facetBottom, color = Color.Black.copy(alpha = 0.16f), style = Fill)
+
+        // 左上方璀璨高光微白聚光點
+        val specularPt = pt0 + (topCenter - pt0) * 0.45f
+        drawCircle(
+            color = Color.White.copy(alpha = 0.85f),
+            radius = (radius * 0.022f).coerceAtLeast(1.8f),
+            center = specularPt
+        )
+
         // 晶體倒角微高光框
-        drawPath(topPath, color = Color.White.copy(alpha = 0.82f), style = Stroke(width = 1.3f))
+        drawPath(topPath, color = Color.White.copy(alpha = 0.85f), style = Stroke(width = 1.4f))
     } else {
         drawPath(topPath, color = Color.White.copy(alpha = 0.20f), style = Stroke(width = 0.8f))
     }
@@ -1410,8 +1813,13 @@ fun IsometricPieceCard(
             .size(96.dp)
             .clip(RoundedCornerShape(16.dp))
             .border(
-                width = 1.5.dp,
-                color = piece.color.copy(alpha = 0.45f),
+                width = 1.4.dp,
+                brush = Brush.verticalGradient(
+                    listOf(
+                        piece.color.copy(alpha = 0.85f),
+                        Color(0x33475569)
+                    )
+                ),
                 shape = RoundedCornerShape(16.dp)
             )
             .onGloballyPositioned { coordinates ->
@@ -1478,7 +1886,7 @@ fun IsometricPieceCard(
                     }
                 }
             },
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+        color = Color(0x991E293B)
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawIsometricPiece(
@@ -1492,7 +1900,7 @@ fun IsometricPieceCard(
 }
 
 /**
- * 繪製 3D 等角立體水晶積木 (真實 1:1:1 立體正方體魔方小方塊組件)
+ * 繪製 3D 等角立體水晶積木 (寶石切面與 1:1:1 立體正方體魔方小方塊組件)
  */
 fun DrawScope.drawIsometricPiece(
     piece: PuzzlePiece,
@@ -1566,12 +1974,61 @@ fun DrawScope.drawIsometricPiece(
         drawPath(frPath, color = Color.Black.copy(alpha = 0.38f * alpha), style = Fill)
         drawPath(frPath, color = Color.Black.copy(alpha = 0.30f * alpha), style = Stroke(width = 0.8f))
 
-        // 3. 繪製頂面 (亮面)
+        // 3. 繪製頂面 (亮面) - 寶石切面與晶瑩雙倒角
         drawPath(topPath, color = piece.color.copy(alpha = 0.98f * alpha), style = Fill)
-        drawPath(topPath, color = Color.White.copy(alpha = 0.28f * alpha), style = Fill)
+
+        val cellCenter = Offset(cx, cy)
+        // 上左亮面切面 (topP0-topP1-center, topP3-topP0-center)
+        val fTop = Path().apply {
+            moveTo(topP0.x, topP0.y)
+            lineTo(topP1.x, topP1.y)
+            lineTo(cellCenter.x, cellCenter.y)
+            close()
+        }
+        drawPath(fTop, color = Color.White.copy(alpha = 0.28f * alpha), style = Fill)
+
+        val fLeft = Path().apply {
+            moveTo(topP3.x, topP3.y)
+            lineTo(topP0.x, topP0.y)
+            lineTo(cellCenter.x, cellCenter.y)
+            close()
+        }
+        drawPath(fLeft, color = Color.White.copy(alpha = 0.16f * alpha), style = Fill)
+
+        // 左上方高光聚光點
+        drawCircle(
+            color = Color.White.copy(alpha = 0.90f * alpha),
+            radius = 1.8f,
+            center = topP0 + (cellCenter - topP0) * 0.45f
+        )
 
         // 4. 頂面倒角晶瑩高光描邊
-        drawPath(topPath, color = Color.White.copy(alpha = 0.82f * alpha), style = Stroke(width = 1.3f))
+        drawPath(topPath, color = Color.White.copy(alpha = 0.85f * alpha), style = Stroke(width = 1.3f))
     }
 }
+
+/**
+ * 依難度與用時計算過關星級 (1~3 星)
+ */
+fun calculateCubeStars(difficulty: GameDifficulty, timeMillis: Long): Int {
+    val seconds = timeMillis / 1000
+    return when (difficulty) {
+        GameDifficulty.BEGINNER -> when {
+            seconds <= 90 -> 3
+            seconds <= 180 -> 2
+            else -> 1
+        }
+        GameDifficulty.INTERMEDIATE -> when {
+            seconds <= 180 -> 3
+            seconds <= 360 -> 2
+            else -> 1
+        }
+        else -> when {
+            seconds <= 300 -> 3
+            seconds <= 600 -> 2
+            else -> 1
+        }
+    }
+}
+
 

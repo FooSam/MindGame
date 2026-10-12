@@ -144,8 +144,8 @@ data class DropItem(
  * 粒子動態模型
  */
 data class Particle(
-    val x: Float,
-    val y: Float,
+    var x: Float,
+    var y: Float,
     val vx: Float,
     val vy: Float,
     val color: Color,

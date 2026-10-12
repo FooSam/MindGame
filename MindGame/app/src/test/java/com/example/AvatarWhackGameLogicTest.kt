@@ -33,7 +33,7 @@ class AvatarWhackGameLogicTest {
         assertEquals(3, advanced.rows)
         assertEquals(3, advanced.cols)
         assertEquals(9, advanced.totalHoles)
-        assertEquals(900L, advanced.stayDurationMs)
+        assertEquals(950L, advanced.stayDurationMs)
         assertEquals(0.20f, advanced.fakeOutProb, 0.001f)
         assertTrue(advanced.bombProb > 0f)
 
@@ -41,24 +41,28 @@ class AvatarWhackGameLogicTest {
         assertEquals(3, hard.rows)
         assertEquals(3, hard.cols)
         assertEquals(9, hard.totalHoles)
-        assertEquals(700L, hard.stayDurationMs)
+        assertEquals(1050L, hard.stayDurationMs)
         assertEquals(0.30f, hard.fakeOutProb, 0.001f)
         assertEquals(2, hard.simultaneousTargets)
+        assertEquals(180L, hard.staggerDelayMs)
 
         val hell = WhackDifficultyConfig.getConfig(GameDifficulty.HELL)
         assertEquals(4, hell.rows)
         assertEquals(3, hell.cols)
         assertEquals(12, hell.totalHoles)
-        assertEquals(550L, hell.stayDurationMs)
+        assertEquals(900L, hell.stayDurationMs)
         assertEquals(0.40f, hell.fakeOutProb, 0.001f)
+        assertEquals(2, hell.simultaneousTargets)
+        assertEquals(160L, hell.staggerDelayMs)
 
         val epic = WhackDifficultyConfig.getConfig(GameDifficulty.EPIC)
         assertEquals(4, epic.rows)
         assertEquals(3, epic.cols)
         assertEquals(12, epic.totalHoles)
-        assertEquals(450L, epic.stayDurationMs)
+        assertEquals(800L, epic.stayDurationMs)
         assertEquals(0.50f, epic.fakeOutProb, 0.001f)
         assertEquals(3, epic.simultaneousTargets)
+        assertEquals(150L, epic.staggerDelayMs)
 
         // 驗證假動作停留時間範圍與隨機浮動
         for (diff in GameDifficulty.entries) {
