@@ -166,6 +166,18 @@ object TurtleSoupRepository {
                 "event" to "Event/Motive",
                 "scene" to "Location/Scene"
             )
+            val targetLabelMapJa = mapOf(
+                "character" to "人物・対象",
+                "item" to "アイテム・媒体",
+                "event" to "出来事・動機",
+                "scene" to "場所・シーン"
+            )
+            val targetLabelMapKo = mapOf(
+                "character" to "인물 대상",
+                "item" to "물건 매개",
+                "event" to "사건 동기",
+                "scene" to "장소 장면"
+            )
 
             // 安全客觀無暴雷之干擾選項
             val safeDistractorsZh = mapOf(
@@ -180,29 +192,54 @@ object TurtleSoupRepository {
                 "event" to listOf("Occupation Link", "Abnormal Action", "Panic/Fear", "Accident"),
                 "scene" to listOf("Core Scene", "Outdoor Public Area", "Indoor Sealed Space", "Movement Route")
             )
+            val safeDistractorsJa = mapOf(
+                "character" to listOf("主人公", "捜査員", "被害者・関係者", "目撃者"),
+                "item" to listOf("現場の重要証拠", "個人の所持品", "通信機器", "環境の小道具"),
+                "event" to listOf("職業との関連", "突発的な異常行動", "パニック・恐怖", "不慮の事故"),
+                "scene" to listOf("核心となる犯行現場", "屋外の公共エリア", "屋内の密閉空間", "移動ルート周辺")
+            )
+            val safeDistractorsKo = mapOf(
+                "character" to listOf("주인공", "수사관/조사관", "피해자/관계자", "목격자"),
+                "item" to listOf("현장 핵심 물증", "개인 소지품", "통신 장비", "환경 소품"),
+                "event" to listOf("직업적 연관성", "돌발적인 이상 행동", "심리적 공황", "우발적 사고"),
+                "scene" to listOf("핵심 사건 현장", "야외 공공장소", "실내 밀폐 공간", "이동 동선 주변")
+            )
 
             targetOrder.forEach { type ->
                 val target = puzzle.targets.find { it.targetType == type }
                 val labelZh = targetLabelMapZh[type] ?: "調查標的"
                 val labelEn = targetLabelMapEn[type] ?: "Target"
+                val labelJa = targetLabelMapJa[type] ?: "捜査対象"
+                val labelKo = targetLabelMapKo[type] ?: "조사 대상"
 
                 val optionsZh = mutableListOf<String>()
                 val optionsEn = mutableListOf<String>()
+                val optionsJa = mutableListOf<String>()
+                val optionsKo = mutableListOf<String>()
 
                 if (target != null) {
                     optionsZh.add(target.name.zhTW)
                     optionsEn.add(target.name.en)
+                    optionsJa.add(if (target.name.ja.isNotEmpty()) target.name.ja else target.name.en)
+                    optionsKo.add(if (target.name.ko.isNotEmpty()) target.name.ko else target.name.en)
                 }
 
                 // 加入客觀安全干擾項，杜絕 slotDeduction 劇透
                 safeDistractorsZh[type]?.let { optionsZh.addAll(it) }
                 safeDistractorsEn[type]?.let { optionsEn.addAll(it) }
+                safeDistractorsJa[type]?.let { optionsJa.addAll(it) }
+                safeDistractorsKo[type]?.let { optionsKo.addAll(it) }
 
                 dimensions.add(
                     com.example.data.model.InvestigationDimension(
                         id = type,
-                        label = com.example.data.model.LocalizedText(zhTW = labelZh, en = labelEn),
-                        options = com.example.data.model.LocalizedOptions(zhTW = optionsZh.distinct(), en = optionsEn.distinct())
+                        label = com.example.data.model.LocalizedText(zhTW = labelZh, en = labelEn, ja = labelJa, ko = labelKo),
+                        options = com.example.data.model.LocalizedOptions(
+                            zhTW = optionsZh.distinct(),
+                            en = optionsEn.distinct(),
+                            ja = optionsJa.distinct(),
+                            ko = optionsKo.distinct()
+                        )
                     )
                 )
             }
@@ -213,34 +250,42 @@ object TurtleSoupRepository {
         return listOf(
             com.example.data.model.InvestigationDimension(
                 id = "character",
-                label = com.example.data.model.LocalizedText(zhTW = "人物對象", en = "Character"),
+                label = com.example.data.model.LocalizedText(zhTW = "人物對象", en = "Character", ja = "人物・対象", ko = "인물 대상"),
                 options = com.example.data.model.LocalizedOptions(
                     zhTW = listOf("主角/男子", "警方/調查員", "受害者", "目擊證人"),
-                    en = listOf("Main Character", "Police/Detective", "Victim", "Eyewitness")
+                    en = listOf("Main Character", "Police/Detective", "Victim", "Eyewitness"),
+                    ja = listOf("主人公", "警察・捜査官", "被害者", "目撃者"),
+                    ko = listOf("주인공", "경찰/조사관", "피해자", "목격자")
                 )
             ),
             com.example.data.model.InvestigationDimension(
                 id = "item",
-                label = com.example.data.model.LocalizedText(zhTW = "物件媒介", en = "Item/Object"),
+                label = com.example.data.model.LocalizedText(zhTW = "物件媒介", en = "Item/Object", ja = "アイテム・媒体", ko = "물건 매개"),
                 options = com.example.data.model.LocalizedOptions(
                     zhTW = listOf("案發現場物品", "隨身攜帶物", "通訊工具", "關鍵道具"),
-                    en = listOf("Scene Object", "Personal Belonging", "Communication Device", "Key Tool")
+                    en = listOf("Scene Object", "Personal Belonging", "Communication Device", "Key Tool"),
+                    ja = listOf("事件現場の遺留物", "所持品", "通信機器", "重要アイテム"),
+                    ko = listOf("사건 현장 물품", "소지품", "통신 도구", "핵심 소품")
                 )
             ),
             com.example.data.model.InvestigationDimension(
                 id = "event",
-                label = com.example.data.model.LocalizedText(zhTW = "事件動機", en = "Event/Motive"),
+                label = com.example.data.model.LocalizedText(zhTW = "事件動機", en = "Event/Motive", ja = "出来事・動機", ko = "사건 동기"),
                 options = com.example.data.model.LocalizedOptions(
                     zhTW = listOf("職業身分關聯", "意外事故", "反常舉止", "心裡恐慌"),
-                    en = listOf("Occupation Link", "Accident", "Abnormal Behavior", "Panic")
+                    en = listOf("Occupation Link", "Accident", "Abnormal Behavior", "Panic"),
+                    ja = listOf("職業や身分との関連", "不慮の事故", "異常な行動", "心理的パニック"),
+                    ko = listOf("직업적 연관성", "뜻밖의 사고", "이상 행동", "심리적 공황")
                 )
             ),
             com.example.data.model.InvestigationDimension(
                 id = "scene",
-                label = com.example.data.model.LocalizedText(zhTW = "地點場景", en = "Location/Scene"),
+                label = com.example.data.model.LocalizedText(zhTW = "地點場景", en = "Location/Scene", ja = "場所・シーン", ko = "장소 장면"),
                 options = com.example.data.model.LocalizedOptions(
                     zhTW = listOf("核心案發現場", "密閉室內空間", "戶外公共區域", "移動路線周圍"),
-                    en = listOf("Core Scene", "Indoor Sealed Space", "Outdoor Public Area", "Movement Route")
+                    en = listOf("Core Scene", "Indoor Sealed Space", "Outdoor Public Area", "Movement Route"),
+                    ja = listOf("核心となる犯行現場", "密閉された室内", "屋外の公共エリア", "移動ルート周辺"),
+                    ko = listOf("핵심 사건 현장", "밀폐된 실내 공간", "야외 공공장소", "이동 동선 주변")
                 )
             )
         )
@@ -354,11 +399,11 @@ object TurtleSoupRepository {
         }
 
         // 3. 通用煙霧彈與未命中處理
-        val isZh = language == AppLanguage.TRADITIONAL_CHINESE
-        val defaultDetail = if (isZh) {
-            "【調查結果】經向現場與證人查證，此人事物組合與本案真相無直接關聯或假設不成立。"
-        } else {
-            "【Investigation】After checking evidence and witnesses, this combination has no direct link to the truth."
+        val defaultDetail = when (language) {
+            AppLanguage.TRADITIONAL_CHINESE -> "【調查結果】經向現場與證人查證，此人事物組合與本案真相無直接關聯或假設不成立。"
+            AppLanguage.ENGLISH -> "【Investigation】After checking evidence and witnesses, this combination has no direct link to the truth."
+            AppLanguage.JAPANESE -> "【捜査結果】現場や証人に確認した結果、この組み合わせは事件の真相と直接の関連がないか、仮説が成立しません。"
+            AppLanguage.KOREAN -> "【조사 결과】현장 및 목격자 확인 결과, 이 인물/물건/사건 조합은 사건의 진상과 직접적인 연관이 없거나 가설이 성립하지 않습니다."
         }
 
         return com.example.data.model.InvestigationQueryLog(

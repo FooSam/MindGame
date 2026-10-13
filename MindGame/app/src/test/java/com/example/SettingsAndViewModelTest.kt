@@ -54,6 +54,17 @@ class SettingsAndViewModelTest {
         val viewModel2 = GameViewModel(app)
         assertEquals(AppLanguage.ENGLISH, viewModel2.language.value)
         assertEquals(AppThemeStyle.DARK, viewModel2.appTheme.value)
+
+        // 測試日文與韓文切換及持久化
+        viewModel2.setLanguage(AppLanguage.JAPANESE)
+        assertEquals(AppLanguage.JAPANESE, viewModel2.language.value)
+        val viewModel3 = GameViewModel(app)
+        assertEquals(AppLanguage.JAPANESE, viewModel3.language.value)
+
+        viewModel3.setLanguage(AppLanguage.KOREAN)
+        assertEquals(AppLanguage.KOREAN, viewModel3.language.value)
+        val viewModel4 = GameViewModel(app)
+        assertEquals(AppLanguage.KOREAN, viewModel4.language.value)
     }
 
     @Test

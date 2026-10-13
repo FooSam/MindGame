@@ -21,11 +21,13 @@ enum class GameType(
     val rankingType: RankingType,
     val category: GameCategory,
     val scoreUnitZh: String = "分",
-    val scoreUnitEn: String = "pts"
+    val scoreUnitEn: String = "pts",
+    val scoreUnitJa: String = "点",
+    val scoreUnitKo: String = "점"
 ) {
     FOCUS_TEST("FOCUS_TEST", "game_focus_test", "game_focus_test_desc", RankingType.TIME_ASC, GameCategory.TEST),
     FOCUS_TRAIN("FOCUS_TRAIN", "game_focus_train", "game_focus_train_desc", RankingType.TIME_ASC, GameCategory.TEST),
-    SPEED_MATCH("SPEED_MATCH", "game_speed_match", "game_speed_match_desc", RankingType.SCORE_DESC, GameCategory.TEST, scoreUnitZh = "次", scoreUnitEn = "times"),
+    SPEED_MATCH("SPEED_MATCH", "game_speed_match", "game_speed_match_desc", RankingType.SCORE_DESC, GameCategory.TEST, scoreUnitZh = "次", scoreUnitEn = "times", scoreUnitJa = "回", scoreUnitKo = "회"),
     SUDOKU("SUDOKU", "game_sudoku", "game_sudoku_desc", RankingType.TIME_ASC, GameCategory.BRAIN),
     CAT_SUDOKU("CAT_SUDOKU", "game_cat_sudoku", "game_cat_sudoku_desc", RankingType.TIME_ASC, GameCategory.BRAIN),
     TURTLE_SOUP("TURTLE_SOUP", "game_turtle_soup", "game_turtle_soup_desc", RankingType.SCORE_DESC, GameCategory.DEDUCTION),
@@ -41,6 +43,15 @@ enum class GameType(
 
     val isSudoku: Boolean
         get() = this == SUDOKU || this == CAT_SUDOKU
+
+    fun getScoreUnit(language: AppLanguage): String {
+        return when (language) {
+            AppLanguage.TRADITIONAL_CHINESE -> scoreUnitZh
+            AppLanguage.ENGLISH -> scoreUnitEn
+            AppLanguage.JAPANESE -> scoreUnitJa
+            AppLanguage.KOREAN -> scoreUnitKo
+        }
+    }
 
     companion object {
         fun fromKey(key: String): GameType {

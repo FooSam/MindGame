@@ -61,6 +61,14 @@ object AdManager {
     val adUnitId: String
         get() = if (BuildConfig.DEBUG) TEST_INTERSTITIAL_AD_UNIT_ID else PRODUCTION_INTERSTITIAL_AD_UNIT_ID
 
+    // 正式橫幅廣告單元 ID (由使用者提供)
+    const val PRODUCTION_BANNER_AD_UNIT_ID = "ca-app-pub-5014630903713895/6390706923"
+    // Google 官方標準測試橫幅廣告單元 ID (用於 Debug 模式防誤點封號)
+    const val TEST_BANNER_AD_UNIT_ID = "ca-app-pub-3940256099942544/6300978111"
+
+    val bannerAdUnitId: String
+        get() = if (BuildConfig.DEBUG) TEST_BANNER_AD_UNIT_ID else PRODUCTION_BANNER_AD_UNIT_ID
+
     val counter = AdCounter(threshold = 3)
 
     private var interstitialAd: InterstitialAd? = null

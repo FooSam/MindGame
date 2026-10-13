@@ -1,31 +1,50 @@
 package com.example.game.stroop
 
 import androidx.compose.ui.graphics.Color
+import com.example.data.model.AppLanguage
 import com.example.data.model.GameDifficulty
 
 enum class StroopColor(
     val key: String,
     val zhName: String,
     val enName: String,
-    val color: Color
+    val color: Color,
+    val jaName: String = enName,
+    val koName: String = enName
 ) {
-    RED("color_red", "紅", "Red", Color(0xFFEF4444)),
-    BLUE("color_blue", "藍", "Blue", Color(0xFF3B82F6)),
-    GREEN("color_green", "綠", "Green", Color(0xFF10B981)),
-    YELLOW("color_yellow", "黃", "Yellow", Color(0xFFEAB308)),
-    PURPLE("color_purple", "紫", "Purple", Color(0xFF8B5CF6)),
-    ORANGE("color_orange", "橙", "Orange", Color(0xFFF97316))
+    RED("color_red", "紅", "Red", Color(0xFFEF4444), "赤", "빨강"),
+    BLUE("color_blue", "藍", "Blue", Color(0xFF3B82F6), "青", "파랑"),
+    GREEN("color_green", "綠", "Green", Color(0xFF10B981), "緑", "초록"),
+    YELLOW("color_yellow", "黃", "Yellow", Color(0xFFEAB308), "黄", "노랑"),
+    PURPLE("color_purple", "紫", "Purple", Color(0xFF8B5CF6), "紫", "보라"),
+    ORANGE("color_orange", "橙", "Orange", Color(0xFFF97316), "橙", "주황");
+
+    fun getName(language: AppLanguage): String = when (language) {
+        AppLanguage.TRADITIONAL_CHINESE -> zhName
+        AppLanguage.ENGLISH -> enName
+        AppLanguage.JAPANESE -> jaName
+        AppLanguage.KOREAN -> koName
+    }
 }
 
 enum class StroopShape(
     val key: String,
     val zhName: String,
-    val enName: String
+    val enName: String,
+    val jaName: String = enName,
+    val koName: String = enName
 ) {
-    CIRCLE("shape_circle", "圓形", "Circle"),
-    SQUARE("shape_square", "方形", "Square"),
-    TRIANGLE("shape_triangle", "三角形", "Triangle"),
-    STAR("shape_star", "星形", "Star")
+    CIRCLE("shape_circle", "圓形", "Circle", "円形", "원형"),
+    SQUARE("shape_square", "方形", "Square", "四角形", "사각형"),
+    TRIANGLE("shape_triangle", "三角形", "Triangle", "三角形", "삼각형"),
+    STAR("shape_star", "星形", "Star", "星形", "별");
+
+    fun getName(language: AppLanguage): String = when (language) {
+        AppLanguage.TRADITIONAL_CHINESE -> zhName
+        AppLanguage.ENGLISH -> enName
+        AppLanguage.JAPANESE -> jaName
+        AppLanguage.KOREAN -> koName
+    }
 }
 
 enum class StroopInstruction(val key: String) {
@@ -46,8 +65,17 @@ data class StroopOption(
     val displayColor: Color = Color.Unspecified,
     val bgColor: Color = Color.Unspecified,
     val isCorrect: Boolean = false,
-    val associatedColor: StroopColor? = null
-)
+    val associatedColor: StroopColor? = null,
+    val labelJa: String = labelEn,
+    val labelKo: String = labelEn
+) {
+    fun getLabel(language: AppLanguage): String = when (language) {
+        AppLanguage.TRADITIONAL_CHINESE -> labelZh
+        AppLanguage.ENGLISH -> labelEn
+        AppLanguage.JAPANESE -> labelJa
+        AppLanguage.KOREAN -> labelKo
+    }
+}
 
 data class StroopQuestion(
     val difficulty: GameDifficulty,
@@ -112,6 +140,8 @@ object StroopGenerator {
                 id = color.key,
                 labelZh = color.zhName,
                 labelEn = color.enName,
+                labelJa = color.jaName,
+                labelKo = color.koName,
                 displayColor = Color.White,
                 bgColor = color.color,
                 isCorrect = (color == targetColor),
@@ -144,6 +174,8 @@ object StroopGenerator {
                 id = color.key,
                 labelZh = color.zhName,
                 labelEn = color.enName,
+                labelJa = color.jaName,
+                labelKo = color.koName,
                 displayColor = Color.White,
                 bgColor = color.color,
                 isCorrect = (color == targetColor),
@@ -177,8 +209,8 @@ object StroopGenerator {
         val isActuallyEqual = (leftMeaning == rightDisplay)
 
         val options = listOf(
-            StroopOption(id = "YES", labelZh = "是 (YES)", labelEn = "YES", isCorrect = isActuallyEqual),
-            StroopOption(id = "NO", labelZh = "否 (NO)", labelEn = "NO", isCorrect = !isActuallyEqual)
+            StroopOption(id = "YES", labelZh = "是 (YES)", labelEn = "YES", isCorrect = isActuallyEqual, labelJa = "はい (YES)", labelKo = "예 (YES)"),
+            StroopOption(id = "NO", labelZh = "否 (NO)", labelEn = "NO", isCorrect = !isActuallyEqual, labelJa = "いいえ (NO)", labelKo = "아니오 (NO)")
         )
 
         return StroopQuestion(
@@ -214,6 +246,8 @@ object StroopGenerator {
                 id = color.key,
                 labelZh = color.zhName,
                 labelEn = color.enName,
+                labelJa = color.jaName,
+                labelKo = color.koName,
                 displayColor = Color.White,
                 bgColor = conflictBg.color,
                 isCorrect = isTarget,
@@ -246,6 +280,8 @@ object StroopGenerator {
                 id = color.key,
                 labelZh = color.zhName,
                 labelEn = color.enName,
+                labelJa = color.jaName,
+                labelKo = color.koName,
                 displayColor = Color.White,
                 bgColor = conflictBg.color,
                 isCorrect = (color == targetColor),
@@ -282,6 +318,8 @@ object StroopGenerator {
                 id = color.key,
                 labelZh = color.zhName,
                 labelEn = color.enName,
+                labelJa = color.jaName,
+                labelKo = color.koName,
                 displayColor = Color.White,
                 bgColor = conflictBg.color,
                 isCorrect = (color == targetColor),

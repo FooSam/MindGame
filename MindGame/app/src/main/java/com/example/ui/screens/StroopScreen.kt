@@ -706,8 +706,14 @@ private fun StroopCyberStimulusStage(
                                 .padding(bottom = 8.dp)
                                 .border(1.dp, Color(0xFF64748B), RoundedCornerShape(10.dp))
                         ) {
+                            val shapePrefix = when (language) {
+                                AppLanguage.TRADITIONAL_CHINESE -> "◈ 形狀："
+                                AppLanguage.ENGLISH -> "◈ Shape: "
+                                AppLanguage.JAPANESE -> "◈ 形状："
+                                AppLanguage.KOREAN -> "◈ 도형: "
+                            }
                             Text(
-                                text = "◈ 形狀：${if (language == AppLanguage.TRADITIONAL_CHINESE) question.shape.zhName else question.shape.enName}",
+                                text = "$shapePrefix${question.shape.getName(language)}",
                                 style = MaterialTheme.typography.labelMedium.copy(
                                     color = Color(0xFF38BDF8),
                                     fontWeight = FontWeight.ExtraBold
@@ -725,8 +731,14 @@ private fun StroopCyberStimulusStage(
                                 .padding(bottom = 8.dp)
                                 .border(1.dp, Color(0xFFEF4444), RoundedCornerShape(10.dp))
                         ) {
+                            val notPrefix = when (language) {
+                                AppLanguage.TRADITIONAL_CHINESE -> "🚫 排除："
+                                AppLanguage.ENGLISH -> "🚫 Exclude: "
+                                AppLanguage.JAPANESE -> "🚫 除外："
+                                AppLanguage.KOREAN -> "🚫 제외: "
+                            }
                             Text(
-                                text = "🚫 排除：${if (language == AppLanguage.TRADITIONAL_CHINESE) question.notConditionColor.zhName else question.notConditionColor.enName}",
+                                text = "$notPrefix${question.notConditionColor.getName(language)}",
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     color = Color(0xFFFCA5A5),
                                     fontWeight = FontWeight.Bold
@@ -779,11 +791,7 @@ private fun CyberWordIsland(
             )
             Spacer(modifier = Modifier.height(6.dp))
 
-            val wordText = if (language == AppLanguage.TRADITIONAL_CHINESE) {
-                wordMeaning?.zhName ?: ""
-            } else {
-                wordMeaning?.enName ?: ""
-            }
+            val wordText = wordMeaning?.getName(language) ?: ""
             val wordColor = displayColor?.color ?: Color.White
 
             // 雙層立體發光字符
@@ -821,11 +829,7 @@ private fun LiquidNeonCharacter(
     displayColor: StroopColor,
     language: AppLanguage
 ) {
-    val wordText = if (language == AppLanguage.TRADITIONAL_CHINESE) {
-        wordMeaning.zhName
-    } else {
-        wordMeaning.enName
-    }
+    val wordText = wordMeaning.getName(language)
     val neonColor = displayColor.color
 
     Box(
@@ -949,7 +953,7 @@ private fun CrystalOptionEnergyButton(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
-    val labelText = if (language == AppLanguage.TRADITIONAL_CHINESE) option.labelZh else option.labelEn
+    val labelText = option.getLabel(language)
 
     Box(
         modifier = modifier
@@ -1000,7 +1004,7 @@ private fun CrystalYesNoButton(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
-    val labelText = if (language == AppLanguage.TRADITIONAL_CHINESE) option.labelZh else option.labelEn
+    val labelText = option.getLabel(language)
 
     Box(
         modifier = modifier

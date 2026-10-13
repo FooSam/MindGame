@@ -6,12 +6,16 @@ import com.squareup.moshi.JsonClass
 @JsonClass(generateAdapter = true)
 data class LocalizedText(
     @Json(name = "zh-TW") val zhTW: String = "",
-    @Json(name = "en") val en: String = ""
+    @Json(name = "en") val en: String = "",
+    @Json(name = "ja") val ja: String = "",
+    @Json(name = "ko") val ko: String = ""
 ) {
     fun get(language: AppLanguage): String {
         return when (language) {
             AppLanguage.TRADITIONAL_CHINESE -> if (zhTW.isNotEmpty()) zhTW else en
             AppLanguage.ENGLISH -> if (en.isNotEmpty()) en else zhTW
+            AppLanguage.JAPANESE -> if (ja.isNotEmpty()) ja else if (en.isNotEmpty()) en else zhTW
+            AppLanguage.KOREAN -> if (ko.isNotEmpty()) ko else if (en.isNotEmpty()) en else zhTW
         }
     }
 }
@@ -19,12 +23,16 @@ data class LocalizedText(
 @JsonClass(generateAdapter = true)
 data class LocalizedOptions(
     @Json(name = "zh-TW") val zhTW: List<String> = emptyList(),
-    @Json(name = "en") val en: List<String> = emptyList()
+    @Json(name = "en") val en: List<String> = emptyList(),
+    @Json(name = "ja") val ja: List<String> = emptyList(),
+    @Json(name = "ko") val ko: List<String> = emptyList()
 ) {
     fun get(language: AppLanguage): List<String> {
         return when (language) {
             AppLanguage.TRADITIONAL_CHINESE -> if (zhTW.isNotEmpty()) zhTW else en
             AppLanguage.ENGLISH -> if (en.isNotEmpty()) en else zhTW
+            AppLanguage.JAPANESE -> if (ja.isNotEmpty()) ja else if (en.isNotEmpty()) en else zhTW
+            AppLanguage.KOREAN -> if (ko.isNotEmpty()) ko else if (en.isNotEmpty()) en else zhTW
         }
     }
 }

@@ -18,4 +18,11 @@ class ExampleRobolectricTest {
     val appName = context.getString(R.string.app_name)
     assertEquals("左右腦鍛鍊", appName)
   }
+
+  @Test
+  fun `read admob app id from string resource`() {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val appId = context.getString(R.string.admob_app_id)
+    assertEquals("ca-app-pub-5014630903713895~9913828625", appId)
+  }
 }

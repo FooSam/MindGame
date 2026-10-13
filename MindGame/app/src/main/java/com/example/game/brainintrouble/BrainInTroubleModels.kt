@@ -1,18 +1,32 @@
 package com.example.game.brainintrouble
 
 import androidx.compose.ui.graphics.Color
+import com.example.data.model.AppLanguage
 import com.example.data.model.GameDifficulty
 
 /**
  * 幾何形狀列舉（左腦處理：空間幾何形狀認知）
  */
-enum class BrainShape(val key: String, val displayNameZh: String, val displayNameEn: String) {
-    CIRCLE("CIRCLE", "圓形", "Circle"),
-    SQUARE("SQUARE", "正方形", "Square"),
-    TRIANGLE("TRIANGLE", "三角形", "Triangle"),
-    DIAMOND("DIAMOND", "菱形", "Diamond"),
-    STAR("STAR", "星形", "Star"),
-    HEXAGON("HEXAGON", "六角形", "Hexagon")
+enum class BrainShape(
+    val key: String,
+    val displayNameZh: String,
+    val displayNameEn: String,
+    val displayNameJa: String = displayNameEn,
+    val displayNameKo: String = displayNameEn
+) {
+    CIRCLE("CIRCLE", "圓形", "Circle", "円形", "원형"),
+    SQUARE("SQUARE", "正方形", "Square", "正方形", "정사각형"),
+    TRIANGLE("TRIANGLE", "三角形", "Triangle", "三角形", "삼각형"),
+    DIAMOND("DIAMOND", "菱形", "Diamond", "ひし形", "다이아몬드"),
+    STAR("STAR", "星形", "Star", "星形", "별"),
+    HEXAGON("HEXAGON", "六角形", "Hexagon", "六角形", "육각형");
+
+    fun getDisplayName(language: AppLanguage): String = when (language) {
+        AppLanguage.TRADITIONAL_CHINESE -> displayNameZh
+        AppLanguage.ENGLISH -> displayNameEn
+        AppLanguage.JAPANESE -> displayNameJa
+        AppLanguage.KOREAN -> displayNameKo
+    }
 }
 
 /**
@@ -22,14 +36,23 @@ enum class BrainColor(
     val key: String,
     val color: Color,
     val displayNameZh: String,
-    val displayNameEn: String
+    val displayNameEn: String,
+    val displayNameJa: String = displayNameEn,
+    val displayNameKo: String = displayNameEn
 ) {
-    RED("RED", Color(0xFFFF3B30), "紅", "Red"),
-    BLUE("BLUE", Color(0xFF007AFF), "藍", "Blue"),
-    GREEN("GREEN", Color(0xFF34C759), "綠", "Green"),
-    YELLOW("YELLOW", Color(0xFFFFCC00), "黃", "Yellow"),
-    PURPLE("PURPLE", Color(0xFFAF52DE), "紫", "Purple"),
-    ORANGE("ORANGE", Color(0xFFFF9500), "橙", "Orange")
+    RED("RED", Color(0xFFFF3B30), "紅", "Red", "赤", "빨강"),
+    BLUE("BLUE", Color(0xFF007AFF), "藍", "Blue", "青", "파랑"),
+    GREEN("GREEN", Color(0xFF34C759), "綠", "Green", "緑", "초록"),
+    YELLOW("YELLOW", Color(0xFFFFCC00), "黃", "Yellow", "黄", "노랑"),
+    PURPLE("PURPLE", Color(0xFFAF52DE), "紫", "Purple", "紫", "보라"),
+    ORANGE("ORANGE", Color(0xFFFF9500), "橙", "Orange", "橙", "주황");
+
+    fun getDisplayName(language: AppLanguage): String = when (language) {
+        AppLanguage.TRADITIONAL_CHINESE -> displayNameZh
+        AppLanguage.ENGLISH -> displayNameEn
+        AppLanguage.JAPANESE -> displayNameJa
+        AppLanguage.KOREAN -> displayNameKo
+    }
 }
 
 /**
@@ -137,8 +160,13 @@ data class DropItem(
     val visualColor: BrainColor? = null, // 右側文字/圖案的視覺顏色 (玩家肉眼看到的顏色，即 targetColor)
     var progress: Float = 0f,          // 0.0f (頂端) -> 1.0f (觸碰底線)
     var isEliminated: Boolean = false,
-    var isMissed: Boolean = false
-)
+    var isMissed: Boolean = false,
+    val textMeaningColor: BrainColor? = null
+) {
+    fun getTextLabel(language: AppLanguage): String? {
+        return textMeaningColor?.getDisplayName(language) ?: textLabel
+    }
+}
 
 /**
  * 粒子動態模型
@@ -194,17 +222,17 @@ object BrainInTroubleGenerator {
             val laneIndex = availableLanes.random()
             lastRightLane = laneIndex
 
-            val textLabel = if (config.useTextOnColor) {
+            val meaningColor = if (config.useTextOnColor) {
                 if (config.isStroopConflict && Math.random() < 0.8) {
                     // 80% 機率製造 Stroop 衝突文字：字義 ≠ 字色
                     val otherColors = config.rightColors.filter { it != targetColor }
                     if (otherColors.isNotEmpty()) {
-                        otherColors.random().displayNameZh
+                        otherColors.random()
                     } else {
-                        targetColor.displayNameZh
+                        targetColor
                     }
                 } else {
-                    targetColor.displayNameZh
+                    targetColor
                 }
             } else {
                 null
@@ -215,7 +243,8 @@ object BrainInTroubleGenerator {
                 isLeftSide = false,
                 laneIndex = laneIndex,
                 targetColor = targetColor,
-                textLabel = textLabel,
+                textLabel = meaningColor?.displayNameZh,
+                textMeaningColor = meaningColor,
                 visualColor = targetColor,
                 progress = 0f
             )

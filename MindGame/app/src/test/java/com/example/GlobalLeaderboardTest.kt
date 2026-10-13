@@ -25,7 +25,17 @@ class GlobalLeaderboardTest {
         assertEquals("TW", tw.code)
         assertEquals("台灣", tw.getDisplayName(AppLanguage.TRADITIONAL_CHINESE))
         assertEquals("Taiwan", tw.getDisplayName(AppLanguage.ENGLISH))
+        assertEquals("台湾", tw.getDisplayName(AppLanguage.JAPANESE))
+        assertEquals("대만", tw.getDisplayName(AppLanguage.KOREAN))
         assertEquals("🇹🇼", tw.flagEmoji)
+
+        val jp = Country.fromCode("JP")
+        assertEquals("日本", jp.getDisplayName(AppLanguage.JAPANESE))
+        assertEquals("일본", jp.getDisplayName(AppLanguage.KOREAN))
+
+        val kr = Country.fromCode("KR")
+        assertEquals("韓国", kr.getDisplayName(AppLanguage.JAPANESE))
+        assertEquals("한국", kr.getDisplayName(AppLanguage.KOREAN))
 
         val fallback = Country.fromCode("XYZ_UNKNOWN")
         assertEquals("OTHER", fallback.code)

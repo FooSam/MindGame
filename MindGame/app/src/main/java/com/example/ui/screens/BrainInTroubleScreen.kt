@@ -531,7 +531,7 @@ fun BrainInTroubleScreen(
                                 item.visualColor?.let { visualColor ->
                                     drawStylized3DColorPill(
                                         color = visualColor,
-                                        text = item.textLabel,
+                                        text = item.getTextLabel(language),
                                         centerX = posX,
                                         centerY = posY,
                                         textMeasurer = textMeasurer
@@ -627,6 +627,7 @@ fun BrainInTroubleScreen(
                     Box(modifier = Modifier.weight(1f)) {
                         ColorButtonGroup(
                             colors = config.rightColors,
+                            language = language,
                             onColorClick = { color ->
                                 onColorButtonPressed(color, halfW, trackH)
                             }
@@ -1542,6 +1543,7 @@ private fun ShapeButton(
 @Composable
 private fun ColorButtonGroup(
     colors: List<BrainColor>,
+    language: AppLanguage,
     onColorClick: (BrainColor) -> Unit
 ) {
     val rows = if (colors.size <= 3) {
@@ -1562,7 +1564,11 @@ private fun ColorButtonGroup(
             ) {
                 rowColors.forEach { color ->
                     Box(modifier = Modifier.weight(1f)) {
-                        ColorButton(color = color, onClick = { onColorClick(color) })
+                        ColorButton(
+                            color = color,
+                            language = language,
+                            onClick = { onColorClick(color) }
+                        )
                     }
                 }
             }
@@ -1576,6 +1582,7 @@ private fun ColorButtonGroup(
 @Composable
 private fun ColorButton(
     color: BrainColor,
+    language: AppLanguage,
     onClick: () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -1602,7 +1609,7 @@ private fun ColorButton(
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
-                text = color.displayNameZh,
+                text = color.getDisplayName(language),
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Black,
                     color = Color.White
