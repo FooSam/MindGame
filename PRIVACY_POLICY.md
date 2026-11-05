@@ -34,7 +34,7 @@
 ### 7. 聯絡我們
 如果您對本隱私權政策有任何疑問、建議或意見，歡迎隨時與我們聯絡：
 - **開發團隊**: Ordinary People Studio
-- **電子郵件**: `support@ordinarypeoplestudio.com`
+- **電子郵件**: `f.oosam@gmail.com`
 
 ---
 
@@ -61,4 +61,4 @@ We may update this Privacy Policy from time to time. Any updates will be posted 
 ### 7. Contact Us
 If you have questions or feedback regarding this Privacy Policy, please contact:
 - **Developer**: Ordinary People Studio
-- **Email**: `support@ordinarypeoplestudio.com`
+- **Email**: `f.oosam@gmail.com`

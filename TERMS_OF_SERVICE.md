@@ -47,8 +47,7 @@
 ### 9. 聯絡我們
 若您對本服務條款有任何疑問，歡迎隨時與我們聯絡：
 - **開發團隊**: Ordinary People Studio
-- **專案信箱**: `f.oosam@gmail.com`
-- **支援信箱**: `support@ordinarypeoplestudio.com`
+- **聯絡信箱**: `f.oosam@gmail.com`
 
 ---
 
@@ -80,5 +79,4 @@ To the maximum extent permitted by applicable law, Ordinary People Studio shall 
 ### 8. Contact Us
 For questions regarding these Terms, contact us at:
 - **Developer**: Ordinary People Studio
-- **Project Email**: `f.oosam@gmail.com`
-- **Support Email**: `support@ordinarypeoplestudio.com`
+- **Support Email**: `f.oosam@gmail.com`
