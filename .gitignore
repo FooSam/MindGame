@@ -9,6 +9,8 @@ Log/
 Gemini.md
 ProjectState.md
 MindGame指令.txt
+build_aab.bat
+build_aab.ps1
 
 # 2. 正式 Release 產出目錄與安裝包
 Release/
