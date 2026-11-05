@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>服務條款 | 左右腦鍛鍊 (MindGame Terms of Service)</title>
+  <style>
+    :root {
+      --primary: #4F46E5;
+      --primary-dark: #3730A3;
+      --bg: #F8FAFC;
+      --card-bg: #FFFFFF;
+      --text: #0F172A;
+      --text-muted: #64748B;
+      --border: #E2E8F0;
+      --accent: #0EA5E9;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      padding: 24px 16px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+      border: 1px solid var(--border);
+    }
+    .header {
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 24px;
+      margin-bottom: 24px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      background-color: rgba(79, 70, 229, 0.1);
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 700;
+      border-radius: 9999px;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    h1 {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .meta-info {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+    .nav-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 20px 0;
+      padding-bottom: 16px;
+      border-bottom: 1px dashed var(--border);
+    }
+    .nav-links a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+      margin-right: 16px;
+    }
+    .nav-links a:hover {
+      text-decoration: underline;
+    }
+    .lang-switcher {
+      display: flex;
+      gap: 8px;
+    }
+    .lang-btn {
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .lang-btn.active {
+      background: var(--primary);
+      color: #FFF;
+      border-color: var(--primary);
+    }
+    h2 {
+      font-size: 19px;
+      font-weight: 700;
+      color: var(--primary-dark);
+      margin-top: 26px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    p, ul {
+      margin-bottom: 14px;
+      color: #334155;
+      font-size: 15px;
+    }
+    ul {
+      padding-left: 20px;
+    }
+    li {
+      margin-bottom: 6px;
+    }
+    .highlight-card {
+      background: #EEF2FF;
+      border-left: 4px solid var(--primary);
+      padding: 16px;
+      border-radius: 0 12px 12px 0;
+      margin-bottom: 24px;
+      font-size: 14px;
+      color: #312E81;
+    }
+    .footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    code {
+      background: #F1F5F9;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      color: #0F172A;
+    }
+    @media (max-width: 600px) {
+      .container {
+        padding: 24px 18px;
+      }
+      h1 {
+        font-size: 22px;
+      }
+      .nav-bar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <span class="badge">Legal Terms</span>
+      <h1 id="page-title">服務條款 (Terms of Service)</h1>
+      <div class="meta-info" id="meta-info">
+        <strong>左右腦鍛鍊 (MindGame / Brain Training)</strong> &bull; 最後更新日期：2026 年 11 月 5 日
+      </div>
+    </div>
+
+    <div class="nav-bar">
+      <div class="nav-links">
+        <a href="../privacy/">🛡️ 隱私權政策 (Privacy Policy)</a>
+        <a href="./" style="color: var(--text); font-weight: 700;">📜 服務條款 (Terms of Service)</a>
+      </div>
+      <div class="lang-switcher">
+        <button class="lang-btn active" onclick="switchLang('zh')">繁體中文</button>
+        <button class="lang-btn" onclick="switchLang('en')">English</button>
+      </div>
+    </div>
+
+    <!-- 繁體中文內容 -->
+    <div id="content-zh">
+      <div class="highlight-card">
+        <strong>📌 條款摘要：</strong> 感謝您使用《左右腦鍛鍊》(MindGame)。下載、安裝或使用本應用程式即表示您同意本服務條款。本應用程式為完全免費且具備 Google AdMob 廣告支援之休閒益智遊戲，所有遊玩記錄均以本地安全儲存為核心。
+      </div>
+
+      <h2>1. 接受條款</h2>
+      <p>歡迎使用由 <strong>Ordinary People Studio</strong>（以下簡稱「我們」或「開發團隊」）所開發之行動應用程式《左右腦鍛鍊》（英文名稱：<strong>MindGame (Brain Training)</strong>，Application ID: <code>com.aistudio.mindgame.app</code>，以下簡稱「本應用程式」）。</p>
+      <p>當您下載、安裝、複製或以任何方式使用本應用程式時，即代表您已閱讀、理解並完全同意接受本《服務條款》（以下簡稱「本條款」）以及我們的《隱私權政策》。若您不同意本條款之任何部分，請勿安裝或使用本應用程式，並請將其從您的裝置中移除。</p>
+
+      <h2>2. 服務內容與授權範圍</h2>
+      <ul>
+        <li><strong>授權範圍</strong>：我們授予您一項個人的、非獨佔的、不可轉讓的、可撤回的有限許可，允許您僅基於個人、非商業之娛樂用途，在您合法擁有的 Android 裝置上下載並運行本應用程式。</li>
+        <li><strong>遊戲功能</strong>：本應用程式提供專注力訓練、極速配對、經典數獨、貓咪數獨、六面合體、雷射迷宮、喵影圍捕、左右為難、海龜湯推理、打那個誰及休閒彈珠等大腦認知訓練與益智休閒遊戲。</li>
+        <li><strong>更新與調整</strong>：我們保留隨時修改、更新、擴充或終止本應用程式中任何遊戲模式、關卡配置或輔助道具之權利，無需事先另行通知。</li>
+      </ul>
+
+      <h2>3. 使用者行為準則</h2>
+      <p>您在使用本應用程式時，同意遵守中華民國及您所在地之相關法律規範，並承諾不會從事以下行為：</p>
+      <ul>
+        <li>對本應用程式進行反向工程（Reverse Engineering）、反編譯（Decompile）、拆解（Disassemble）或試圖獲取原始程式碼。</li>
+        <li>使用任何未經授權之外掛程式、作弊軟體、自動化腳本或機器人修改本機記錄、錯誤灌水或干擾全球排行榜公正性。</li>
+        <li>以惡意代碼、病毒或任何破壞性方式攻擊本應用程式及其支援之雲端排行榜服務。</li>
+        <li>將本應用程式或其任何部分（包括美術資源、音效、關卡演算法）轉售、出租、分許可或用於任何商業牟利目的。</li>
+      </ul>
+
+      <h2>4. 智慧財產權聲明</h2>
+      <p>本應用程式所包含之所有智慧財產權（包括但不限於商標、標誌、文字說明、美術圖示、視覺 UI 設計、關卡演算法、音效合成機制、動畫效果及軟體程式碼）均屬於 <strong>Ordinary People Studio</strong> 或相關合法權利人所有，受國際版權法、商標法及相關智慧財產權法律保護。未經我們事先書面許可，任何人不得擅自複製、修改、散布或公開展示上述任何內容。</p>
+
+      <h2>5. 第三方服務與廣告宣告</h2>
+      <ul>
+        <li><strong>Google AdMob</strong>：本應用程式整合 Google Mobile Ads SDK（Google AdMob）以提供免費遊戲體驗。應用程式中可能展示插頁式廣告（Interstitial Ads）與獎勵影片廣告（Rewarded Ads）。</li>
+        <li><strong>廣告內容責任</strong>：廣告內容係由第三方廣告聯播網自動派送，我們不對任何第三方廣告之內容、商品品質、正確性或其外部連結網站承擔任何責任。您與廣告商之間的任何互動或交易，純屬您與該廣告商之間的協議。</li>
+        <li><strong>隱私保護</strong>：關於廣告辨識碼與設備資訊之處理方式，請詳閱我們的<a href="../privacy/" target="_blank">《隱私權政策》</a>及 Google 隱私權政策。</li>
+      </ul>
+
+      <h2>6. 免責聲明與保證限制 (Disclaimer of Warranties)</h2>
+      <ul>
+        <li>本應用程式係依「現狀」（As-Is）及「現有基礎」（As-Available）提供。在法律允許之最大範圍內，我們明確聲明不提供任何明示或默示之保證，包括但不限於適銷性、特定目的之適用性、不侵權或持續無錯誤之保證。</li>
+        <li><strong>娛樂用途</strong>：本應用程式中所有認知鍛鍊、專注力測試、記憶力測試與左右腦測驗均僅供休閒與娛樂目的，<strong>不構成任何醫療、心理學診斷、醫療建議或專業大腦健康療效之保證</strong>。</li>
+        <li><strong>數據保存</strong>：玩家本機之遊戲記錄存放在裝置本地儲存庫。若您解除安裝應用程式、清除應用程式資料或變更裝置，本機歷史成績可能會遺失，我們對因此導致之數據遺失不負賠償責任。</li>
+      </ul>
+
+      <h2>7. 責任限制 (Limitation of Liability)</h2>
+      <p>在適用法律允許的最大範圍內，Ordinary People Studio 及其開發團隊成員概不對因使用或無法使用本應用程式所引起的任何直接、間接、附隨、衍生性、懲罰性或特殊損害（包括但不限於設備故障、利潤損失、數據遺失或精神損害）承擔賠償責任。</p>
+
+      <h2>8. 條款修訂與終止</h2>
+      <p>我們保留隨時更新或修改本服務條款之權利。更新後之條款將即時公佈於本網頁並更新「最後修訂日期」。若您在條款修改後繼續使用本應用程式，即視為您已接受並同意修改後之條款內容。</p>
+
+      <h2>9. 準據法與管轄法院</h2>
+      <p>本條款之解釋、效力及履行均以中華民國（Taiwan）法律為準據法。若因本條款或使用本應用程式而發生任何爭議，雙方同意以台灣台北地方法院為第一審管轄法院。</p>
+
+      <h2>10. 聯絡我們 (Contact Us)</h2>
+      <p>若您對本服務條款有任何疑問、建議或法律反饋，歡迎隨時透過以下管道與我們聯繫：</p>
+      <ul>
+        <li>開發團隊：<strong>Ordinary People Studio</strong></li>
+        <li>專案官方信箱：<code>f.oosam@gmail.com</code></li>
+        <li>客戶支援信箱：<code>support@ordinarypeoplestudio.com</code></li>
+      </ul>
+    </div>
+
+    <!-- English Content -->
+    <div id="content-en" style="display: none;">
+      <div class="highlight-card">
+        <strong>📌 Terms Summary:</strong> Thank you for using MindGame (Brain Training). By downloading, installing, or playing the App, you agree to these Terms of Service. MindGame is an ad-supported free casual brain-training puzzle game with a strong commitment to local offline data storage.
+      </div>
+
+      <h2>1. Acceptance of Terms</h2>
+      <p>Welcome to <strong>MindGame (Brain Training)</strong> (Application ID: <code>com.aistudio.mindgame.app</code>, hereinafter referred to as the "App"), created and maintained by <strong>Ordinary People Studio</strong> ("we", "us", or "our").</p>
+      <p>By downloading, installing, accessing, or using this App, you acknowledge that you have read, understood, and agreed to be legally bound by these Terms of Service ("Terms") and our Privacy Policy. If you do not agree to these Terms, please do not install or use the App and delete it immediately from your device.</p>
+
+      <h2>2. License and Permitted Use</h2>
+      <ul>
+        <li><strong>Grant of License</strong>: We grant you a personal, non-exclusive, non-transferable, revocable, and limited license to download and run the App solely on your personal Android device for non-commercial entertainment purposes.</li>
+        <li><strong>Features</strong>: The App offers interactive cognitive exercises including Focus Training, Speed Match, Classic Sudoku, Cat Sudoku, 3D Glass Puzzle Cube, Laser Maze, Cat Trap, Brain in Trouble, Turtle Soup, and arcade pinballs.</li>
+        <li><strong>Modifications</strong>: We reserve the right to alter, update, expand, or remove any game modes, puzzle layouts, or tool configurations at our sole discretion without prior notice.</li>
+      </ul>
+
+      <h2>3. User Conduct and Restrictions</h2>
+      <p>You agree not to engage in any prohibited activities, including but not limited to:</p>
+      <ul>
+        <li>Reverse engineering, decompiling, disassembling, or attempting to discover the source code of the App.</li>
+        <li>Using cheats, automation scripts, exploits, bots, or unauthorized memory modifications to alter local scores or disrupt global leaderboard rankings.</li>
+        <li>Introducing malware, viruses, or any code intended to harm, disrupt, or impair the App or its cloud leaderboard micro-backend.</li>
+        <li>Sublicensing, renting, leasing, selling, distributing, or commercially exploiting any assets, artwork, or algorithms of the App.</li>
+      </ul>
+
+      <h2>4. Intellectual Property Rights</h2>
+      <p>All title, ownership rights, and intellectual property rights in and to the App (including but not limited to game designs, graphics, audio synthesis algorithms, UI aesthetics, text, code, and trademarks) are owned exclusively by <strong>Ordinary People Studio</strong> and protected by copyright, trademark, and international intellectual property treaties. All rights not expressly granted herein are reserved.</p>
+
+      <h2>5. Third-Party Services and Advertisements</h2>
+      <ul>
+        <li><strong>Google AdMob</strong>: The App utilizes the Google Mobile Ads SDK (Google AdMob) to serve interstitial and rewarded video ads that enable free access to all game features.</li>
+        <li><strong>Ad Content</strong>: Third-party advertisements are served dynamically by ad networks. We do not endorse, guarantee, or assume responsibility for the accuracy or quality of third-party products, services, or websites linked through ads.</li>
+        <li><strong>Privacy Policy</strong>: For details regarding advertising identifiers (AD_ID) and diagnostic data, please refer to our <a href="../privacy/" target="_blank">Privacy Policy</a> and Google's Privacy Policy.</li>
+      </ul>
+
+      <h2>6. Disclaimer of Warranties</h2>
+      <ul>
+        <li>THE APP IS PROVIDED ON AN "AS IS" AND "AS AVAILABLE" BASIS WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR ERROR-FREE OPERATION.</li>
+        <li><strong>Entertainment Only</strong>: All brain tests, focus measurements, and memory assessments within the App are designed strictly for recreational and puzzle-solving enjoyment. <strong>They do NOT constitute medical diagnosis, cognitive therapy, or professional psychological health advice</strong>.</li>
+        <li><strong>Local Data Storage</strong>: Your progress and high scores are stored locally in Room SQLite database. Uninstalling the app, clearing app storage, or switching devices may cause progress loss, for which we bear no liability.</li>
+      </ul>
+
+      <h2>7. Limitation of Liability</h2>
+      <p>TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, ORDINARY PEOPLE STUDIO AND ITS DEVELOPERS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, CONSEQUENTIAL, SPECIAL, OR PUNITIVE DAMAGES (INCLUDING LOSS OF DATA, DEVICE DAMAGE, OR INTERRUPTIONS) ARISING OUT OF OR IN CONNECTION WITH YOUR USE OF THE APP.</p>
+
+      <h2>8. Changes to Terms</h2>
+      <p>We may revise these Terms of Service periodically. Any updates will be posted directly on this webpage with a revised "Last Updated" date. Continued use of the App following any changes indicates your full acceptance of the revised Terms.</p>
+
+      <h2>9. Governing Law</h2>
+      <p>These Terms shall be governed by and construed in accordance with the laws of Taiwan (Republic of China), without regard to its conflict of law principles. Any dispute arising out of or related to these Terms shall be subject to the exclusive jurisdiction of the Taipei District Court in Taiwan.</p>
+
+      <h2>10. Contact Information</h2>
+      <p>If you have any questions, inquiries, or feedback regarding these Terms of Service, please feel free to reach out to us at:</p>
+      <ul>
+        <li>Developer: <strong>Ordinary People Studio</strong></li>
+        <li>Project Email: <code>f.oosam@gmail.com</code></li>
+        <li>Support Email: <code>support@ordinarypeoplestudio.com</code></li>
+      </ul>
+    </div>
+
+    <div class="footer">
+      &copy; 2026 Ordinary People Studio. All rights reserved. | MindGame 左右腦鍛鍊
+    </div>
+  </div>
+
+  <script>
+    function switchLang(lang) {
+      document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
+      if (lang === 'zh') {
+        document.getElementById('content-zh').style.display = 'block';
+        document.getElementById('content-en').style.display = 'none';
+        document.querySelectorAll('.lang-btn')[0].classList.add('active');
+        document.getElementById('page-title').innerText = '服務條款 (Terms of Service)';
+        document.getElementById('meta-info').innerHTML = '<strong>左右腦鍛鍊 (MindGame / Brain Training)</strong> &bull; 最後更新日期：2026 年 11 月 5 日';
+      } else {
+        document.getElementById('content-zh').style.display = 'none';
+        document.getElementById('content-en').style.display = 'block';
+        document.querySelectorAll('.lang-btn')[1].classList.add('active');
+        document.getElementById('page-title').innerText = 'Terms of Service (ToS)';
+        document.getElementById('meta-info').innerHTML = '<strong>MindGame (Brain Training)</strong> &bull; Last Updated: November 5, 2026';
+      }
+    }
+  </script>
+</body>
+</html>

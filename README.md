@@ -139,7 +139,8 @@ gradle :app:bundleRelease
 ## 🔒 隱私與資料安全 (Privacy & Data Safety)
 - **個人資料安全保護**：本應用程式遊戲進度與成績完全儲存於本地設備，不主動收集個人身分資料。
 - **第三方廣告服務**：整合 Google AdMob 提供廣告服務，遵循 Google Play 廣告 ID 合規政策。
-- **隱私權政策完整網址**：請參閱 [PRIVACY_POLICY.md](PRIVACY_POLICY.md) 或線上網頁 `https://FooSam.github.io/MindGame/privacy/`。
+- **隱私權政策完整網址**：請參閱 [PRIVACY_POLICY.md](PRIVACY_POLICY.md) 或線上網頁 `https://FooSam.github.io/MindGame/privacy/`。
+- **服務條款完整網址**：請參閱線上網頁 `https://FooSam.github.io/MindGame/terms/`。
 
 ---
 
