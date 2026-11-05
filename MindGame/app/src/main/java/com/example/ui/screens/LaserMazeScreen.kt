@@ -194,14 +194,14 @@ fun LaserMazeScreen(
     var panOffsetX by remember { mutableFloatStateOf(0f) }
     var panOffsetY by remember { mutableFloatStateOf(0f) }
 
-    // 3D 微傾透視角度 (限制變化不超過 30 度)
-    var tiltPitch by remember { mutableFloatStateOf(18f) } // X軸俯仰角: 0f (正俯視) ~ 30f (微傾極限)，預設 18f
-    var tiltYaw by remember { mutableFloatStateOf(-5f) }   // Y軸偏航角: -20f ~ 20f，預設 -5f
+    // 3D 微傾透視角度 (限制變化不超過 38 度，兼顧垂直立面可視度與後排格子觸控)
+    var tiltPitch by remember { mutableFloatStateOf(22f) } // X軸俯仰角: 0f (正俯視) ~ 38f (微傾極限)，預設 22f
+    var tiltYaw by remember { mutableFloatStateOf(-5f) }   // Y軸偏航角: -25f ~ 25f，預設 -5f
     var isAngleAdjustMode by remember { mutableStateOf(false) } // 大棋盤時是否處於單指旋轉視角模式
 
     // 一鍵回正視角
     fun resetViewAngle() {
-        tiltPitch = 18f
+        tiltPitch = 22f
         tiltYaw = -5f
     }
 
@@ -211,7 +211,7 @@ fun LaserMazeScreen(
             tiltPitch = 0f
             tiltYaw = 0f
         } else {
-            tiltPitch = 18f
+            tiltPitch = 22f
             tiltYaw = -5f
         }
     }
@@ -664,7 +664,7 @@ fun LaserMazeScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .graphicsLayer {
-                                rotationX = tiltPitch.coerceIn(0f, 30f)
+                                rotationX = tiltPitch.coerceIn(0f, 38f)
                                 rotationY = tiltYaw.coerceIn(-25f, 25f)
                                 cameraDistance = 16f * density
                             }
@@ -679,9 +679,9 @@ fun LaserMazeScreen(
                                             panOffsetX = (panOffsetX + dragAmount.x).coerceIn(-currentMaxPanX, currentMaxPanX)
                                             panOffsetY = (panOffsetY + dragAmount.y).coerceIn(-currentMaxPanY, currentMaxPanY)
                                         } else {
-                                            // 自由微調 3D 視角 (限制不超過 30 度)
+                                            // 自由微調 3D 視角 (限制不超過 38 度)
                                             tiltYaw = (tiltYaw + dragAmount.x * 0.16f).coerceIn(-25f, 25f)
-                                            tiltPitch = (tiltPitch - dragAmount.y * 0.16f).coerceIn(0f, 30f)
+                                            tiltPitch = (tiltPitch - dragAmount.y * 0.16f).coerceIn(0f, 38f)
                                         }
                                     }
                                 }
@@ -729,7 +729,7 @@ fun LaserMazeScreen(
                                 }
                             }
 
-                            // 2. 繪製各格子物件 (3A 工藝手繪)
+                            // 2. 繪製各格子物件 (3A 工藝手繪 + 動態 3D 垂直立面)
                             for (r in 0 until gridSize) {
                                 for (c in 0 until gridSize) {
                                     val piece = boardState.grid[r][c] ?: continue
@@ -747,7 +747,9 @@ fun LaserMazeScreen(
                                         size = cellSize * 0.82f,
                                         rotationDegrees = currentAngle,
                                         isLit = (Pair(r, c) in boardState.receivers && boardState.receivers.indexOf(Pair(r, c)) in boardState.litReceiverIndices),
-                                        palette = palette
+                                        palette = palette,
+                                        tiltPitch = tiltPitch,
+                                        tiltYaw = tiltYaw
                                     )
                                 }
                             }
@@ -967,7 +969,7 @@ fun LaserMazeScreen(
                                 )
                             }
 
-                            if (tiltPitch != 18f || tiltYaw != -5f) {
+                            if (tiltPitch != 22f || tiltYaw != -5f) {
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = "↺ " + Localization.getString("laser_maze_reset_view", language),
@@ -1634,9 +1636,19 @@ private fun DrawScope.drawOpticalPiece(
     size: Float,
     rotationDegrees: Float,
     isLit: Boolean,
-    palette: LaserMazePalette
+    palette: LaserMazePalette,
+    tiltPitch: Float = 0f,
+    tiltYaw: Float = 0f
 ) {
     val half = size / 2f
+
+    // 計算 3D 視角投影立體高度向量 (Extrusion Vector)
+    // 當玩家向上推動盤面產生俯仰角 (tiltPitch > 0) 或左右轉動 (tiltYaw) 時，物件將朝向視線反向拉出立體高度
+    val pitchRad = (tiltPitch * (PI / 180f)).toFloat()
+    val yawRad = (tiltYaw * (PI / 180f)).toFloat()
+    val maxExtrudeHeight = half * 0.42f // 立體高度比例 (最高約 21% 格長)
+    val extrudeX = -sin(yawRad) * (maxExtrudeHeight * 0.55f)
+    val extrudeY = -sin(pitchRad) * maxExtrudeHeight
 
     when (piece.type) {
         OpticalPieceType.EMITTER -> {
@@ -1724,25 +1736,35 @@ private fun DrawScope.drawOpticalPiece(
         }
 
         OpticalPieceType.MIRROR_SINGLE -> {
-            // 單面 45° 鍍銀反光鏡 (3D 立體斜切鏡面 + 鏡背裝甲側身 + 精密轉盤 + 鍍銀高光 + 合金固定扣)
+            // 單面 45° 鍍銀反光鏡 (動態視差垂直立面 + 立體真空鍍銀鏡板 + 重裝甲背面)
             rotate(rotationDegrees, pivot = Offset(centerX, centerY)) {
                 drawPrecisionTurntable(centerX, centerY, half, piece.isDecoy)
 
-                // 鏡背裝甲 (背部三角斜板，帶有金屬加強筋與微型鉚釘)
+                // 鏡子基礎端點 (45度對角線)
                 val p1 = Offset(centerX - half * 0.65f, centerY + half * 0.65f)
                 val p2 = Offset(centerX + half * 0.65f, centerY - half * 0.65f)
                 val backCorner = Offset(centerX - half * 0.45f, centerY - half * 0.45f)
 
-                // 1. 鏡背裝甲側身厚度 (3D Extruded Armor Thickness)
-                val armorSide = Path().apply {
-                    moveTo(p1.x, p1.y)
-                    lineTo(p2.x, p2.y)
-                    lineTo(p2.x - half * 0.08f, p2.y - half * 0.08f)
-                    lineTo(p1.x - half * 0.08f, p1.y - half * 0.08f)
-                    close()
-                }
-                drawPath(armorSide, color = Color(0xFF1E293B))
+                // 在元件旋轉坐標系下轉換當前的立體拉伸高度向量
+                val rotRad = (-rotationDegrees * (PI / 180f)).toFloat()
+                val localExtrudeX = extrudeX * cos(rotRad) - extrudeY * sin(rotRad)
+                val localExtrudeY = extrudeX * sin(rotRad) + extrudeY * cos(rotRad)
 
+                // 1. 【背面重型裝甲立體面】(Back Armor Extrusion Facet)
+                // 當有立體拉伸時，若視角看到背面，繪製厚實金屬立面板
+                if (localExtrudeY < 0f || localExtrudeX < 0f) {
+                    val backExtrudePath = Path().apply {
+                        moveTo(p1.x, p1.y)
+                        lineTo(p2.x, p2.y)
+                        lineTo(p2.x + localExtrudeX * 0.8f, p2.y + localExtrudeY * 0.8f)
+                        lineTo(p1.x + localExtrudeX * 0.8f, p1.y + localExtrudeY * 0.8f)
+                        close()
+                    }
+                    drawPath(backExtrudePath, color = Color(0xFF1E293B))
+                    drawPath(backExtrudePath, color = Color(0xFF0F172A), style = Stroke(width = 1.2f))
+                }
+
+                // 2. 鏡背深色強化底板 (背部三角斜板，帶有金屬加強筋與微型鉚釘)
                 val backArmor = Path().apply {
                     moveTo(p1.x, p1.y)
                     lineTo(p2.x, p2.y)
@@ -1752,46 +1774,84 @@ private fun DrawScope.drawOpticalPiece(
                 drawPath(backArmor, color = Color(0xFF263238))
                 drawPath(backArmor, color = Color(0xFF455A64), style = Stroke(width = 1.5f))
 
-                // 背板微型六角鉚釘
+                // 背板微型六角鉚釘與散熱筋條
                 drawCircle(color = Color(0xFFB0BEC5), radius = 2.2f, center = Offset(centerX - half * 0.25f, centerY - half * 0.25f))
+                drawLine(
+                    color = Color(0xFF37474F),
+                    start = Offset(centerX - half * 0.38f, centerY - half * 0.15f),
+                    end = Offset(centerX - half * 0.15f, centerY - half * 0.38f),
+                    strokeWidth = 2.5f,
+                    cap = StrokeCap.Round
+                )
 
-                // 2. 45° 玻璃鏡面立體斜切面 (3D Beveled Optical Mirror Prism Facet)
-                // 朝向前向反射側擴展立體斜面
-                val normX = half * 0.12f
-                val normY = half * 0.12f
+                // 3. 【正面立體鍍銀鏡板】(3D Front Mirror Prism Standing Facet)
+                // 朝向前向反射側擴展垂直立體鏡面板，傾斜時能清晰辨識「正面朝向」
+                val normX = half * 0.14f
+                val normY = half * 0.14f
+
+                // 若有視角傾斜，將正面鏡板朝向視線反方向拉伸立面
+                val facetP1 = Offset(p1.x + normX, p1.y + normY)
+                val facetP2 = Offset(p2.x + normX, p2.y + normY)
+
+                // 正面立體側牆面 (Front Wall Extrusion)
+                if (localExtrudeY < 0f || localExtrudeX > 0f) {
+                    val mirrorWallPath = Path().apply {
+                        moveTo(p1.x, p1.y)
+                        lineTo(p2.x, p2.y)
+                        lineTo(facetP2.x + localExtrudeX, facetP2.y + localExtrudeY)
+                        lineTo(facetP1.x + localExtrudeX, facetP1.y + localExtrudeY)
+                        close()
+                    }
+                    drawPath(
+                        mirrorWallPath,
+                        brush = Brush.linearGradient(
+                            colors = listOf(Color(0xFF38BDF8).copy(alpha = 0.85f), Color(0xFFE2E8F0), Color(0xFF0284C7).copy(alpha = 0.85f)),
+                            start = p1,
+                            end = Offset(facetP2.x + localExtrudeX, facetP2.y + localExtrudeY)
+                        )
+                    )
+                }
+
+                // 正面鏡板本體 (真空鍍銀高亮層 + 青藍光學鍍膜)
                 val facetPath = Path().apply {
                     moveTo(p1.x, p1.y)
                     lineTo(p2.x, p2.y)
-                    lineTo(p2.x + normX, p2.y + normY)
-                    lineTo(p1.x + normX, p1.y + normY)
+                    lineTo(facetP2.x, facetP2.y)
+                    lineTo(facetP1.x, facetP1.y)
                     close()
                 }
-                // 鏡面主體真空鍍銀層與抗反射青藍微光
                 drawPath(
                     facetPath,
                     brush = Brush.linearGradient(
-                        colors = listOf(Color(0xFFE2E8F0), Color.White, Color(0xFFCBD5E1), Color(0xFF94A3B8)),
+                        colors = listOf(Color(0xFFE0F2FE), Color.White, Color(0xFFBAE6FD), Color(0xFF38BDF8)),
                         start = p1,
-                        end = Offset(p2.x + normX, p2.y + normY)
+                        end = facetP2
                     )
                 )
-                // 鏡面倒角邊緣高光
-                drawPath(facetPath, color = Color.White.copy(alpha = 0.85f), style = Stroke(width = 1.2f))
+                drawPath(facetPath, color = Color.White, style = Stroke(width = 1.4f))
 
+                // 4. 正面高反光霓虹光暈標記 (讓玩家在任何角度都能一眼確信此側為反射面)
+                drawLine(
+                    color = Color(0xFF00E5FF).copy(alpha = 0.75f),
+                    start = Offset(p1.x + normX * 0.7f, p1.y + normY * 0.7f),
+                    end = Offset(p2.x + normX * 0.7f, p2.y + normY * 0.7f),
+                    strokeWidth = 2.2f,
+                    cap = StrokeCap.Round
+                )
                 // 鏡面流光高光帶 (Specular Sheen Sweep)
                 drawLine(
                     color = Color.White,
                     start = Offset(centerX - half * 0.18f + normX * 0.5f, centerY + half * 0.18f + normY * 0.5f),
                     end = Offset(centerX + half * 0.35f + normX * 0.5f, centerY - half * 0.35f + normY * 0.5f),
-                    strokeWidth = 2.2f,
+                    strokeWidth = 2.5f,
                     cap = StrokeCap.Round
                 )
 
                 // 兩端合金夾扣 (Mounting Clamps)
-                drawCircle(color = Color(0xFF37474F), radius = 4.2f, center = p1)
-                drawCircle(color = Color(0xFF90A4AE), radius = 3.0f, center = p1)
-                drawCircle(color = Color(0xFF37474F), radius = 4.2f, center = p2)
-                drawCircle(color = Color(0xFF90A4AE), radius = 3.0f, center = p2)
+                drawCircle(color = Color(0xFF37474F), radius = 4.5f, center = p1)
+                drawCircle(color = Color(0xFF38BDF8), radius = 2.8f, center = p1)
+                drawCircle(color = Color(0xFF37474F), radius = 4.5f, center = p2)
+                drawCircle(color = Color(0xFF38BDF8), radius = 2.8f, center = p2)
             }
         }
 
@@ -1947,84 +2007,128 @@ private fun DrawScope.drawOpticalPiece(
         }
 
         OpticalPieceType.OBSTACLE_ABSORBER -> {
-            // 碳素吸光石 (非對稱多邊形立體晶岩 Low-Poly 3D Rock + 三面光影 + 天然裂隙 + 環境遮蔽陰影)
-            // 1. 接觸陰影 (Ambient Occlusion Drop Shadow)
+            // 碳素吸光石 (動態 3D 垂直岩石峭壁 Extruded Rock Wall + 三面光影 + 環境遮蔽陰影)
+            // 1. 接觸陰影 (隨立體拉伸動態擴大陰影)
             drawOval(
-                color = Color.Black.copy(alpha = 0.45f),
-                topLeft = Offset(centerX - half * 0.82f, centerY + half * 0.45f),
-                size = Size(half * 1.64f, half * 0.45f)
+                color = Color.Black.copy(alpha = 0.55f),
+                topLeft = Offset(centerX - half * 0.82f - extrudeX * 0.3f, centerY + half * 0.38f - extrudeY * 0.3f),
+                size = Size(half * 1.64f, half * 0.52f)
             )
 
-            // 2. 多面體巨石多邊形頂點
+            // 2. 多面體巨石多邊形底座頂點 (Base Vertices)
             val pTop = Offset(centerX - half * 0.15f, centerY - half * 0.75f)
             val pTopRight = Offset(centerX + half * 0.72f, centerY - half * 0.42f)
             val pRight = Offset(centerX + half * 0.78f, centerY + half * 0.35f)
             val pBottom = Offset(centerX + half * 0.1f, centerY + half * 0.75f)
             val pBottomLeft = Offset(centerX - half * 0.72f, centerY + half * 0.45f)
             val pLeft = Offset(centerX - half * 0.78f, centerY - half * 0.32f)
-            val pCenter = Offset(centerX - half * 0.05f, centerY - half * 0.05f)
 
-            // 受光頂面 (Top Light Facet)
+            // 3. 巨石頂面頂點 (隨視角傾斜向上凸出拉伸)
+            val tTop = Offset(pTop.x + extrudeX, pTop.y + extrudeY)
+            val tTopRight = Offset(pTopRight.x + extrudeX, pTopRight.y + extrudeY)
+            val tRight = Offset(pRight.x + extrudeX, pRight.y + extrudeY)
+            val tBottom = Offset(pBottom.x + extrudeX, pBottom.y + extrudeY)
+            val tBottomLeft = Offset(pBottomLeft.x + extrudeX, pBottomLeft.y + extrudeY)
+            val tLeft = Offset(pLeft.x + extrudeX, pLeft.y + extrudeY)
+            val tCenter = Offset(centerX - half * 0.05f + extrudeX, centerY - half * 0.05f + extrudeY)
+
+            // 4. 垂直岩石側壁 (Vertical Rock Faces) - 讓傾斜視角時一眼看見垂直石牆厚度
+            val wallBottom = Path().apply {
+                moveTo(pBottomLeft.x, pBottomLeft.y)
+                lineTo(pBottom.x, pBottom.y)
+                lineTo(tBottom.x, tBottom.y)
+                lineTo(tBottomLeft.x, tBottomLeft.y)
+                close()
+            }
+            drawPath(wallBottom, color = Color(0xFF0F172A))
+
+            val wallRight = Path().apply {
+                moveTo(pBottom.x, pBottom.y)
+                lineTo(pRight.x, pRight.y)
+                lineTo(tRight.x, tRight.y)
+                lineTo(tBottom.x, tBottom.y)
+                close()
+            }
+            drawPath(wallRight, color = Color(0xFF1E293B))
+
+            // 5. 受光頂面 (Top Light Facet)
             val topFacet = Path().apply {
-                moveTo(pTop.x, pTop.y)
-                lineTo(pTopRight.x, pTopRight.y)
-                lineTo(pCenter.x, pCenter.y)
-                lineTo(pLeft.x, pLeft.y)
+                moveTo(tTop.x, tTop.y)
+                lineTo(tTopRight.x, tTopRight.y)
+                lineTo(tCenter.x, tCenter.y)
+                lineTo(tLeft.x, tLeft.y)
                 close()
             }
             drawPath(topFacet, color = Color(0xFF475569))
 
-            // 側邊過渡面 (Midtone Facet)
+            // 側邊過渡頂面 (Midtone Facet)
             val midFacet = Path().apply {
-                moveTo(pLeft.x, pLeft.y)
-                lineTo(pCenter.x, pCenter.y)
-                lineTo(pBottom.x, pBottom.y)
-                lineTo(pBottomLeft.x, pBottomLeft.y)
+                moveTo(tLeft.x, tLeft.y)
+                lineTo(tCenter.x, tCenter.y)
+                lineTo(tBottom.x, tBottom.y)
+                lineTo(tBottomLeft.x, tBottomLeft.y)
                 close()
             }
             drawPath(midFacet, color = Color(0xFF334155))
 
-            // 背光陰影面 (Shadow Facet)
+            // 背光陰影頂面 (Shadow Facet)
             val shadowFacet = Path().apply {
-                moveTo(pCenter.x, pCenter.y)
-                lineTo(pTopRight.x, pTopRight.y)
-                lineTo(pRight.x, pRight.y)
-                lineTo(pBottom.x, pBottom.y)
+                moveTo(tCenter.x, tCenter.y)
+                lineTo(tTopRight.x, tTopRight.y)
+                lineTo(tRight.x, tRight.y)
+                lineTo(tBottom.x, tBottom.y)
                 close()
             }
-            drawPath(shadowFacet, color = Color(0xFF0F172A))
+            drawPath(shadowFacet, color = Color(0xFF1E293B))
 
             // 巨石外稜線輪廓
             val rockOutline = Path().apply {
-                moveTo(pTop.x, pTop.y)
-                lineTo(pTopRight.x, pTopRight.y)
-                lineTo(pRight.x, pRight.y)
-                lineTo(pBottom.x, pBottom.y)
-                lineTo(pBottomLeft.x, pBottomLeft.y)
-                lineTo(pLeft.x, pLeft.y)
+                moveTo(tTop.x, tTop.y)
+                lineTo(tTopRight.x, tTopRight.y)
+                lineTo(tRight.x, tRight.y)
+                lineTo(tBottom.x, tBottom.y)
+                lineTo(tBottomLeft.x, tBottomLeft.y)
+                lineTo(tLeft.x, tLeft.y)
                 close()
             }
-            drawPath(rockOutline, color = Color(0xFF1E293B), style = Stroke(width = 2.2f))
+            drawPath(rockOutline, color = Color(0xFF38BDF8).copy(alpha = 0.4f), style = Stroke(width = 1.2f))
 
             // 表面地質龜裂紋 (帶微弱暗能量幽光)
             val crackPath = Path().apply {
-                moveTo(pCenter.x, pCenter.y)
-                lineTo(centerX + half * 0.25f, centerY + half * 0.15f)
-                lineTo(centerX + half * 0.45f, centerY + half * 0.38f)
+                moveTo(tCenter.x, tCenter.y)
+                lineTo(tCenter.x + half * 0.3f, tCenter.y + half * 0.2f)
+                lineTo(tCenter.x + half * 0.45f, tCenter.y + half * 0.4f)
             }
-            drawLine(color = Color(0xFF00E5FF).copy(alpha = 0.35f), start = Offset(pCenter.x, pCenter.y), end = Offset(centerX + half * 0.25f, centerY + half * 0.15f), strokeWidth = 2.5f)
+            drawLine(color = Color(0xFF00E5FF).copy(alpha = 0.45f), start = Offset(tCenter.x, tCenter.y), end = Offset(tCenter.x + half * 0.3f, tCenter.y + half * 0.2f), strokeWidth = 2.2f)
             drawPath(crackPath, color = Color(0xFF0F172A), style = Stroke(width = 1.5f))
         }
 
         OpticalPieceType.OBSTACLE_FIXED_MIRROR -> {
-            // 固定折射斜壁 (重裝甲三角基座 + 六角螺栓釘死 + 3D 拋光黃金反射稜鏡)
+            // 固定折射斜壁 (重裝甲三角基座 + 六角螺栓釘死 + 3D 拋光黃金反射稜鏡 + 垂直黃金合金牆面)
             rotate(rotationDegrees, pivot = Offset(centerX, centerY)) {
                 val t1 = Offset(centerX - half * 0.75f, centerY + half * 0.75f)
                 val t2 = Offset(centerX + half * 0.75f, centerY - half * 0.75f)
                 val t3 = Offset(centerX - half * 0.75f, centerY - half * 0.75f)
 
-                val normX = half * 0.12f
-                val normY = half * 0.12f
+                val normX = half * 0.14f
+                val normY = half * 0.14f
+
+                // 在元件旋轉坐標系下轉換當前的立體拉伸高度向量
+                val rotRad = (-rotationDegrees * (PI / 180f)).toFloat()
+                val localExtrudeX = extrudeX * cos(rotRad) - extrudeY * sin(rotRad)
+                val localExtrudeY = extrudeX * sin(rotRad) + extrudeY * cos(rotRad)
+
+                // 垂直裝甲側壁 (Extruded Wall)
+                if (localExtrudeY < 0f) {
+                    val wall = Path().apply {
+                        moveTo(t1.x, t1.y)
+                        lineTo(t2.x, t2.y)
+                        lineTo(t2.x + localExtrudeX, t2.y + localExtrudeY)
+                        lineTo(t1.x + localExtrudeX, t1.y + localExtrudeY)
+                        close()
+                    }
+                    drawPath(wall, color = Color(0xFF451A03))
+                }
 
                 val triangle = Path().apply {
                     moveTo(t1.x, t1.y)
@@ -2056,8 +2160,16 @@ private fun DrawScope.drawOpticalPiece(
                         end = Offset(t2.x + normX, t2.y + normY)
                     )
                 )
-                drawPath(goldFacet, color = Color.White.copy(alpha = 0.8f), style = Stroke(width = 1.2f))
+                drawPath(goldFacet, color = Color.White.copy(alpha = 0.85f), style = Stroke(width = 1.4f))
 
+                // 醒目高亮黃金反射指示線
+                drawLine(
+                    color = Color(0xFFFFD54F),
+                    start = Offset(t1.x + normX * 0.6f, t1.y + normY * 0.6f),
+                    end = Offset(t2.x + normX * 0.6f, t2.y + normY * 0.6f),
+                    strokeWidth = 2f,
+                    cap = StrokeCap.Round
+                )
                 // 鏡面流光
                 drawLine(
                     color = Color.White,

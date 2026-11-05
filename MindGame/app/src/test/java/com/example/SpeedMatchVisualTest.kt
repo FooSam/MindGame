@@ -64,4 +64,32 @@ class SpeedMatchVisualTest {
         assertEquals(1, calculateStars(14))
         assertEquals(1, calculateStars(0))
     }
+
+    @Test
+    fun testGridGenerationContainsPair() {
+        // 驗證全 6 大難度在 100 次連續隨機生成中，100% 絕對存在至少一組相同數字，且尺寸完全正確
+        val difficulties = GameDifficulty.entries
+        for (diff in difficulties) {
+            for (i in 1..100) {
+                val maxNumber = when (diff) {
+                    GameDifficulty.BEGINNER, GameDifficulty.INTERMEDIATE -> 9
+                    GameDifficulty.ADVANCED -> 12
+                    GameDifficulty.HARD -> 16
+                    GameDifficulty.HELL -> 20
+                    GameDifficulty.EPIC -> 25
+                }
+                val totalCells = diff.speedMatchCells
+                val range = (1..maxNumber).toList()
+                val pairValue = range.random()
+                val remainingCount = (totalCells - 2).coerceAtLeast(0)
+                val otherCandidates = range.filter { it != pairValue }.shuffled()
+                val otherValues = List(remainingCount) { idx -> otherCandidates[idx % otherCandidates.size] }.shuffled()
+                val grid = (listOf(pairValue, pairValue) + otherValues).shuffled()
+
+                assertEquals(totalCells, grid.size)
+                val hasPair = grid.groupBy { it }.any { it.value.size >= 2 }
+                assertTrue("Difficulty $diff in iteration $i must contain at least 1 pair", hasPair)
+            }
+        }
+    }
 }

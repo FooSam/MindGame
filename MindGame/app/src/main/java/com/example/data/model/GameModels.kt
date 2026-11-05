@@ -39,7 +39,8 @@ enum class GameType(
     PINBALL_FLIPPER("PINBALL_FLIPPER", "game_pinball_flipper", "game_pinball_flipper_desc", RankingType.SCORE_DESC, GameCategory.TEST),
     NIGHT_MARKET_PINBALL("NIGHT_MARKET_PINBALL", "game_night_market_pinball", "game_night_market_pinball_desc", RankingType.SCORE_DESC, GameCategory.CASUAL),
     BRAIN_IN_TROUBLE("BRAIN_IN_TROUBLE", "game_brain_in_trouble", "game_brain_in_trouble_desc", RankingType.SCORE_DESC, GameCategory.TEST),
-    LASER_MAZE("LASER_MAZE", "game_laser_maze", "game_laser_maze_desc", RankingType.TIME_ASC, GameCategory.DEDUCTION);
+    LASER_MAZE("LASER_MAZE", "game_laser_maze", "game_laser_maze_desc", RankingType.TIME_ASC, GameCategory.DEDUCTION),
+    CAT_TRAP("CAT_TRAP", "game_cat_trap", "game_cat_trap_desc", RankingType.SCORE_DESC, GameCategory.BRAIN);
 
     val isSudoku: Boolean
         get() = this == SUDOKU || this == CAT_SUDOKU

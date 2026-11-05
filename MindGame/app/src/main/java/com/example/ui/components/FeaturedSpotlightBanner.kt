@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
@@ -114,7 +115,7 @@ fun FeaturedSpotlightBanner(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.Lightbulb,
+                    imageVector = Icons.Default.Pets,
                     contentDescription = "New Game Icon",
                     tint = Color.White,
                     modifier = Modifier.size(24.dp)
@@ -129,7 +130,7 @@ fun FeaturedSpotlightBanner(
                     .weight(1f)
                     .padding(end = 8.dp)
             ) {
-                val bannerMainText = Localization.getString("spotlight_banner_laser_maze", language)
+                val bannerMainText = Localization.getString("spotlight_banner_cat_trap", language)
                 val fullMarqueeText = if (!marqueeExtraText.isNullOrBlank()) {
                     "$bannerMainText   ★   $marqueeExtraText"
                 } else {

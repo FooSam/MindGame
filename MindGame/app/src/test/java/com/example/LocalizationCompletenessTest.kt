@@ -27,7 +27,7 @@ class LocalizationCompletenessTest {
         "confirm", "cancel", "state_enabled", "state_disabled", "about_section_title",
         "theme_snow_white", "theme_dark", "theme_mechanical", "theme_cute",
         "diff_beginner", "diff_intermediate", "diff_advanced", "diff_hard", "diff_hell", "diff_epic",
-        "game_completed", "your_time", "play_again", "back_to_menu", "watch_ad_button", "hint"
+        "game_completed", "your_time", "play_again", "back_to_menu", "watch_ad_button", "hint", "speed_match_skip", "cattrap_diff_desc_beginner", "cattrap_diff_desc_intermediate", "cattrap_diff_desc_advanced", "cattrap_diff_desc_epic", "cattrap_tool_guide_title", "cattrap_tool_ad_hint"
     )
 
     @Test

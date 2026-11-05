@@ -12,6 +12,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -101,7 +102,8 @@ fun SpeedMatchScreen(
     onStartClick: () -> Unit,
     onResetClick: () -> Unit,
     onCellClick: (Int) -> Unit,
-    onLeaderboardClick: () -> Unit
+    onLeaderboardClick: () -> Unit,
+    onSkipClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
 
@@ -257,6 +259,8 @@ fun SpeedMatchScreen(
             ) {
                 val totalCells = difficulty.speedMatchCells
                 val cols = difficulty.speedMatchCols
+                val boxWidth = maxWidth
+                val boxHeight = maxHeight
 
                 // 精雕胡桃木與黑金雙層護框
                 Box(
@@ -362,36 +366,56 @@ fun SpeedMatchScreen(
                             }
                         }
                     } else if (gameStatus == GameStatus.PLAYING) {
-                        // Match Grid
+                        // Match Grid with dynamic width & height constraints to prevent clipping
+                        val rows = (totalCells + cols - 1) / cols
                         val spacing = when {
-                            totalCells <= 9 -> 12.dp
+                            totalCells <= 9 -> 10.dp
                             totalCells <= 16 -> 8.dp
                             else -> 6.dp
                         }
 
+                        // Available inner dimensions inside padding
+                        val availW = boxWidth - 24.dp
+                        val availH = boxHeight - 24.dp
+                        val cellW = (availW - spacing * (cols - 1)) / cols
+                        val cellH = (availH - spacing * (rows - 1)) / rows
+                        val cellSize = minOf(cellW, cellH).coerceAtLeast(36.dp)
+
                         val fontSize = when {
-                            totalCells <= 6 -> 24.sp
-                            totalCells <= 9 -> 20.sp
-                            totalCells <= 16 -> 17.sp
-                            else -> 14.sp
+                            cellSize >= 64.dp -> 22.sp
+                            cellSize >= 50.dp -> 18.sp
+                            cellSize >= 42.dp -> 15.sp
+                            else -> 12.sp
                         }
 
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(cols),
-                            horizontalArrangement = Arrangement.spacedBy(spacing),
+                        Column(
                             verticalArrangement = Arrangement.spacedBy(spacing),
-                            userScrollEnabled = false,
-                            modifier = Modifier.fillMaxSize()
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            itemsIndexed(gridNumbers) { index, number ->
-                                val isSelected = selectedCellIndex == index
+                            for (r in 0 until rows) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(spacing),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    for (c in 0 until cols) {
+                                        val index = r * cols + c
+                                        if (index < gridNumbers.size) {
+                                            val number = gridNumbers[index]
+                                            val isSelected = selectedCellIndex == index
 
-                                MatchCellView(
-                                    number = number,
-                                    isSelected = isSelected,
-                                    fontSize = fontSize,
-                                    onClick = { onCellClick(index) }
-                                )
+                                            Box(modifier = Modifier.size(cellSize)) {
+                                                MatchCellView(
+                                                    number = number,
+                                                    isSelected = isSelected,
+                                                    fontSize = fontSize,
+                                                    onClick = { onCellClick(index) }
+                                                )
+                                            }
+                                        } else {
+                                            Spacer(modifier = Modifier.size(cellSize))
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -428,27 +452,59 @@ fun SpeedMatchScreen(
                 }
 
                 if (gameStatus != GameStatus.IDLE) {
-                    Button(
-                        onClick = onResetClick,
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF37474F)
-                        )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = Localization.getString("restart_game", language),
-                            style = MaterialTheme.typography.labelLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
+                        if (gameStatus == GameStatus.PLAYING) {
+                            OutlinedButton(
+                                onClick = onSkipClick,
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = Color(0xFF00E5FF)
+                                ),
+                                border = BorderStroke(
+                                    1.dp,
+                                    Color(0xFF00E5FF).copy(alpha = 0.5f)
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = Localization.getString("speed_match_skip", language),
+                                    style = MaterialTheme.typography.labelLarge.copy(
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                )
+                            }
+                        }
+
+                        Button(
+                            onClick = onResetClick,
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF37474F)
                             )
-                        )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = Localization.getString("restart_game", language),
+                                style = MaterialTheme.typography.labelLarge.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            )
+                        }
                     }
                 }
             }

@@ -48,6 +48,7 @@ import com.example.ui.screens.FlipperPinballScreen
 import com.example.ui.screens.NightMarketPinballScreen
 import com.example.ui.screens.BrainInTroubleScreen
 import com.example.ui.screens.LaserMazeScreen
+import com.example.ui.screens.CatTrapScreen
 import com.example.ui.screens.turtlesoup.TurtleSoupScreen
 import com.example.ui.screens.turtlesoup.TurtleSoupPlayState
 import com.example.game.sudoku.SudokuConfig
@@ -215,6 +216,27 @@ fun MainApp(viewModel: GameViewModel) {
     val stroopIsWrongFlash by viewModel.stroopIsWrongFlash.collectAsStateWithLifecycle()
     val stroopLastCompletedScore by viewModel.stroopLastCompletedScore.collectAsStateWithLifecycle()
 
+    // Cat Trap state
+    val catTrapStatus by viewModel.catTrapStatus.collectAsStateWithLifecycle()
+    val catTrapCatPos by viewModel.catTrapCatPos.collectAsStateWithLifecycle()
+    val catTrapCatEmotion by viewModel.catTrapCatEmotion.collectAsStateWithLifecycle()
+    val catTrapGrid by viewModel.catTrapGrid.collectAsStateWithLifecycle()
+    val catTrapSteps by viewModel.catTrapSteps.collectAsStateWithLifecycle()
+    val catTrapMode by viewModel.catTrapMode.collectAsStateWithLifecycle()
+    val catTrapSelectedBreed by viewModel.catTrapSelectedBreed.collectAsStateWithLifecycle()
+    val catTrapFreezeCount by viewModel.catTrapFreezeCount.collectAsStateWithLifecycle()
+    val catTrapDoubleBlockCount by viewModel.catTrapDoubleBlockCount.collectAsStateWithLifecycle()
+    val catTrapRadarCount by viewModel.catTrapRadarCount.collectAsStateWithLifecycle()
+    val catTrapIsFreezeActive by viewModel.catTrapIsFreezeActive.collectAsStateWithLifecycle()
+    val catTrapDoubleBlockRemaining by viewModel.catTrapDoubleBlockRemaining.collectAsStateWithLifecycle()
+    val catTrapIsRadarHighlit by viewModel.catTrapIsRadarHighlit.collectAsStateWithLifecycle()
+    val catTrapEscapePath by viewModel.catTrapEscapePath.collectAsStateWithLifecycle()
+    val catTrapStars by viewModel.catTrapStars.collectAsStateWithLifecycle()
+    val catTrapScore by viewModel.catTrapScore.collectAsStateWithLifecycle()
+    val catTrapShowBriefingDialog by viewModel.catTrapShowBriefingDialog.collectAsStateWithLifecycle()
+    val catTrapShowRewardAdDialog by viewModel.catTrapShowRewardAdDialog.collectAsStateWithLifecycle()
+    val catTrapPendingRewardTool by viewModel.catTrapPendingRewardTool.collectAsStateWithLifecycle()
+
     val leaderboardList by viewModel.leaderboardList.collectAsStateWithLifecycle()
     val globalLeaderboardList by viewModel.globalLeaderboardList.collectAsStateWithLifecycle()
     val myGlobalRankEntry by viewModel.myGlobalRankEntry.collectAsStateWithLifecycle()
@@ -302,6 +324,11 @@ fun MainApp(viewModel: GameViewModel) {
             AdManager.recordGameFinished(context as? Activity)
         }
     }
+    LaunchedEffect(catTrapStatus) {
+        if (catTrapStatus == com.example.game.cattrap.CatTrapGameStatus.VICTORY) {
+            AdManager.recordGameFinished(context as? Activity)
+        }
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -339,7 +366,7 @@ fun MainApp(viewModel: GameViewModel) {
                     onChangeNameClick = { viewModel.openNameDialog() },
                     onCategoryClick = { viewModel.selectCategory(it) },
                     onFeaturedBannerClick = {
-                        viewModel.openFeaturedGameDirectly(com.example.data.model.GameType.LASER_MAZE)
+                        viewModel.openFeaturedGameDirectly(com.example.data.model.GameType.CAT_TRAP)
                     }
                 )
             }
@@ -453,7 +480,8 @@ fun MainApp(viewModel: GameViewModel) {
                         viewModel.resetSpeedMatchGame()
                     },
                     onCellClick = { index -> viewModel.onSpeedMatchCellTapped(index) },
-                    onLeaderboardClick = { viewModel.openLeaderboardDialog() }
+                    onLeaderboardClick = { viewModel.openLeaderboardDialog() },
+                    onSkipClick = { viewModel.skipSpeedMatchRound() }
                 )
             }
 
@@ -737,6 +765,46 @@ fun MainApp(viewModel: GameViewModel) {
                         AdManager.recordGameFinished(context as? Activity)
                     },
                     onGameInterrupted = { AdManager.recordGameInterrupted(context as? Activity) }
+                )
+            }
+
+            ScreenState.CAT_TRAP_GAME -> {
+                CatTrapScreen(
+                    language = language,
+                    appTheme = appTheme,
+                    status = catTrapStatus,
+                    catPos = catTrapCatPos,
+                    catEmotion = catTrapCatEmotion,
+                    grid = catTrapGrid,
+                    steps = catTrapSteps,
+                    mode = catTrapMode,
+                    selectedBreed = catTrapSelectedBreed,
+                    freezeCount = catTrapFreezeCount,
+                    doubleBlockCount = catTrapDoubleBlockCount,
+                    radarCount = catTrapRadarCount,
+                    isFreezeActive = catTrapIsFreezeActive,
+                    doubleBlockRemaining = catTrapDoubleBlockRemaining,
+                    isRadarHighlit = catTrapIsRadarHighlit,
+                    escapePath = catTrapEscapePath,
+                    stars = catTrapStars,
+                    score = catTrapScore,
+                    showBriefingDialog = catTrapShowBriefingDialog,
+                    showRewardAdDialog = catTrapShowRewardAdDialog,
+                    pendingRewardTool = catTrapPendingRewardTool,
+                    onBackClick = { viewModel.navigateTo(ScreenState.CATEGORY_DETAIL) },
+                    onLeaderboardClick = {
+                        viewModel.openLeaderboardDialog(selectedDifficulty, com.example.data.model.GameType.CAT_TRAP)
+                    },
+                    onCellClick = { coord -> viewModel.onCatTrapCellClicked(coord) },
+                    onUseTool = { tool -> viewModel.useCatTrapTool(tool) },
+                    onUndoClick = { viewModel.undoCatTrap() },
+                    onSelectBreed = { breed -> viewModel.selectCatTrapBreed(breed) },
+                    onRestartClick = { viewModel.restartCurrentCatTrapLevel() },
+                    onNextLevelClick = { viewModel.nextCatTrapLevel() },
+                    onOpenBriefingClick = { viewModel.openCatTrapBriefingDialog() },
+                    onCloseBriefingClick = { viewModel.closeCatTrapBriefingDialog() },
+                    onDismissRewardDialog = { viewModel.dismissCatTrapRewardDialog() },
+                    onWatchAdForTool = { act -> viewModel.watchAdForCatTrapTool(act) }
                 )
             }
 

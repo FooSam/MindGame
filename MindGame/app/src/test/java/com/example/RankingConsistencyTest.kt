@@ -1,4 +1,4 @@
-package com.example
+﻿package com.example
 
 import com.example.data.db.ScoreRecord
 import com.example.data.model.GameType
@@ -44,7 +44,8 @@ class RankingConsistencyTest {
                 GameType.FRUIT_MASTER,
                 GameType.PINBALL_FLIPPER,
                 GameType.NIGHT_MARKET_PINBALL,
-                GameType.BRAIN_IN_TROUBLE -> {
+                GameType.BRAIN_IN_TROUBLE,
+                GameType.CAT_TRAP -> {
                     assertEquals("${game.key} 應為 SCORE_DESC", RankingType.SCORE_DESC, game.rankingType)
                 }
             }

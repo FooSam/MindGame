@@ -51,8 +51,10 @@ class AdManagerLogicTest {
 
     @Test
     fun `test ad manager unit id configuration`() {
-        assertEquals("ca-app-pub-5014630903713895/7605455982", AdManager.PRODUCTION_INTERSTITIAL_AD_UNIT_ID)
+        assertEquals("ca-app-pub-5014630903713895/3215350450", AdManager.PRODUCTION_INTERSTITIAL_AD_UNIT_ID)
         assertEquals("ca-app-pub-3940256099942544/1033173712", AdManager.TEST_INTERSTITIAL_AD_UNIT_ID)
+        assertEquals("ca-app-pub-5014630903713895/7605455982", AdManager.PRODUCTION_REWARDED_INTERSTITIAL_AD_UNIT_ID)
+        assertEquals("ca-app-pub-3940256099942544/5354046379", AdManager.TEST_REWARDED_INTERSTITIAL_AD_UNIT_ID)
         assertEquals("ca-app-pub-5014630903713895/6390706923", AdManager.PRODUCTION_BANNER_AD_UNIT_ID)
         assertEquals("ca-app-pub-3940256099942544/6300978111", AdManager.TEST_BANNER_AD_UNIT_ID)
     }

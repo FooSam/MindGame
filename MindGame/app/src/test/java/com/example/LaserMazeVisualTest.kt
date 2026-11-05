@@ -46,19 +46,29 @@ class LaserMazeVisualTest {
     }
 
     @Test
-    fun test3DTiltAngleConstraintsNeverExceed30Degrees() {
-        // 驗證俯仰角 (Pitch) 與偏航角 (Yaw) 嚴格限制在 30 度以內
-        val testPitchInputs = listOf(-50f, -10f, 0f, 15f, 18f, 30f, 45f, 90f)
+    fun test3DTiltAngleConstraintsAndExtrusionVector() {
+        // 驗證俯仰角 (Pitch) 與偏航角 (Yaw) 嚴格限制在 38 度以內，兼顧立體立面可視度與操作性
+        val testPitchInputs = listOf(-50f, -10f, 0f, 15f, 22f, 30f, 38f, 45f, 90f)
         for (pitch in testPitchInputs) {
-            val clampedPitch = pitch.coerceIn(0f, 30f)
+            val clampedPitch = pitch.coerceIn(0f, 38f)
             assertTrue("Pitch 應大於等於 0 度: $clampedPitch", clampedPitch >= 0f)
-            assertTrue("Pitch 絕對不可超過 30 度: $clampedPitch", clampedPitch <= 30f)
+            assertTrue("Pitch 絕對不可超過 38 度: $clampedPitch", clampedPitch <= 38f)
+
+            // 驗證立體拉伸向量 (Extrusion Vector) 在有效範圍內且無 NaN
+            val pitchRad = (clampedPitch * (Math.PI / 180f)).toFloat()
+            val extrudeY = -kotlin.math.sin(pitchRad) * 20f
+            assertTrue("立體 Y 軸拉伸向量應為非正數（往上方拉伸）: $extrudeY", extrudeY <= 0f)
+            assertTrue("拉伸值不可為 NaN 或無窮大", !extrudeY.isNaN() && !extrudeY.isInfinite())
         }
 
-        val testYawInputs = listOf(-90f, -45f, -25f, -20f, 0f, 20f, 25f, 50f)
+        val testYawInputs = listOf(-90f, -45f, -25f, -20f, -5f, 0f, 20f, 25f, 50f)
         for (yaw in testYawInputs) {
             val clampedYaw = yaw.coerceIn(-25f, 25f)
-            assertTrue("Yaw 絕對值不可超過 30 度: $clampedYaw", kotlin.math.abs(clampedYaw) <= 30f)
+            assertTrue("Yaw 絕對值不可超過 25 度: $clampedYaw", kotlin.math.abs(clampedYaw) <= 25f)
+
+            val yawRad = (clampedYaw * (Math.PI / 180f)).toFloat()
+            val extrudeX = -kotlin.math.sin(yawRad) * 10f
+            assertTrue("拉伸值不可為 NaN 或無窮大", !extrudeX.isNaN() && !extrudeX.isInfinite())
         }
     }
 

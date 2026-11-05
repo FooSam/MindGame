@@ -58,6 +58,15 @@ import com.example.game.whack.WhackHoleState
 import com.example.game.stroop.StroopGenerator
 import com.example.game.stroop.StroopOption
 import com.example.game.stroop.StroopQuestion
+import com.example.game.cattrap.CatBreed
+import com.example.game.cattrap.CatEmotion
+import com.example.game.cattrap.CatTrapGame
+import com.example.game.cattrap.CatTrapGameStatus
+import com.example.game.cattrap.CatTrapLevels
+import com.example.game.cattrap.CatTrapMode
+import com.example.game.cattrap.CatTrapTool
+import com.example.game.cattrap.HexCellType
+import com.example.game.cattrap.HexCoord
 
 enum class ScreenState {
     HOME,
@@ -77,7 +86,8 @@ enum class ScreenState {
     PINBALL_FLIPPER_GAME,
     NIGHT_MARKET_PINBALL_GAME,
     BRAIN_IN_TROUBLE_GAME,
-    LASER_MAZE_GAME
+    LASER_MAZE_GAME,
+    CAT_TRAP_GAME
 }
 
 enum class GameStatus {
@@ -837,6 +847,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             _currentScreen.value = ScreenState.BRAIN_IN_TROUBLE_GAME
         } else if (_selectedGameType.value == GameType.LASER_MAZE) {
             _currentScreen.value = ScreenState.LASER_MAZE_GAME
+        } else if (_selectedGameType.value == GameType.CAT_TRAP) {
+            val mode = when (difficulty) {
+                GameDifficulty.BEGINNER -> CatTrapMode.LevelMode(1)
+                GameDifficulty.INTERMEDIATE -> CatTrapMode.LevelMode(21)
+                GameDifficulty.ADVANCED -> CatTrapMode.LevelMode(41)
+                else -> CatTrapMode.RandomMode(pondCount = 10)
+            }
+            startCatTrapGame(mode)
         } else {
             setupInitialGrid(difficulty)
             _currentScreen.value = ScreenState.FOCUS_GAME
@@ -1249,7 +1267,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         setupSpeedMatchInitialGrid(_selectedDifficulty.value)
     }
 
-    private fun generateSpeedMatchRoundGrid(difficulty: GameDifficulty): List<Int> {
+    fun generateSpeedMatchRoundGrid(difficulty: GameDifficulty): List<Int> {
         val maxNumber = when (difficulty) {
             GameDifficulty.BEGINNER, GameDifficulty.INTERMEDIATE -> 9
             GameDifficulty.ADVANCED -> 12
@@ -1263,7 +1281,19 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val remainingCount = (totalCells - 2).coerceAtLeast(0)
         val otherCandidates = range.filter { it != pairValue }.shuffled()
         val otherValues = List(remainingCount) { i -> otherCandidates[i % otherCandidates.size] }.shuffled()
-        return (listOf(pairValue, pairValue) + otherValues).shuffled()
+        val grid = (listOf(pairValue, pairValue) + otherValues).shuffled()
+        // 強制校驗：確保絕對至少有一組重複的數字與圖騰
+        require(grid.size == totalCells && grid.groupBy { it }.any { it.value.size >= 2 }) {
+            "SpeedMatch grid generation defect: must contain at least 1 pair and match totalCells"
+        }
+        return grid
+    }
+
+    fun skipSpeedMatchRound() {
+        if (_speedMatchStatus.value != GameStatus.PLAYING) return
+        _selectedMatchCellIndex.value = null
+        _speedMatchGrid.value = generateSpeedMatchRoundGrid(_selectedDifficulty.value)
+        SoundManager.playClick()
     }
 
     fun onSpeedMatchCellTapped(index: Int) {
@@ -1485,7 +1515,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun watchAdForSudokuHint(activity: Activity? = null) {
         closeSudokuHintDialog()
-        AdManager.showAdNow(activity) {
+        AdManager.showRewardedAd(activity) {
             applySudokuHint()
         }
     }
@@ -1761,7 +1791,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun watchAdForCatSudokuHint(activity: Activity? = null) {
         closeCatSudokuHintDialog()
-        AdManager.showAdNow(activity) {
+        AdManager.showRewardedAd(activity) {
             applyCatSudokuHint()
         }
     }
@@ -2049,7 +2079,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun watchAdForTurtleSoupInquiry(activity: Activity?) {
         closeTurtleSoupAdDialog()
-        AdManager.showAdNow(activity) {
+        AdManager.showRewardedAd(activity) {
             val rewardCount = 1 // 依指示：觀看廣告 1 次 = 加次數 1 次
             _turtleSoupRemainingChances.value = _turtleSoupRemainingChances.value + rewardCount
             _turtleSoupUsedAdReward.value = true
@@ -2174,7 +2204,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun watchAdForTurtleSoupChances(activity: Activity?) {
-        AdManager.showAdNow(activity) {
+        AdManager.showRewardedAd(activity) {
             val rewardCount = 1 // 依指示：觀看廣告 1 次 = 加次數 1 次
             _turtleSoupRemainingChances.value = _turtleSoupRemainingChances.value + rewardCount
             _turtleSoupUsedAdReward.value = true
@@ -2600,5 +2630,205 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun resetStroopGame() {
         setupStroopGame(_selectedDifficulty.value)
+    }
+
+    // ==========================================
+    // Cat Trap (喵影圍捕：別想逃！) 狀態管理
+    // ==========================================
+
+    private val _catTrapInstance = MutableStateFlow(CatTrapGame())
+
+    private val _catTrapStatus = MutableStateFlow(CatTrapGameStatus.IDLE)
+    val catTrapStatus: StateFlow<CatTrapGameStatus> = _catTrapStatus.asStateFlow()
+
+    private val _catTrapCatPos = MutableStateFlow(HexCoord(5, 5))
+    val catTrapCatPos: StateFlow<HexCoord> = _catTrapCatPos.asStateFlow()
+
+    private val _catTrapCatEmotion = MutableStateFlow(CatEmotion.IDLE)
+    val catTrapCatEmotion: StateFlow<CatEmotion> = _catTrapCatEmotion.asStateFlow()
+
+    private val _catTrapGrid = MutableStateFlow<Map<HexCoord, HexCellType>>(emptyMap())
+    val catTrapGrid: StateFlow<Map<HexCoord, HexCellType>> = _catTrapGrid.asStateFlow()
+
+    private val _catTrapSteps = MutableStateFlow(0)
+    val catTrapSteps: StateFlow<Int> = _catTrapSteps.asStateFlow()
+
+    private val _catTrapMode = MutableStateFlow<CatTrapMode>(CatTrapMode.LevelMode(1))
+    val catTrapMode: StateFlow<CatTrapMode> = _catTrapMode.asStateFlow()
+
+    private val _catTrapSelectedBreed = MutableStateFlow(CatBreed.ORANGE_TABBY)
+    val catTrapSelectedBreed: StateFlow<CatBreed> = _catTrapSelectedBreed.asStateFlow()
+
+    private val _catTrapFreezeCount = MutableStateFlow(2)
+    val catTrapFreezeCount: StateFlow<Int> = _catTrapFreezeCount.asStateFlow()
+
+    private val _catTrapDoubleBlockCount = MutableStateFlow(2)
+    val catTrapDoubleBlockCount: StateFlow<Int> = _catTrapDoubleBlockCount.asStateFlow()
+
+    private val _catTrapRadarCount = MutableStateFlow(3)
+    val catTrapRadarCount: StateFlow<Int> = _catTrapRadarCount.asStateFlow()
+
+    private val _catTrapIsFreezeActive = MutableStateFlow(false)
+    val catTrapIsFreezeActive: StateFlow<Boolean> = _catTrapIsFreezeActive.asStateFlow()
+
+    private val _catTrapDoubleBlockRemaining = MutableStateFlow(0)
+    val catTrapDoubleBlockRemaining: StateFlow<Int> = _catTrapDoubleBlockRemaining.asStateFlow()
+
+    private val _catTrapIsRadarHighlit = MutableStateFlow(false)
+    val catTrapIsRadarHighlit: StateFlow<Boolean> = _catTrapIsRadarHighlit.asStateFlow()
+
+    private val _catTrapEscapePath = MutableStateFlow<List<HexCoord>>(emptyList())
+    val catTrapEscapePath: StateFlow<List<HexCoord>> = _catTrapEscapePath.asStateFlow()
+
+    private val _catTrapStars = MutableStateFlow(0)
+    val catTrapStars: StateFlow<Int> = _catTrapStars.asStateFlow()
+
+    private val _catTrapScore = MutableStateFlow(0)
+    val catTrapScore: StateFlow<Int> = _catTrapScore.asStateFlow()
+
+    private val _catTrapShowBriefingDialog = MutableStateFlow(false)
+    val catTrapShowBriefingDialog: StateFlow<Boolean> = _catTrapShowBriefingDialog.asStateFlow()
+
+    private val _catTrapShowRewardAdDialog = MutableStateFlow(false)
+    val catTrapShowRewardAdDialog: StateFlow<Boolean> = _catTrapShowRewardAdDialog.asStateFlow()
+
+    private val _catTrapPendingRewardTool = MutableStateFlow<CatTrapTool?>(null)
+    val catTrapPendingRewardTool: StateFlow<CatTrapTool?> = _catTrapPendingRewardTool.asStateFlow()
+
+    fun startCatTrapGame(mode: CatTrapMode = CatTrapMode.LevelMode(1)) {
+        SoundManager.onGameSwitched()
+        _selectedCategory.value = GameCategory.BRAIN
+        _selectedGameType.value = GameType.CAT_TRAP
+        _catTrapMode.value = mode
+        val game = CatTrapGame(mode = mode, selectedBreed = _catTrapSelectedBreed.value)
+        _catTrapInstance.value = game
+        syncCatTrapStateFromGame(game)
+        loadLeaderboard(GameCategory.BRAIN.key, GameType.CAT_TRAP.key, _selectedDifficulty.value.key)
+        _currentScreen.value = ScreenState.CAT_TRAP_GAME
+    }
+
+    private fun syncCatTrapStateFromGame(game: CatTrapGame) {
+        _catTrapStatus.value = game.status
+        _catTrapCatPos.value = game.catPos
+        _catTrapCatEmotion.value = game.catEmotion
+        _catTrapGrid.value = game.grid.toMap()
+        _catTrapSteps.value = game.stepsTaken
+        _catTrapFreezeCount.value = game.freezeToolCount
+        _catTrapDoubleBlockCount.value = game.doubleBlockToolCount
+        _catTrapRadarCount.value = game.radarToolCount
+        _catTrapIsFreezeActive.value = game.isFreezeActive
+        _catTrapDoubleBlockRemaining.value = game.doubleBlockRemaining
+        _catTrapIsRadarHighlit.value = game.isRadarHighlit
+        _catTrapEscapePath.value = game.currentEscapePath
+        _catTrapStars.value = game.calculateStars()
+        _catTrapScore.value = game.calculateScore()
+    }
+
+    fun onCatTrapCellClicked(coord: HexCoord) {
+        val game = _catTrapInstance.value
+        val success = game.onCellClicked(coord)
+        if (success) {
+            SoundManager.playClick()
+            syncCatTrapStateFromGame(game)
+
+            // 若達成勝利，寫入排行榜資料庫
+            if (game.status == CatTrapGameStatus.VICTORY) {
+                SoundManager.playSuccess()
+                val finalScore = game.calculateScore()
+                viewModelScope.launch {
+                    val record = ScoreRecord(
+                        playerName = _playerName.value,
+                        categoryKey = GameCategory.BRAIN.key,
+                        gameTypeKey = GameType.CAT_TRAP.key,
+                        difficultyKey = _selectedDifficulty.value.key,
+                        timeMillis = 0L,
+                        score = finalScore,
+                        wrongCount = game.stepsTaken,
+                        timestamp = System.currentTimeMillis()
+                    )
+                    repository.insertScore(record)
+                    loadLeaderboard(GameCategory.BRAIN.key, GameType.CAT_TRAP.key, _selectedDifficulty.value.key)
+                }
+            } else if (game.status == CatTrapGameStatus.DEFEAT) {
+                SoundManager.playError()
+            }
+        }
+    }
+
+    fun useCatTrapTool(tool: CatTrapTool) {
+        val game = _catTrapInstance.value
+        val success = when (tool) {
+            CatTrapTool.FREEZE -> game.useFreezeTool()
+            CatTrapTool.DOUBLE_BLOCK -> game.useDoubleBlockTool()
+            CatTrapTool.RADAR -> game.useRadarTool()
+        }
+        if (success) {
+            SoundManager.playClick()
+            syncCatTrapStateFromGame(game)
+        } else {
+            val count = when (tool) {
+                CatTrapTool.FREEZE -> game.freezeToolCount
+                CatTrapTool.DOUBLE_BLOCK -> game.doubleBlockToolCount
+                CatTrapTool.RADAR -> game.radarToolCount
+            }
+            if (count <= 0) {
+                _catTrapPendingRewardTool.value = tool
+                _catTrapShowRewardAdDialog.value = true
+            }
+        }
+    }
+
+    fun undoCatTrap() {
+        val game = _catTrapInstance.value
+        if (game.undo()) {
+            SoundManager.playClick()
+            syncCatTrapStateFromGame(game)
+        }
+    }
+
+    fun selectCatTrapBreed(breed: CatBreed) {
+        _catTrapSelectedBreed.value = breed
+        _catTrapInstance.value.selectedBreed = breed
+        _catTrapCatPos.value = _catTrapInstance.value.catPos
+    }
+
+    fun restartCurrentCatTrapLevel() {
+        val game = _catTrapInstance.value
+        game.startNewGame()
+        syncCatTrapStateFromGame(game)
+    }
+
+    fun nextCatTrapLevel() {
+        val currentMode = _catTrapMode.value
+        if (currentMode is CatTrapMode.LevelMode) {
+            val nextLvlId = if (currentMode.levelId < CatTrapLevels.TOTAL_LEVELS) currentMode.levelId + 1 else 1
+            startCatTrapGame(CatTrapMode.LevelMode(nextLvlId))
+        } else {
+            restartCurrentCatTrapLevel()
+        }
+    }
+
+    fun openCatTrapBriefingDialog() {
+        _catTrapShowBriefingDialog.value = true
+    }
+
+    fun closeCatTrapBriefingDialog() {
+        _catTrapShowBriefingDialog.value = false
+    }
+
+    fun dismissCatTrapRewardDialog() {
+        _catTrapShowRewardAdDialog.value = false
+        _catTrapPendingRewardTool.value = null
+    }
+
+    fun watchAdForCatTrapTool(activity: Activity) {
+        val tool = _catTrapPendingRewardTool.value ?: return
+        dismissCatTrapRewardDialog()
+        AdManager.showRewardedAd(activity) {
+            val game = _catTrapInstance.value
+            game.addToolCount(tool, 1)
+            syncCatTrapStateFromGame(game)
+            SoundManager.playSuccess()
+        }
     }
 }

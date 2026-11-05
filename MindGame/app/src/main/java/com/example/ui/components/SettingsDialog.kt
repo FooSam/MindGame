@@ -26,18 +26,25 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,9 +54,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
+import com.example.ad.AdDiagnosticManager
+import com.example.ad.AdManager
 import com.example.data.model.AppLanguage
 import com.example.data.model.Localization
 import com.example.ui.theme.AppThemeStyle
@@ -460,6 +474,10 @@ fun SettingsDialog(
                         }
 
                         SettingsTab.ABOUT -> {
+                            var showDiagnosticCard by remember { mutableStateOf(false) }
+                            var versionClickCount by remember { mutableStateOf(0) }
+                            val context = LocalContext.current
+
                             LazyColumn(
                                 verticalArrangement = Arrangement.spacedBy(10.dp),
                                 modifier = Modifier.fillMaxWidth()
@@ -482,7 +500,19 @@ fun SettingsDialog(
                                                 )
                                                 Surface(
                                                     shape = RoundedCornerShape(6.dp),
-                                                    color = MaterialTheme.colorScheme.primaryContainer
+                                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                                    modifier = Modifier.clickable {
+                                                        versionClickCount++
+                                                        if (versionClickCount >= 5) {
+                                                            showDiagnosticCard = !showDiagnosticCard
+                                                            Toast.makeText(
+                                                                context,
+                                                                if (showDiagnosticCard) "已開啟廣告連線診斷面板" else "已隱藏廣告連線診斷面板",
+                                                                Toast.LENGTH_SHORT
+                                                            ).show()
+                                                            versionClickCount = 0
+                                                        }
+                                                    }
                                                 ) {
                                                     Text(
                                                         text = "v${com.example.BuildConfig.VERSION_NAME}",
@@ -532,7 +562,178 @@ fun SettingsDialog(
                                         }
                                     }
                                 }
+
+                                if (showDiagnosticCard) {
+                                    item {
+                                        val diagSnapshot by AdDiagnosticManager.snapshot.collectAsState()
+
+                                    Card(
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                    ) {
+                                        Column(modifier = Modifier.padding(14.dp)) {
+                                            // Title and Mode Badge
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = "AdMob 廣告連線診斷",
+                                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                                                )
+                                                Surface(
+                                                    shape = RoundedCornerShape(6.dp),
+                                                    color = if (diagSnapshot.isDebugMode) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
+                                                ) {
+                                                    Text(
+                                                        text = if (diagSnapshot.isDebugMode) "DEBUG/測試單元" else "RELEASE/正式單元",
+                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                        style = MaterialTheme.typography.labelSmall.copy(
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = if (diagSnapshot.isDebugMode) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer
+                                                        )
+                                                    )
+                                                }
+                                            }
+
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f))
+                                            Spacer(modifier = Modifier.height(8.dp))
+
+                                            // SDK 初始化狀態
+                                            Text(
+                                                text = "SDK 初始化狀態: ${diagSnapshot.initStatus}",
+                                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold)
+                                            )
+
+                                            Spacer(modifier = Modifier.height(6.dp))
+
+                                            // 橫幅廣告狀態
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Column(modifier = Modifier.padding(8.dp)) {
+                                                    Text(
+                                                        text = "頂部橫幅廣告 (Banner)",
+                                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                                                    )
+                                                    Text(
+                                                        text = "請求: ${diagSnapshot.bannerRequests} 次 | 成功: ${diagSnapshot.bannerSuccesses} | 失敗: ${diagSnapshot.bannerFailures}",
+                                                        style = MaterialTheme.typography.bodySmall
+                                                    )
+                                                    Text(
+                                                        text = "最後狀態: ${diagSnapshot.lastBannerStatus}",
+                                                        style = MaterialTheme.typography.bodySmall.copy(
+                                                            color = if (diagSnapshot.bannerFailures > 0 && diagSnapshot.bannerSuccesses == 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    )
+                                                }
+                                            }
+
+                                            Spacer(modifier = Modifier.height(6.dp))
+
+                                            // 通關插頁廣告狀態
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Column(modifier = Modifier.padding(8.dp)) {
+                                                    Text(
+                                                        text = "通關插頁廣告 (Interstitial)",
+                                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                                                    )
+                                                    Text(
+                                                        text = "請求: ${diagSnapshot.interstitialRequests} 次 | 成功: ${diagSnapshot.interstitialSuccesses} | 失敗: ${diagSnapshot.interstitialFailures}",
+                                                        style = MaterialTheme.typography.bodySmall
+                                                    )
+                                                    Text(
+                                                        text = "最後狀態: ${diagSnapshot.lastInterstitialStatus}",
+                                                        style = MaterialTheme.typography.bodySmall.copy(
+                                                            color = if (diagSnapshot.interstitialFailures > 0 && diagSnapshot.interstitialSuccesses == 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    )
+                                                }
+                                            }
+
+                                            Spacer(modifier = Modifier.height(6.dp))
+
+                                            // 提示獎勵廣告狀態 (數獨提示/海龜湯加次數)
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Column(modifier = Modifier.padding(8.dp)) {
+                                                    Text(
+                                                        text = "提示插頁獎勵 (Rewarded)",
+                                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                                                    )
+                                                    Text(
+                                                        text = "請求: ${diagSnapshot.rewardedRequests} 次 | 成功: ${diagSnapshot.rewardedSuccesses} | 失敗: ${diagSnapshot.rewardedFailures}",
+                                                        style = MaterialTheme.typography.bodySmall
+                                                    )
+                                                    Text(
+                                                        text = "最後狀態: ${diagSnapshot.lastRewardedStatus}",
+                                                        style = MaterialTheme.typography.bodySmall.copy(
+                                                            color = if (diagSnapshot.rewardedFailures > 0 && diagSnapshot.rewardedSuccesses == 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    )
+                                                }
+                                            }
+
+                                            Spacer(modifier = Modifier.height(10.dp))
+
+                                            // 操作按鈕列
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                FilledTonalButton(
+                                                    onClick = {
+                                                        AdManager.forceReloadAds(context)
+                                                        Toast.makeText(context, "已重新發送廣告請求！請觀察上方數值變化", Toast.LENGTH_SHORT).show()
+                                                    },
+                                                    modifier = Modifier.weight(1f),
+                                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp, vertical = 4.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Refresh,
+                                                        contentDescription = "Reload",
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text("發送請求", fontSize = 12.sp)
+                                                }
+
+                                                OutlinedButton(
+                                                    onClick = {
+                                                        val report = AdDiagnosticManager.exportDiagnosticReport()
+                                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                                                        val clip = ClipData.newPlainText("AdMob Diagnostic", report)
+                                                        clipboard?.setPrimaryClip(clip)
+                                                        Toast.makeText(context, "診斷日誌已複製到剪貼簿！", Toast.LENGTH_SHORT).show()
+                                                    },
+                                                    modifier = Modifier.weight(1f),
+                                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp, vertical = 4.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.ContentCopy,
+                                                        contentDescription = "Copy",
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text("複製日誌", fontSize = 12.sp)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
+                        }
                         }
                     }
                 }

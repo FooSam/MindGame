@@ -205,4 +205,49 @@ class SettingsAndViewModelTest {
         assertEquals(com.example.data.model.GameCategory.CASUAL, viewModel.selectedCategory.value)
         assertEquals(com.example.data.model.GameType.NIGHT_MARKET_PINBALL, viewModel.selectedGameType.value)
     }
+
+    @Test
+    fun testCatTrapNavigationAndDifficultyMapping() {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        val viewModel = GameViewModel(app)
+
+        // 模擬玩家在次選單點擊 CAT_TRAP
+        viewModel.selectCategory(com.example.data.model.GameCategory.BRAIN)
+        viewModel.selectGameType(com.example.data.model.GameType.CAT_TRAP)
+
+        // 1. 初級 (BEGINNER) -> 第 1 關 (1~20 關)
+        viewModel.selectDifficultyAndStart(com.example.data.model.GameDifficulty.BEGINNER)
+        assertEquals(com.example.ui.viewmodel.ScreenState.CAT_TRAP_GAME, viewModel.currentScreen.value)
+        val modeBeginner = viewModel.catTrapMode.value as com.example.game.cattrap.CatTrapMode.LevelMode
+        assertEquals(1, modeBeginner.levelId)
+
+        // 2. 中級 (INTERMEDIATE) -> 第 21 關 (21~40 關)
+        viewModel.selectDifficultyAndStart(com.example.data.model.GameDifficulty.INTERMEDIATE)
+        assertEquals(com.example.ui.viewmodel.ScreenState.CAT_TRAP_GAME, viewModel.currentScreen.value)
+        val modeInter = viewModel.catTrapMode.value as com.example.game.cattrap.CatTrapMode.LevelMode
+        assertEquals(21, modeInter.levelId)
+
+        // 3. 高級 (ADVANCED) -> 第 41 關 (41~60 關)
+        viewModel.selectDifficultyAndStart(com.example.data.model.GameDifficulty.ADVANCED)
+        assertEquals(com.example.ui.viewmodel.ScreenState.CAT_TRAP_GAME, viewModel.currentScreen.value)
+        val modeAdv = viewModel.catTrapMode.value as com.example.game.cattrap.CatTrapMode.LevelMode
+        assertEquals(41, modeAdv.levelId)
+
+        // 4. 史詩 (EPIC) -> 自由隨機對局 (無盡隨機模式)
+        viewModel.selectDifficultyAndStart(com.example.data.model.GameDifficulty.EPIC)
+        assertEquals(com.example.ui.viewmodel.ScreenState.CAT_TRAP_GAME, viewModel.currentScreen.value)
+        assertTrue(viewModel.catTrapMode.value is com.example.game.cattrap.CatTrapMode.RandomMode)
+    }
+
+    @Test
+    fun testOpenFeaturedGameDirectlyCatTrap() {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        val viewModel = GameViewModel(app)
+
+        viewModel.openFeaturedGameDirectly(com.example.data.model.GameType.CAT_TRAP)
+        assertEquals(com.example.ui.viewmodel.ScreenState.CATEGORY_DETAIL, viewModel.currentScreen.value)
+        assertEquals(com.example.data.model.GameCategory.BRAIN, viewModel.selectedCategory.value)
+        assertEquals(com.example.data.model.GameType.CAT_TRAP, viewModel.selectedGameType.value)
+        assertEquals(com.example.data.model.GameType.CAT_TRAP, viewModel.expandedGameType.value)
+    }
 }

@@ -92,6 +92,7 @@ fun CategoryScreen(
     val gamesInCategory = when (category) {
         GameCategory.DEDUCTION -> listOf(GameType.LASER_MAZE, GameType.TURTLE_SOUP)
         GameCategory.BRAIN -> listOf(
+            GameType.CAT_TRAP,
             GameType.GLASS_PUZZLE_CUBE,
             GameType.SUDOKU,
             GameType.CAT_SUDOKU
@@ -458,6 +459,125 @@ fun GameAccordionCard(
                                 }
                             }
                         }
+                    } else if (gameType == GameType.CAT_TRAP) {
+                        // 《喵影圍捕：別想逃！》專屬全寬橫條式 4 列難度面板 (完整文字呈現，告別截斷)
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            levelItems.forEach { item ->
+                                val descText = when (item.difficulty) {
+                                    GameDifficulty.BEGINNER -> Localization.getString("cattrap_diff_desc_beginner", language)
+                                    GameDifficulty.INTERMEDIATE -> Localization.getString("cattrap_diff_desc_intermediate", language)
+                                    GameDifficulty.ADVANCED -> Localization.getString("cattrap_diff_desc_advanced", language)
+                                    else -> Localization.getString("cattrap_diff_desc_epic", language)
+                                }
+                                val badgeTag = when (item.difficulty) {
+                                    GameDifficulty.BEGINNER -> "第 1~20 關"
+                                    GameDifficulty.INTERMEDIATE -> "第 21~40 關"
+                                    GameDifficulty.ADVANCED -> "第 41~60 關"
+                                    else -> "無限隨機"
+                                }
+                                val iconEmoji = when (item.difficulty) {
+                                    GameDifficulty.BEGINNER -> "🌱"
+                                    GameDifficulty.INTERMEDIATE -> "❄️"
+                                    GameDifficulty.ADVANCED -> "🏰"
+                                    else -> "🎲"
+                                }
+
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .border(
+                                            width = 1.dp,
+                                            color = item.color.copy(alpha = 0.35f),
+                                            shape = RoundedCornerShape(14.dp)
+                                        )
+                                        .clickable { onDifficultySelect(item.difficulty) },
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.weight(1f),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(44.dp)
+                                                    .clip(RoundedCornerShape(12.dp))
+                                                    .background(item.color.copy(alpha = 0.14f)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(text = iconEmoji, fontSize = 22.sp)
+                                            }
+
+                                            Spacer(modifier = Modifier.width(12.dp))
+
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Text(
+                                                        text = Localization.getString(item.titleKey, language),
+                                                        style = MaterialTheme.typography.titleSmall.copy(
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = MaterialTheme.colorScheme.onSurface
+                                                        )
+                                                    )
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    Surface(
+                                                        shape = RoundedCornerShape(6.dp),
+                                                        color = item.color.copy(alpha = 0.15f)
+                                                    ) {
+                                                        Text(
+                                                            text = badgeTag,
+                                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                                color = item.color,
+                                                                fontWeight = FontWeight.Bold,
+                                                                fontSize = 11.sp
+                                                            ),
+                                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                        )
+                                                    }
+                                                }
+                                                Spacer(modifier = Modifier.height(3.dp))
+                                                Text(
+                                                    text = descText,
+                                                    style = MaterialTheme.typography.bodySmall.copy(
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                        fontSize = 12.sp,
+                                                        lineHeight = 16.sp
+                                                    )
+                                                )
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.width(8.dp))
+
+                                        Box(
+                                            modifier = Modifier
+                                                .size(32.dp)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(item.color.copy(alpha = 0.15f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.PlayArrow,
+                                                contentDescription = "Play",
+                                                tint = item.color,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     } else {
                         // 一般遊戲 2 欄式難度選擇網格 (自適應排版，無滑動衝突)
                         Column(
@@ -560,6 +680,7 @@ private fun getGameIcon(gameType: GameType): ImageVector {
         GameType.SPEED_MATCH -> Icons.Default.Bolt
         GameType.SUDOKU -> Icons.Default.GridOn
         GameType.CAT_SUDOKU -> Icons.Default.Pets
+        GameType.CAT_TRAP -> Icons.Default.Pets
         GameType.GLASS_PUZZLE_CUBE -> Icons.Default.Extension
         GameType.FOCUS_TRAIN -> Icons.Default.TrackChanges
         GameType.TURTLE_SOUP -> Icons.Default.Lightbulb
@@ -584,6 +705,12 @@ private fun getLevelItemsForGame(gameType: GameType): List<LevelItem> {
             LevelItem(GameDifficulty.BEGINNER, "diff_name_beginner", Color(0xFF10B981)),
             LevelItem(GameDifficulty.INTERMEDIATE, "diff_name_intermediate", Color(0xFF0EA5E9)),
             LevelItem(GameDifficulty.ADVANCED, "diff_name_hard", Color(0xFFEF4444))
+        )
+        GameType.CAT_TRAP -> listOf(
+            LevelItem(GameDifficulty.BEGINNER, "diff_name_beginner", Color(0xFF10B981)),
+            LevelItem(GameDifficulty.INTERMEDIATE, "diff_name_intermediate", Color(0xFF0EA5E9)),
+            LevelItem(GameDifficulty.ADVANCED, "diff_name_advanced", Color(0xFFF59E0B)),
+            LevelItem(GameDifficulty.EPIC, "diff_name_epic", Color(0xFF8B5CF6))
         )
         else -> listOf(
             LevelItem(GameDifficulty.BEGINNER, "diff_name_beginner", Color(0xFF10B981)),
@@ -669,6 +796,12 @@ private fun getGridLabel(gameType: GameType, difficulty: GameDifficulty): String
             GameDifficulty.HELL -> "7x7"
             GameDifficulty.EPIC -> "8x8"
         }
+        GameType.CAT_TRAP -> when (difficulty) {
+            GameDifficulty.BEGINNER -> "1~20關"
+            GameDifficulty.INTERMEDIATE -> "21~40關"
+            GameDifficulty.ADVANCED -> "41~60關"
+            else -> "自由對局"
+        }
         else -> "${difficulty.gridDim}x${difficulty.gridDim}"
     }
 }
@@ -752,6 +885,12 @@ private fun getCellDesc(gameType: GameType, difficulty: GameDifficulty): String 
             GameDifficulty.HARD -> "6x6 • 立體隧道 • 10關"
             GameDifficulty.HELL -> "7x7 • 平移地圖 • 10關"
             GameDifficulty.EPIC -> "8x8 • 極限拓撲 • 10關"
+        }
+        GameType.CAT_TRAP -> when (difficulty) {
+            GameDifficulty.BEGINNER -> "庭園初遇 (1~20關, 12~15天然水塘)"
+            GameDifficulty.INTERMEDIATE -> "九曲迷冰 (21~40關, 8~11天然水塘)"
+            GameDifficulty.ADVANCED -> "絕境圍城 (41~60關, 4~7天然水塘)"
+            else -> "自由對局 (無限隨機水塘)"
         }
         else -> "${difficulty.totalCells} 格 (1~${difficulty.totalCells})"
     }
