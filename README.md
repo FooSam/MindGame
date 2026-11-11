@@ -1,17 +1,20 @@
 # 左右腦鍛鍊 (MindGame / Brain Training) 🧠✨
 
+[![Version](https://img.shields.io/badge/Version-1.00.02.07-brightgreen.svg)]()
+[![Games](https://img.shields.io/badge/Games-16%20Brain%20Games-orange.svg)]()
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.0+-7F52FF.svg?logo=kotlin&logoColor=white)](https://kotlinlang.org/)
 [![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4.svg?logo=android&logoColor=white)](https://developer.android.com/jetpack/compose)
 [![Android SDK](https://img.shields.io/badge/Android%20SDK-24%20--%2036-3DDC84.svg?logo=android&logoColor=white)](https://developer.android.com/)
 [![Room Database](https://img.shields.io/badge/SQLite-Room%20DB-FFA000.svg?logo=sqlite&logoColor=white)](https://developer.android.com/training/data-storage/room)
 [![Google AdMob](https://img.shields.io/badge/Google%20AdMob-Integrated-E37400.svg?logo=googleadmob&logoColor=white)](https://admob.google.com/)
+[![Languages](https://img.shields.io/badge/Languages-zh--TW%20%7C%20en%20%7C%20ja%20%7C%20ko-blue.svg)]()
 [![License](https://img.shields.io/badge/License-Proprietary-blue.svg)]()
 
 > **「左右腦鍛鍊」**是一款專為全方位激發專注力、反應速度、邏輯推理、空間感知與情境思維所設計的現代化 Android 益智應用程式。全 UI 採用最新 **Jetpack Compose (Material 3)** 打造，支援極致流暢動效、豐富難易度、本地即時排行榜、繁中/英/日/韓多國語系切換、7 套精緻視覺主題、無版權高品質背景音樂與智慧沉浸體驗。
 
 ---
 
-## 🎮 核心遊戲訓練模組 (Game Modes)
+## 🎮 核心遊戲訓練模組 (16 大遊戲矩陣)
 
 | 遊戲項目 | 訓練領域 | 核心玩法特色 |
 | :--- | :--- | :--- |
@@ -28,7 +31,7 @@
 | 🧠 **斯特魯普效應 (Stroop Effect)** | **認知抗干擾與大腦彈性** | **看字說顏色經典認知挑戰**！提供 6 大難度進階模式：經典選字色、字義/顏色雙向切換、左右雙字比對（2選1快速判定）、文字與色彩雙重干擾按鈕、1.5 秒動態旋轉閃爍、以及複合形狀與否定句「選不是 X 色」史詩級搶答！ |
 | 🎯 **專注力訓練 (Focus Train)** | **動態追蹤與視野辨識** | **創新動態舒爾特圓盤**！中心圓靜止，外圍 1至3 圈同心圓以順時針/逆時針動態旋轉（數字 1至69），文字維持正立向上，挑戰動態視覺專注力極限。 |
 | ⏱️ **專注力測驗 (Focus Test)** | **視覺搜尋與抗干擾** | 經典舒爾特方格（Schulte Grid），提供 3x3 (初級 9格) 至 8x8 (史詩級 64格) 難度，依序點擊數字。 |
-| ⚡ **極速配對 (Speed Match)** | **反應速度與瞬時記憶** | 1 分鐘限時挑戰！在隨機網格中找出唯一一組相同的數字組合，連續配對衝擊最高分。 |
+| ⚡ **極速配對 (Speed Match)** | **反應速度與瞬時記憶** | 1 分鐘限時挑戰！畫面尺寸自適應保證 100% 零裁切，具備確定性成對生成演算法與跳題換題機制，在隨機網格中找出唯一一組相同的圖形組合連續配對衝擊最高分。 |
 | 🧩 **經典數獨 (Classic Sudoku)** | **邏輯思維與矩陣推演** | 提供 4x4 (入門)、6x6 (進階)、9x9 (標準三級難度) 與 12x12 (史詩級) 棋盤，支援筆記模式、擦除、復原與衝突高亮。 |
 | 🐱 **貓咪數獨 (Cat Sudoku)** | **空間感知與幾何推理** | 創新色塊排貓益智玩法！每行、每列、每個同色區塊各恰好放置 1 隻貓咪，且相鄰 8 格不得有其他貓咪。 |
 
@@ -40,7 +43,7 @@
   - 各遊戲分類（智力遊戲、休閒遊戲、專注評估、邏輯推理）之次選單全面導入手風琴式收合卡片。
   - 卡片未展開時呈現精緻遊戲圖示、中英標題、專屬標籤與遊玩亮點摘要；點擊展開後直接提供「開始遊戲」與「🏆 排行榜」快捷鍵，大幅縮短玩家操作層級，直覺順手！
 - 🌟 **首頁新遊戲探索橫幅 (Featured Spotlight Banner)**：
-  - 首頁頂部智慧推薦旗艦新作（如《雷射迷宮》、《六面合體》、《水果切切樂》），支援一鍵直達開局，引導玩家快速體驗最新遊戲。
+  - 首頁頂部智慧推薦旗艦新作（如《喵影圍捕：別想逃！》、《雷射迷宮》、《六面合體》），支援一鍵直達開局，引導玩家快速體驗最新遊戲。
 - ✨ **NEW 微脈動發光標籤 (New Badge)**：
   - 在新上線遊戲卡片與對應分類按鈕上，採用主題色彩之漸層微脈動呼吸燈動效標記，引導玩家輕鬆發掘全新內容。
 
@@ -55,7 +58,7 @@
 
 ---
 
-## 🎨 7 大主題風格與雙語支援 (Themes & Localization)
+## 🎨 7 大主題風格與多語系支援 (Themes & Localization)
 
 - ❄️ **雪白風格 (Snow White)** (預設明亮清爽)
 - 🌙 **暗黑風格 (Dark Mode)** (極客沉浸感，省電舒適)
@@ -64,7 +67,7 @@
 - ☀️ **陽光風格 (Sunny Vibrant)** (活力飽滿橙黃色調)
 - 💼 **上班族風格 (Corporate)** (優雅專業商務藍調)
 - ☕ **休閒風格 (Casual Earth)** (溫暖自然森系大地風)
-- 🌐 **完整多語系**：繁體中文 (Traditional Chinese)、English、日本語 (Japanese)、한국어 (Korean)。
+- 🌐 **四國完整多語系**：繁體中文 (Traditional Chinese)、English、日本語 (Japanese)、한국어 (Korean)。
 - 🖥️ **全螢幕沉浸模式 (Immersive Sticky Mode)**：支援隱藏系統狀態列與虛擬導航列，享受無邊界全屏視野。
 
 ---
@@ -73,7 +76,7 @@
 
 - 🌐 **雙分頁排行榜架構 (Leaderboard Dialog)**：
   - **【🎮 單項紀錄榜】**：
-    - 支援「遊戲切換選單（Game Selector Dropdown）」：在排行榜視窗內可隨意無縫切換專案中全部 14 款遊戲，支援各難度切換與本機/全球前 100 名高分即時刷新。
+    - 支援「遊戲切換選單（Game Selector Dropdown）」：在排行榜視窗內可隨意無縫切換專案中全部 16 款遊戲，支援各難度切換與本機/全球前 100 名高分即時刷新。
     - 個人最佳名次獨立高亮卡片：若不在前 100 名內，專屬卡片標示玩家精確全球排名與總參賽人數。
   - **【🔥 全球玩家熱門遊戲排行榜 (Hot Games)】**：
     - 展示當月全球所有玩家票選的最愛遊戲熱門度排行。
@@ -107,8 +110,7 @@
 - **資料解析**: Moshi JSON 序列化引擎
 - **廣告系統**: Google Mobile Ads SDK (AdMob 23.6.0)，具備每 3 局插頁廣告與次數獎勵補給機制
 - **安全加固**: ProGuard / R8 程式碼混淆與無用資源壓縮
-- **單元測試**: Robolectric, JUnit4, Roborazzi
-
+- **單元測試**: Robolectric, JUnit4, Roborazzi（全專案 206 項測試 100% PASS）
 
 ---
 
@@ -122,7 +124,7 @@
 ### 編譯指令
 ```bash
 # 執行所有自動化單元測試
-gradle test
+gradle testDebugUnitTest
 
 # 編譯 Debug APK
 gradle :app:assembleDebug
@@ -136,11 +138,17 @@ gradle :app:bundleRelease
 
 ---
 
-## 🔒 隱私與資料安全 (Privacy & Data Safety)
+## 🔒 隱私與法規合規 (Privacy, Terms & Legal)
+
 - **個人資料安全保護**：本應用程式遊戲進度與成績完全儲存於本地設備，不主動收集個人身分資料。
 - **第三方廣告服務**：整合 Google AdMob 提供廣告服務，遵循 Google Play 廣告 ID 合規政策。
-- **隱私權政策完整網址**：請參閱 [PRIVACY_POLICY.md](PRIVACY_POLICY.md) 或線上網頁 `https://FooSam.github.io/MindGame/privacy/`。
-- **服務條款完整網址**：請參閱線上網頁 `https://FooSam.github.io/MindGame/terms/`。
+- **隱私權政策 (Privacy Policy)**：
+  - GitHub 頁面：[PRIVACY_POLICY.md](PRIVACY_POLICY.md)
+  - 獨立網頁：`https://FooSam.github.io/MindGame/privacy/`
+- **服務條款 (Terms of Service)**：
+  - GitHub 頁面：[TERMS_OF_SERVICE.md](TERMS_OF_SERVICE.md)
+  - 獨立網頁：`https://FooSam.github.io/MindGame/terms/`
+- **官方支援信箱**：`f.oosam@gmail.com`
 
 ---
 
